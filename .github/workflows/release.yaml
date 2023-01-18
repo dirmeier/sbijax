@@ -1,0 +1,30 @@
+name: release
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install pypa/build
+      run: |
+        python -m pip install --upgrade build twine
+    - name: Build a binary wheel and a source tarball
+      run: |
+        python -m build --sdist --wheel --outdir dist/ .
+    - name: Publish a Python distribution to PyPI
+      if: startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}

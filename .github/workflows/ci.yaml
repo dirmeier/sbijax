@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  precommit:
+    name: Pre-commit checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.0
+
+  build:
+    runs-on: ubuntu-latest
+    needs:
+      - precommit
+    strategy:
+      matrix:
+        python-version: [3.9]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install poetry
+    - name: Build package
+      run: |
+        poetry build
+
+  tests:
+    runs-on: ubuntu-latest
+    needs:
+      - precommit
+    strategy:
+      matrix:
+        python-version: [ 3.9 ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install poetry
+      - name: Build package
+        run: |
+          pip install jaxlib jax
+          poetry install
+      - name: Run examples
+        run: |
+          poetry run pytest -v --doctest-modules --cov=./{{ cookiecutter.project_name }} --cov-report=xml {{ cookiecutter.project_name }} tests
+      - name: Copy file
+        run: |
+          cp coverage.xml cobertura.xml
+      - name: Run codacy-coverage-reporter
+        uses: codacy/codacy-coverage-reporter-action@v1
+        with:
+          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+          coverage-reports: cobertura.xml
+          language: Python
