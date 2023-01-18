@@ -30,10 +30,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install poetry
+        pip install hatch
     - name: Build package
       run: |
-        poetry build
+        hatch build
 
   tests:
     runs-on: ubuntu-latest
@@ -41,7 +41,7 @@ jobs:
       - precommit
     strategy:
       matrix:
-        python-version: [ 3.9 ]
+        python-version: [3.9]
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -50,20 +50,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          pip install poetry
+          pip install hatch
       - name: Build package
         run: |
           pip install jaxlib jax
-          poetry install
-      - name: Run examples
+      - name: Run tests
         run: |
-          poetry run pytest -v --doctest-modules --cov=./{{ cookiecutter.project_name }} --cov-report=xml {{ cookiecutter.project_name }} tests
-      - name: Copy file
-        run: |
-          cp coverage.xml cobertura.xml
-      - name: Run codacy-coverage-reporter
-        uses: codacy/codacy-coverage-reporter-action@v1
-        with:
-          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
-          coverage-reports: cobertura.xml
-          language: Python
+          hatch run test
+#      - name: Copy file
+#        run: |
+#          cp coverage.xml cobertura.xml
+#      - name: Run codacy-coverage-reporter
+#        uses: codacy/codacy-coverage-reporter-action@v1
+#        with:
+#          project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
+#          coverage-reports: cobertura.xml
+#          language: Python
