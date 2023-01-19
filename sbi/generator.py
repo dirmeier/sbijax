@@ -1,10 +1,11 @@
 from collections import namedtuple
 
 import chex
-from jax import lax, random
+from jax import lax
 from jax import numpy as jnp
+from jax import random
 
-named_dataset = namedtuple("dataset", "y x")
+named_dataset = namedtuple("named_dataset", "y x")
 
 
 class DataLoader:
@@ -19,21 +20,31 @@ class DataLoader:
         return self.get_batch(idx, idxs)
 
 
-def as_batch_iterators(rng_key: chex.PRNGKey, data: namedtuple, batch_size, split, shuffle):
+def as_batch_iterators(
+    rng_key: chex.PRNGKey, data: named_dataset, batch_size, split, shuffle
+):
     n = data.y.shape[0]
     n_train = int(n * split)
-
-    y_train = named_dataset(*[el[n_train:, :] for el in enumerate(data)])
-    y_val = named_dataset(*[el[n_train:, :] for el in enumerate(data)])
+    if shuffle:
+        data = named_dataset(
+            *[
+                random.permutation(rng_key, el, independent=False)
+                for _, el in enumerate(data)
+            ]
+        )
+    y_train = named_dataset(*[el[:n_train, :] for el in data])
+    y_val = named_dataset(*[el[n_train:, :] for el in data])
     train_rng_key, val_rng_key = random.split(rng_key)
 
-    train_itr = as_batch_iterator(train_rng_key, y_train, batch_size, split, shuffle)
-    val_itr = as_batch_iterator(val_rng_key, y_val, batch_size, split, shuffle)
+    train_itr = as_batch_iterator(train_rng_key, y_train, batch_size, shuffle)
+    val_itr = as_batch_iterator(val_rng_key, y_val, batch_size, shuffle)
 
     return train_itr, val_itr
 
 
-def as_batch_iterator(rng_key: chex.PRNGKey, data: namedtuple, batch_size, shuffle):
+def as_batch_iterator(
+    rng_key: chex.PRNGKey, data: named_dataset, batch_size, shuffle
+):
     n = data.y.shape[0]
     if n < batch_size:
         num_batches = 1
@@ -45,7 +56,7 @@ def as_batch_iterator(rng_key: chex.PRNGKey, data: namedtuple, batch_size, shuff
 
     idxs = jnp.arange(n)
     if shuffle:
-        idxs = random.permutation(rng_key, idxs, independent=True)
+        idxs = random.permutation(rng_key, idxs)
 
     def get_batch(idx, idxs=idxs):
         start_idx = idx * batch_size
