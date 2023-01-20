@@ -2,7 +2,6 @@ from collections import namedtuple
 from functools import partial
 from typing import Iterable
 
-import blackjax as bj
 import chex
 import haiku as hk
 import jax
@@ -15,11 +14,12 @@ from jax import random
 
 from sbi import generator
 from sbi.generator import named_dataset
+from sbi.mcmc.sample import mcmc_diagnostics, sample_with_nuts
 
 
 class SNL:
     def __init__(self, model_fns, density_estimator):
-        self.prior_sampler_fn, self.prior_log_density_fn = model_fns[0]()
+        self.prior_sampler_fn, self.prior_log_density_fn = model_fns[0]
         self.simulator_fn = model_fns[1]
         self.model = density_estimator
         self._len_theta = len(self.prior_sampler_fn(seed=random.PRNGKey(0)))
@@ -29,7 +29,7 @@ class SNL:
         self._train_iter: Iterable
         self._val_iter: Iterable
 
-    def train(
+    def fit(
         self,
         rng_key,
         observed,
@@ -44,7 +44,7 @@ class SNL:
         n_chains=4,
     ):
         self._rng_seq = hk.PRNGSequence(rng_key)
-        self.observed = observed
+        self.observed = jnp.atleast_2d(observed)
 
         simulator_fn = partial(
             self._simulate_new_data_and_append,
@@ -53,7 +53,13 @@ class SNL:
             n_samples=n_samples,
             n_warmup=n_warmup,
         )
-        D, params, all_diagnostics, all_losses = None, None, [], []
+        D, params, all_diagnostics, all_losses, all_params = (
+            None,
+            None,
+            [],
+            [],
+            [],
+        )
         for i in range(n_rounds):
             D, diagnostics = simulator_fn(params, D)
             self._train_iter, self._val_iter = generator.as_batch_iterators(
@@ -63,20 +69,25 @@ class SNL:
                 1.0 - percentage_data_as_validation_set,
                 True,
             )
-            params, losses = self._train_model_single_round(
-                optimizer, max_n_iter
-            )
+            params, losses = self._fit_model_single_round(optimizer, max_n_iter)
+            all_params.append(params)
             all_losses.append(losses)
             all_diagnostics.append(diagnostics)
 
-        return params, all_losses, all_diagnostics
+        snl_info = namedtuple("snl_info", "params losses, diagnostics")
+        return params, snl_info(all_params, all_losses, all_diagnostics)
 
-    def _train_model_single_round(self, optimizer, max_n_iter):
+    def sample_posterior(self, params, n_chains, n_samples, n_warmup):
+        return self._simulate_from_amortized_posterior(
+            params, n_chains, n_samples, n_warmup
+        )
+
+    def _fit_model_single_round(self, optimizer, max_n_iter):
         params = self._init_params(next(self._rng_seq), self._train_iter(0))
         state = optimizer.init(params)
 
         @jax.jit
-        def step(params, rng, state, **batch):
+        def step(params, state, **batch):
             def loss_fn(params):
                 lp = self.model.apply(params, method="log_prob", **batch)
                 return -jnp.sum(lp)
@@ -88,20 +99,19 @@ class SNL:
 
         losses = np.zeros([max_n_iter, 2])
         early_stop = EarlyStopping(1e-3, 5)
+        logging.info("training model")
         for i in range(max_n_iter):
             train_loss = 0.0
             for j in range(self._train_iter.num_batches):
                 batch = self._train_iter(j)
-                batch_loss, params, state = step(
-                    params, next(self._rng_seq), state, **batch
-                )
+                batch_loss, params, state = step(params, state, **batch)
                 train_loss += batch_loss
             validation_loss = self._validation_loss(params)
             losses[i] = jnp.array([train_loss, validation_loss])
 
             _, early_stop = early_stop.update(validation_loss)
             if early_stop.should_stop:
-                logging.info("early stop criterion found")
+                logging.info("early stopping criterion found")
                 break
 
         losses = jnp.vstack(losses)[:i, :]
@@ -137,6 +147,7 @@ class SNL:
             new_thetas, diagnostics = self._simulate_from_amortized_posterior(
                 params, n_chains, n_samples, n_warmup
             )
+            new_thetas = new_thetas.reshape(-1, self._len_theta)
             new_thetas = random.permutation(next(self._rng_seq), new_thetas)
             new_thetas = new_thetas[:n_simulations_per_round, :]
 
@@ -165,52 +176,11 @@ class SNL:
             lp = _log_likelihood_fn(theta)
             return jnp.sum(lp) + jnp.sum(lp_prior)
 
-        lp__ = lambda x: _joint_logdensity_fn(**x)
+        def lp__(x):
+            return _joint_logdensity_fn(**x)
 
-        def _inference_loop(rng_key, kernel, initial_state, n_samples):
-            @jax.jit
-            def _step(states, rng_key):
-                keys = jax.random.split(rng_key, n_chains)
-                states, infos = jax.vmap(kernel)(keys, states)
-                return states, states
-
-            sampling_keys = jax.random.split(rng_key, n_samples)
-            _, states = jax.lax.scan(_step, initial_state, sampling_keys)
-            return states
-
-        initial_positions = random.multivariate_normal(
-            next(self._rng_seq),
-            0.1 + jnp.zeros(self._len_theta),
-            jnp.eye(self._len_theta),
-            shape=(n_chains,),
+        samples = sample_with_nuts(
+            self._rng_seq, lp__, self._len_theta, n_chains, n_samples, n_warmup
         )
-        initial_positions = {"theta": initial_positions}
-
-        init_keys = random.split(next(self._rng_seq), n_chains)
-        warmup = bj.window_adaptation(bj.nuts, lp__)
-        initial_states, kernel_params = jax.vmap(
-            lambda seed, param: warmup.run(seed, param)[0]
-        )(init_keys, initial_positions)
-
-        kernel_params = {k: v[0] for k, v in kernel_params.items()}
-        _, kernel = bj.nuts(lp__, **kernel_params)
-
-        states = _inference_loop(
-            next(self._rng_seq), kernel, initial_states, n_samples
-        )
-        _ = states.position["theta"].block_until_ready()
-        thetas = states.position["theta"][n_warmup:, :, :]
-
-        thetas, diagnostics = self._merge_chains_and_diagnose(thetas)
-        return thetas, diagnostics
-
-    def _merge_chains_and_diagnose(self, samples):
-        esses = [0] * samples.shape[-1]
-        rhats = [0] * samples.shape[-1]
-        for i in range(samples.shape[-1]):
-            esses[i] = bj.diagnostics.effective_sample_size(samples[:, :, i].T)
-            rhats[i] = bj.diagnostics.potential_scale_reduction(
-                samples[:, :, i].T
-            )
-        samples = samples.reshape(-1, samples.shape[-1])
-        return samples, namedtuple("diagnostics", "ess rhat")(esses, rhats)
+        diagnostics = mcmc_diagnostics(samples)
+        return samples, diagnostics
