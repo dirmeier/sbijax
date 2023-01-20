@@ -40,7 +40,7 @@ pre-commit install
 
 3) Test your contribution/implementation by calling `hatch run test` on the (Unix) command line before submitting a PR
 
-```
+```bash
 hatch run test
 ```
 
