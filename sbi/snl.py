@@ -44,7 +44,7 @@ class SNL:
         n_chains=4,
     ):
         self._rng_seq = hk.PRNGSequence(rng_key)
-        self.observed = observed
+        self.observed = jnp.atleast_2d(observed)
 
         simulator_fn = partial(
             self._simulate_new_data_and_append,
@@ -147,12 +147,14 @@ class SNL:
             new_thetas, diagnostics = self._simulate_from_amortized_posterior(
                 params, n_chains, n_samples, n_warmup
             )
+            new_thetas = new_thetas.reshape(-1, self._len_theta)
             new_thetas = random.permutation(next(self._rng_seq), new_thetas)
             new_thetas = new_thetas[:n_simulations_per_round, :]
 
-        new_data = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
+        new_obs = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
+        new_data = named_dataset(new_obs, new_thetas)
         if D is None:
-            d_new = named_dataset(new_data, new_thetas)
+            d_new = new_data
         else:
             d_new = named_dataset(
                 *[jnp.vstack([a, b]) for a, b in zip(D, new_data)]
@@ -178,10 +180,8 @@ class SNL:
         def lp__(x):
             return _joint_logdensity_fn(**x)
 
-        logging.info("sampling from posterior using nuts")
         samples = sample_with_nuts(
             self._rng_seq, lp__, self._len_theta, n_chains, n_samples, n_warmup
         )
         diagnostics = mcmc_diagnostics(samples)
-        samples = samples.reshape(-1, self._len_theta)
         return samples, diagnostics

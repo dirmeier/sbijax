@@ -41,20 +41,15 @@ exclude = [
     "/.pre-commit-config.yaml"
 ]
 
-[tool.hatch.envs.default]
+[tool.hatch.envs.test]
 dependencies = [
-    "pre-commit>=2.20.0",
-    "black>=22.8.0",
-    "flake8>=5.0.4",
-    "flake8-pyproject>=1.1.0.post0",
-    "isort>=5.10.1",
-    "mypy>=0.971",
-    "bandit>=1.7.4",
+    "pylint>=2.15.10",
     "pytest>=7.2.0",
     "pytest-cov>=4.0.0"
 ]
 
-[tool.hatch.envs.default.scripts]
+[tool.hatch.envs.test.scripts]
+lint = 'pylint sbi tests'
 test = 'pytest -v --doctest-modules --cov=./sbi --cov-report=xml sbi tests'
 
 [tool.black]
@@ -84,4 +79,12 @@ include_trailing_comma = true
 
 [tool.flake8]
 max-line-length = 80
-extend-ignore = ["E203", "W503", "F401", "E731"]
+extend-ignore = ["E203", "W503", "E731"]
+per-file-ignores = [
+    '__init__.py:F401',
+]
+
+[tool.pylint.messages_control]
+disable = """
+invalid-name,missing-module-docstring,R0801
+"""

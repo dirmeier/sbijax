@@ -23,7 +23,6 @@ def sample_with_nuts(rng_seq, lp, len_theta, n_chains, n_samples, n_warmup):
     states = _inference_loop(next(rng_seq), kernel, initial_states, n_samples)
     _ = states.position["theta"].block_until_ready()
     thetas = states.position["theta"][n_warmup:, :, :]
-
     return thetas
 
 

@@ -23,11 +23,10 @@ To install the latest GitHub <RELEASE>, just call the following on the command l
 pip install git+https://github.com/dirmeier/sbi@<RELEASE>
 ```
 
-
 ## Contributing
 
 Contributions in the form of pull requests are more than welcome. A good way to start is to check out issues labelled
-["good first issue"](https://github.com/ramsey-devs/ramsey/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). In order to contribute:
+["good first issue"](https://github.com/dirmeier/sbi/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). In order to contribute:
 
 1) Fork the repository and install `hatch` and `pre-commit`
 

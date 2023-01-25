@@ -1,17 +1,18 @@
+from functools import partial
+
 import distrax
 import haiku as hk
+import matplotlib.pyplot as plt
 import optax
+import seaborn as sns
 from jax import numpy as jnp
 from jax import random
-from surjectors.bijectors.masked_coupling import MaskedCoupling
-from surjectors.conditioners.mlp import mlp_conditioner
-from surjectors.distributions.transformed_distribution import (
-    TransformedDistribution,
-)
-from surjectors.surjectors.chain import Chain
+from surjectors import Chain, MaskedCoupling, TransformedDistribution
+from surjectors.conditioners import mlp_conditioner
 from surjectors.util import make_alternating_binary_mask
 
 from sbi import SNL
+from sbi.mcmc import sample_with_nuts
 
 
 def prior_model_fns():
@@ -20,9 +21,19 @@ def prior_model_fns():
 
 
 def simulator_fn(seed, theta):
-    p_noise = distrax.Normal(jnp.zeros_like(theta), 1.0)
-    noise = p_noise.sample(seed=seed)
-    return theta + 0.1 * noise
+    p = distrax.MultivariateNormalDiag(theta, 0.1 * jnp.ones_like(theta))
+    y = p.sample(seed=seed)
+    return y
+
+
+def log_density_fn(theta, y):
+    prior = distrax.Uniform(jnp.full(2, -3.0), jnp.full(2, 3.0))
+    likelihood = distrax.MultivariateNormalDiag(
+        theta, 0.1 * jnp.ones_like(theta)
+    )
+
+    lp = jnp.sum(prior.log_prob(theta)) + jnp.sum(likelihood.log_prob(y))
+    return lp
 
 
 def make_model(dim):
@@ -54,13 +65,40 @@ def make_model(dim):
     return td
 
 
-prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
-fns = ((prior_simulator_fn, prior_logdensity_fn), simulator_fn)
-model = make_model(2)
+def run():
+    rng_seq = hk.PRNGSequence(0)
+    y_observed = jnp.array([-1.0, 1.0])
 
-snl = SNL(fns, model)
+    log_density_partial = partial(log_density_fn, y=y_observed)
+    log_density = lambda x: log_density_partial(**x)
 
-optimizer = optax.adam(1e-4)
-params, all_losses, all_diagnostics = snl.train(
-    random.PRNGKey(23), jnp.full(2, 2), optimizer
-)
+    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
+
+    snl = SNL(fns, make_model(2))
+    optimizer = optax.adam(1e-3)
+    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer)
+
+    nuts_samples = sample_with_nuts(rng_seq, log_density, 2, 4, 2000, 1000)
+    snl_samples, _ = snl.sample_posterior(params, 4, 10000, 7500)
+
+    snl_samples = snl_samples.reshape(-1, 2)
+    nuts_samples = nuts_samples.reshape(-1, 2)
+
+    fig, axes = plt.subplots(2, 2)
+    for i in range(2):
+        sns.histplot(nuts_samples[:, i], color="darkgrey", ax=axes.flatten()[i])
+        sns.histplot(
+            snl_samples[:, i], color="darkblue", ax=axes.flatten()[i + 2]
+        )
+        axes.flatten()[i].set_title(rf"Sampled posterior $\theta_{i}$")
+        axes.flatten()[i + 2].set_title(
+            rf"Approximated posterior $\theta_{i + 2}$"
+        )
+    sns.despine()
+    plt.tight_layout()
+    plt.show()
+
+
+if __name__ == "__main__":
+    run()
