@@ -151,9 +151,10 @@ class SNL:
             new_thetas = random.permutation(next(self._rng_seq), new_thetas)
             new_thetas = new_thetas[:n_simulations_per_round, :]
 
-        new_data = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
+        new_obs = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
+        new_data = named_dataset(new_obs, new_thetas)
         if D is None:
-            d_new = named_dataset(new_data, new_thetas)
+            d_new = new_data
         else:
             d_new = named_dataset(
                 *[jnp.vstack([a, b]) for a, b in zip(D, new_data)]

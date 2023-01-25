@@ -1,13 +1,22 @@
+import argparse
 from functools import partial
 
 import distrax
 import haiku as hk
 import matplotlib.pyplot as plt
+import numpy as np
 import optax
+import pandas as pd
 import seaborn as sns
 from jax import numpy as jnp
 from jax import random
-from surjectors import Chain, MaskedCoupling, TransformedDistribution
+from jax import scipy as jsp
+from surjectors import (
+    AffineMaskedCouplingInferenceFunnel,
+    Chain,
+    MaskedCoupling,
+    TransformedDistribution,
+)
 from surjectors.conditioners import mlp_conditioner
 from surjectors.util import make_alternating_binary_mask
 
@@ -15,46 +24,82 @@ from sbi import SNL
 from sbi.mcmc import sample_with_nuts
 
 
-def prior_model_fns():
-    p = distrax.Uniform(jnp.full(2, -3.0), jnp.full(2, 3.0))
+def prior_fns():
+    p = distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0))
     return p.sample, p.log_prob
 
 
-def simulator_fn(seed, theta):
-    p = distrax.MultivariateNormalDiag(theta, 0.1 * jnp.ones_like(theta))
-    y = p.sample(seed=seed)
-    return y
+def likelihood_fn(theta, y):
+    mu = jnp.tile(theta[:2], 4)
+    s1, s2 = theta[2] ** 2, theta[3] ** 2
+    corr = s1 * s2 * jnp.tanh(theta[4])
+    cov = jnp.array([[s1**2, corr], [corr, s2**2]])
+    cov = jsp.linalg.block_diag(*[cov for _ in range(4)])
+    p = distrax.MultivariateNormalFullCovariance(mu, cov)
+    return p.log_prob(y)
 
 
-def log_density_fn(theta, y):
-    prior = distrax.Uniform(jnp.full(2, -3.0), jnp.full(2, 3.0))
-    likelihood = distrax.MultivariateNormalDiag(
-        theta, 0.1 * jnp.ones_like(theta)
+def simulator(seed, theta):
+    def _unpack_params(ps):
+        m0 = ps[:, [0]]
+        m1 = ps[:, [1]]
+        s0 = ps[:, [2]] ** 2
+        s1 = ps[:, [3]] ** 2
+        r = np.tanh(ps[:, [4]])
+        return m0, m1, s0, s1, r
+
+    m0, m1, s0, s1, r = _unpack_params(theta)
+    us = distrax.Normal(0.0, 1.0).sample(
+        seed=seed, sample_shape=(theta.shape[0], 4, 2)
+    )
+    xs = jnp.empty_like(us)
+    xs = xs.at[:, :, 0].set(s0 * us[:, :, 0] + m0)
+    xs = xs.at[:, :, 1].set(
+        s1 * (r * us[:, :, 0] + np.sqrt(1.0 - r**2) * us[:, :, 1]) + m1
     )
 
-    lp = jnp.sum(prior.log_prob(theta)) + jnp.sum(likelihood.log_prob(y))
-    return lp
+    return xs.reshape(theta.shape[0], 8)
 
 
-def make_model(dim):
+def make_model(dim, use_surjectors):
     def _bijector_fn(params):
         means, log_scales = jnp.split(params, 2, -1)
         return distrax.ScalarAffine(means, jnp.exp(log_scales))
 
+    def _conditional_fn(n_dim):
+        decoder_net = mlp_conditioner([32, 32, n_dim * 2])
+
+        def _fn(z):
+            params = decoder_net(z)
+            mu, log_scale = jnp.split(params, 2, -1)
+            return distrax.Independent(distrax.Normal(mu, jnp.exp(log_scale)))
+
+        return _fn
+
     def _flow(method, **kwargs):
         layers = []
-        for i in range(2):
-            mask = make_alternating_binary_mask(dim, i % 2 == 0)
-            layer = MaskedCoupling(
-                mask=mask,
-                bijector=_bijector_fn,
-                conditioner=mlp_conditioner([8, 8, dim * 2]),
-            )
+        n_dimension = dim
+        for i in range(5):
+            mask = make_alternating_binary_mask(n_dimension, i % 2 == 0)
+            if i == 2 and use_surjectors:
+                n_latent = 6
+                layer = AffineMaskedCouplingInferenceFunnel(
+                    n_latent,
+                    _conditional_fn(n_dimension - n_latent),
+                    mlp_conditioner([32, 32, n_dimension * 2]),
+                )
+                n_dimension = n_latent
+            else:
+                layer = MaskedCoupling(
+                    mask=mask,
+                    bijector=_bijector_fn,
+                    conditioner=mlp_conditioner([32, 32, n_dimension * 2]),
+                )
             layers.append(layer)
         chain = Chain(layers)
 
         base_distribution = distrax.Independent(
-            distrax.Normal(jnp.zeros(dim), jnp.ones(dim)),
+            distrax.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
             reinterpreted_batch_ndims=1,
         )
         td = TransformedDistribution(base_distribution, chain)
@@ -65,40 +110,74 @@ def make_model(dim):
     return td
 
 
-def run():
-    rng_seq = hk.PRNGSequence(0)
-    y_observed = jnp.array([-1.0, 1.0])
+def run(use_surjectors):
+    len_theta = 5
+    # this is the thetas used in SNL
+    # thetas = jnp.array([-0.7, -2.9, -1.0, -0.9, 0.6])
+    y_observed = jnp.array(
+        [
+            [
+                -0.9707123,
+                -2.9461224,
+                -0.4494722,
+                -3.4231849,
+                -0.13285634,
+                -3.364017,
+                -0.85367596,
+                -2.4271638,
+            ]
+        ]
+    )
+    prior_sampler, prior_fn = prior_fns()
+    fns = (prior_sampler, prior_fn), simulator
+    snl = SNL(fns, make_model(y_observed.shape[1], use_surjectors))
+    optimizer = optax.adam(1e-3)
+    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer)
+
+    snl_samples, _ = snl.sample_posterior(params, 20, 50000, 10000)
+    snl_samples = snl_samples.reshape(-1, len_theta)
+
+    def log_density_fn(theta, y):
+        prior_lp = prior_fn(theta)
+        likelihood_lp = likelihood_fn(theta, y)
+
+        lp = jnp.sum(prior_lp) + jnp.sum(likelihood_lp)
+        return lp
 
     log_density_partial = partial(log_density_fn, y=y_observed)
     log_density = lambda x: log_density_partial(**x)
 
-    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
-    fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
+    rng_seq = hk.PRNGSequence(12)
+    nuts_samples = sample_with_nuts(
+        rng_seq, log_density, len_theta, 20, 50000, 10000
+    )
+    nuts_samples = nuts_samples.reshape(-1, len_theta)
 
-    snl = SNL(fns, make_model(2))
-    optimizer = optax.adam(1e-3)
-    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer)
+    g = sns.PairGrid(pd.DataFrame(nuts_samples))
+    g.map_upper(sns.scatterplot, color="black", marker=".", edgecolor=None, s=2)
+    g.map_diag(plt.hist, color="black")
+    for ax in g.axes.flatten():
+        ax.set_xlim(-5, 5)
+        ax.set_ylim(-5, 5)
+    g.fig.set_figheight(5)
+    g.fig.set_figwidth(5)
+    plt.show()
 
-    nuts_samples = sample_with_nuts(rng_seq, log_density, 2, 4, 2000, 1000)
-    snl_samples, _ = snl.sample_posterior(params, 4, 10000, 7500)
-
-    snl_samples = snl_samples.reshape(-1, 2)
-    nuts_samples = nuts_samples.reshape(-1, 2)
-
-    fig, axes = plt.subplots(2, 2)
-    for i in range(2):
-        sns.histplot(nuts_samples[:, i], color="darkgrey", ax=axes.flatten()[i])
-        sns.histplot(
-            snl_samples[:, i], color="darkblue", ax=axes.flatten()[i + 2]
-        )
-        axes.flatten()[i].set_title(rf"Sampled posterior $\theta_{i}$")
-        axes.flatten()[i + 2].set_title(
-            rf"Approximated posterior $\theta_{i + 2}$"
-        )
+    fig, axes = plt.subplots(len_theta, 2)
+    for i in range(len_theta):
+        sns.histplot(nuts_samples[:, i], color="darkgrey", ax=axes[i, 0])
+        sns.histplot(snl_samples[:, i], color="darkblue", ax=axes[i, 1])
+        axes[i, 0].set_title(rf"Sampled posterior $\theta_{i}$")
+        axes[i, 1].set_title(rf"Approximated posterior $\theta_{i}$")
+        for j in range(2):
+            axes[i, j].set_xlim(-5, 5)
     sns.despine()
     plt.tight_layout()
     plt.show()
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--use-surjectors", action="store_true")
+    args = parser.parse_args()
+    run(args.use_surjectors)
