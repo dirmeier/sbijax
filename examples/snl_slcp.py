@@ -1,3 +1,7 @@
+"""
+SLCP example from [1] using SNL and masked coupling bijections or surjections
+"""
+
 import argparse
 from functools import partial
 

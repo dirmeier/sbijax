@@ -1,3 +1,7 @@
+"""
+Example using SNL and masked coupling flows
+"""
+
 from functools import partial
 
 import distrax
