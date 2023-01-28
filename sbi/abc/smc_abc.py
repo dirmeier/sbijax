@@ -41,10 +41,9 @@ class SMCABC:
         ess_min,
         cov_scale=1.0,
     ):
-        particles, _, log_weights, epsilon = self.init_particles(
+        particles, log_weights, epsilon = self.init_particles(
             n_samples, n_simulations_per_theta
         )
-        all_particles = particles
         for _ in range(n_total_simulations):
             epsilon *= eps_step
             cov_chol_factor = jnp.linalg.cholesky(
@@ -63,8 +62,7 @@ class SMCABC:
                 particles, log_weights = self.resample(
                     particles, log_weights, particles.shape[0]
                 )
-            all_particles = jnp.vstack([all_particles, particles])
-        return all_particles[:n_samples, :]
+        return particles
 
     def init_particles(self, n_samples, n_simulations_per_theta):
         particles = self.prior_sampler_fn(
@@ -79,14 +77,13 @@ class SMCABC:
         distances = self.distance_fn(
             summary_statistics, self.summarized_observed
         )
-        idxs = jnp.argsort(distances)
+        sort_idx = jnp.argsort(distances)
 
-        particles = particles[idxs][:n_samples]
-        summary_statistics = summary_statistics[idxs][:n_samples]
+        particles = particles[sort_idx][:n_samples]
         log_weights = -jnp.log(jnp.full(n_samples, n_samples))
         initial_epsilon = distances[-1]
 
-        return particles, summary_statistics, log_weights, initial_epsilon
+        return particles, log_weights, initial_epsilon
 
     def move(
         self,
@@ -120,9 +117,9 @@ class SMCABC:
             )
             ys = jnp.swapaxes(ys, 1, 0)
             summary_statistics = self.summary_fn(ys)
-            d = self.distance_fn(summary_statistics, self.summarized_observed)
+            ds = self.distance_fn(summary_statistics, self.summarized_observed)
 
-            idxs = jnp.where(d < epsilon)[0]
+            idxs = jnp.where(ds < epsilon)[0]
             new_candidate_particles = new_candidate_particles[idxs]
             if new_particles is None:
                 new_particles = new_candidate_particles
@@ -138,6 +135,7 @@ class SMCABC:
         new_log_weights = self._new_log_weights(
             new_particles, particles, log_weights, cov_chol_factor
         )
+
         return new_particles, new_log_weights
 
     def resample(self, particles, log_weights, n_samples):

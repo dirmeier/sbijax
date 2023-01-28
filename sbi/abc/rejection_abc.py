@@ -27,7 +27,7 @@ class RejectionABC:
         self.observed = jnp.atleast_2d(observed)
         self.summarized_observed = self.summary_fn(self.observed)
 
-    def sample_posterior(self, n_samples, n_simulations_per_theta, K):
+    def sample_posterior(self, n_samples, n_simulations_per_theta, K, h):
         thetas = None
         n = n_samples
         K = jnp.maximum(
@@ -43,7 +43,7 @@ class RejectionABC:
                 theta=jnp.tile(ps, [n_simulations_per_theta, 1, 1]),
             )
             ys = jnp.swapaxes(ys, 1, 0)
-            k = self.kernel_fn(self.summary_fn(ys), self.summarized_observed)
+            k = self.kernel_fn(self.summary_fn(ys), self.summarized_observed, h)
             p = random.uniform(next(self._rng_seq), shape=(len(k),))
             mr = k / K
             idxs = jnp.where(p < mr)[0]
