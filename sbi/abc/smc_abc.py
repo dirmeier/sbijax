@@ -1,15 +1,15 @@
 import chex
 import distrax
-import haiku as hk
 import jax
 from blackjax.smc import resampling
 from blackjax.smc.ess import ess
 from jax import numpy as jnp
-from jax import random
 from jax import scipy as jsp
 
+from sbi._sbi_base import SBI
 
-class SMCABC:
+
+class SMCABC(SBI):
     """
     Sisson et al. - Handbook of approximate Bayesian computation
 
@@ -17,21 +17,16 @@ class SMCABC:
     """
 
     def __init__(self, model_fns, summary_fn, distance_fn):
-        self.prior_sampler_fn, self.prior_log_density_fn = model_fns[0]
-        self.simulator_fn = model_fns[1]
+        super().__init__(model_fns)
         self.summary_fn = summary_fn
         self.distance_fn = distance_fn
-        self._len_theta = len(self.prior_sampler_fn(seed=random.PRNGKey(0)))
-
-        self.observed: chex.Array
         self.summarized_observed: chex.Array
-        self._rng_seq: hk.PRNGSequence
 
     def fit(self, rng_key, observed):
-        self._rng_seq = hk.PRNGSequence(rng_key)
-        self.observed = jnp.atleast_2d(observed)
+        super().fit(rng_key, observed)
         self.summarized_observed = self.summary_fn(self.observed)
 
+    # pylint: disable=too-many-arguments,arguments-differ
     def sample_posterior(
         self,
         n_total_simulations,
@@ -41,30 +36,56 @@ class SMCABC:
         ess_min,
         cov_scale=1.0,
     ):
-        particles, log_weights, epsilon = self.init_particles(
+        """
+        Sample from the approximate posterior
+
+        Parameters
+        ----------
+        n_total_simulations: int
+            number of SMC steps
+        n_samples: int
+            number of samples to draw for each parameter
+        n_simulations_per_theta: int
+            number of simulations for each paramter sample
+        eps_step:  float
+            decay of initial epsilon per simulation round
+        ess_min: float
+            minimal effective sample size
+        cov_scale: float
+            scaling of the transition kernel covariance
+
+        Returns
+        -------
+        chex.Array
+            an array of samples from the posterior distribution of dimension
+            (n_samples \times p)
+        """
+
+        particles, log_weights, epsilon = self._init_particles(
             n_samples, n_simulations_per_theta
         )
         for _ in range(n_total_simulations):
             epsilon *= eps_step
-            cov_chol_factor = jnp.linalg.cholesky(
-                jnp.cov(particles.T) * cov_scale
-            )
-            particles, new_log_weights = self.move(
+            particles, log_weights = self._move(
                 n_samples,
                 particles,
                 log_weights,
-                cov_chol_factor,
                 n_simulations_per_theta,
                 epsilon,
+                cov_scale,
             )
             curr_ess = ess(log_weights)
             if curr_ess < ess_min:
-                particles, log_weights = self.resample(
+                particles, log_weights = self._resample(
                     particles, log_weights, particles.shape[0]
                 )
         return particles
 
-    def init_particles(self, n_samples, n_simulations_per_theta):
+    def _chol_factor(self, particles, cov_scale):
+        chol = jnp.linalg.cholesky(jnp.cov(particles.T) * cov_scale)
+        return chol
+
+    def _init_particles(self, n_samples, n_simulations_per_theta):
         particles = self.prior_sampler_fn(
             seed=next(self._rng_seq), sample_shape=(n_samples * 10,)
         )
@@ -85,39 +106,54 @@ class SMCABC:
 
         return particles, log_weights, initial_epsilon
 
-    def move(
+    def _sample_candidates(self, particles, log_weights, n, cov_chol_factor):
+        n_sim = jnp.minimum(n, 1000)
+        new_candidate_particles, _ = self._resample(
+            particles, log_weights, n_sim
+        )
+        new_candidate_particles = self._perturb(
+            new_candidate_particles, cov_chol_factor
+        )
+        cand_lps = self.prior_log_density_fn(new_candidate_particles)
+        new_candidate_particles = new_candidate_particles[
+            jnp.logical_not(jnp.isinf(cand_lps))
+        ]
+        return new_candidate_particles
+
+    def _simulate_and_distance(
+        self, new_candidate_particles, n_simulations_per_theta
+    ):
+        ys = self.simulator_fn(
+            seed=next(self._rng_seq),
+            theta=jnp.tile(
+                new_candidate_particles, [n_simulations_per_theta, 1, 1]
+            ),
+        )
+        ys = jnp.swapaxes(ys, 1, 0)
+        summary_statistics = self.summary_fn(ys)
+        ds = self.distance_fn(summary_statistics, self.summarized_observed)
+        return ds
+
+    # pylint: disable=too-many-arguments
+    def _move(
         self,
         n_samples,
         particles,
         log_weights,
-        cov_chol_factor,
         n_simulations_per_theta,
         epsilon,
+        cov_scale,
     ):
         new_particles = None
+        cov_chol_factor = self._chol_factor(particles, cov_scale)
         n = n_samples
         while n > 0:
-            n_sim = jnp.minimum(n, 1000)
-            new_candidate_particles, _ = self.resample(
-                particles, log_weights, n_sim
+            new_candidate_particles = self._sample_candidates(
+                particles, log_weights, n, cov_chol_factor
             )
-            new_candidate_particles = self._perturb(
-                new_candidate_particles, cov_chol_factor
+            ds = self._simulate_and_distance(
+                new_candidate_particles, n_simulations_per_theta
             )
-            cand_lps = self.prior_log_density_fn(new_candidate_particles)
-            new_candidate_particles = new_candidate_particles[
-                ~jnp.isinf(cand_lps)
-            ]
-
-            ys = self.simulator_fn(
-                seed=next(self._rng_seq),
-                theta=jnp.tile(
-                    new_candidate_particles, [n_simulations_per_theta, 1, 1]
-                ),
-            )
-            ys = jnp.swapaxes(ys, 1, 0)
-            summary_statistics = self.summary_fn(ys)
-            ds = self.distance_fn(summary_statistics, self.summarized_observed)
 
             idxs = jnp.where(ds < epsilon)[0]
             new_candidate_particles = new_candidate_particles[idxs]
@@ -138,7 +174,7 @@ class SMCABC:
 
         return new_particles, new_log_weights
 
-    def resample(self, particles, log_weights, n_samples):
+    def _resample(self, particles, log_weights, n_samples):
         idxs = resampling.multinomial(
             next(self._rng_seq), jnp.exp(log_weights), n_samples
         )

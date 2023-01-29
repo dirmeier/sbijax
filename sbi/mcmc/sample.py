@@ -7,6 +7,7 @@ from jax import numpy as jnp
 from jax import random
 
 
+# pylint: disable=too-many-arguments
 def sample_with_nuts(rng_seq, lp, len_theta, n_chains, n_samples, n_warmup):
     """
     Sample from a distribution using the No-U-Turn sampler.
@@ -36,7 +37,7 @@ def sample_with_nuts(rng_seq, lp, len_theta, n_chains, n_samples, n_warmup):
         @jax.jit
         def _step(states, rng_key):
             keys = jax.random.split(rng_key, n_chains)
-            states, infos = jax.vmap(kernel)(keys, states)
+            states, _ = jax.vmap(kernel)(keys, states)
             return states, states
 
         sampling_keys = jax.random.split(rng_key, n_samples)
@@ -50,6 +51,7 @@ def sample_with_nuts(rng_seq, lp, len_theta, n_chains, n_samples, n_warmup):
     return thetas
 
 
+# pylint: disable=missing-function-docstring
 def _nuts_init(rng_seq, len_theta, n_chains, lp):
     initial_positions = distrax.MultivariateNormalDiag(
         jnp.zeros(len_theta),

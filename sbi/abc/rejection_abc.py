@@ -1,10 +1,12 @@
 import chex
-import haiku as hk
 from jax import numpy as jnp
 from jax import random
 
+from sbi._sbi_base import SBI
 
-class RejectionABC:
+
+# pylint: disable=too-many-instance-attributes
+class RejectionABC(SBI):
     """
     Sisson et al. - Handbook of approximate Bayesian computation
 
@@ -12,22 +14,38 @@ class RejectionABC:
     """
 
     def __init__(self, model_fns, summary_fn, kernel_fn):
-        self.prior_sampler_fn, self.prior_log_density_fn = model_fns[0]
-        self.simulator_fn = model_fns[1]
-        self.summary_fn = summary_fn
+        super().__init__(model_fns)
         self.kernel_fn = kernel_fn
-        self._len_theta = len(self.prior_sampler_fn(seed=random.PRNGKey(0)))
-
-        self.observed: chex.Array
+        self.summary_fn = summary_fn
         self.summarized_observed: chex.Array
-        self._rng_seq: hk.PRNGSequence
 
     def fit(self, rng_key, observed):
-        self._rng_seq = hk.PRNGSequence(rng_key)
-        self.observed = jnp.atleast_2d(observed)
+        super().fit(rng_key, observed)
         self.summarized_observed = self.summary_fn(self.observed)
 
+    # pylint: disable=arguments-differ
     def sample_posterior(self, n_samples, n_simulations_per_theta, K, h):
+        """
+        Sample from the approximate posterior
+
+        Parameters
+        ----------
+        n_samples: int
+            number of samples to draw for each parameter
+        n_simulations_per_theta: int
+            number of simulations for each paramter sample
+        K: double
+            normalisation parameter
+        h: double
+            kernel scale
+
+        Returns
+        -------
+        chex.Array
+            an array of samples from the posterior distribution of dimension
+            (n_samples \times p)
+        """
+
         thetas = None
         n = n_samples
         K = jnp.maximum(

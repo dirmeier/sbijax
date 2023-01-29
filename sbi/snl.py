@@ -13,14 +13,21 @@ from jax import numpy as jnp
 from jax import random
 
 from sbi import generator
+from sbi._sbi_base import SBI
 from sbi.generator import named_dataset
 from sbi.mcmc.sample import mcmc_diagnostics, sample_with_nuts
 
 
-class SNL:
+# pylint: disable=too-many-arguments
+class SNL(SBI):
+    """
+    Sequential neural likelihood
+
+    From the Papamakarios paper
+    """
+
     def __init__(self, model_fns, density_estimator):
-        self.prior_sampler_fn, self.prior_log_density_fn = model_fns[0]
-        self.simulator_fn = model_fns[1]
+        super().__init__(model_fns)
         self.model = density_estimator
         self._len_theta = len(self.prior_sampler_fn(seed=random.PRNGKey(0)))
 
@@ -29,6 +36,7 @@ class SNL:
         self._train_iter: Iterable
         self._val_iter: Iterable
 
+    # pylint: disable=arguments-differ,too-many-locals
     def fit(
         self,
         rng_key,
@@ -43,8 +51,44 @@ class SNL:
         n_warmup=5000,
         n_chains=4,
     ):
-        self._rng_seq = hk.PRNGSequence(rng_key)
-        self.observed = jnp.atleast_2d(observed)
+        """
+        Fit a SNL model
+
+        Parameters
+        ----------
+        rng_seq: hk.PRNGSequence
+            a hk.PRNGSequence
+        observed: chex.Array
+            (n \times p)-dimensional array of observations, where `n` is the n
+            number of samples
+        optimizer: optax.Optimizer
+            an optax optimizer object
+        n_rounds: int
+            number of rounds to optimize
+        n_simulations_per_round: int
+            number of data simulations per round
+        max_n_iter:
+            maximal number of training iterations per round
+        batch_size: int
+            batch size used for training the model
+        percentage_data_as_validation_set:
+            percentage of the simulated data that is used for valitation and
+            early stopping
+         n_samples: int
+            number of samples to draw to approximate the posterior
+        n_warmup: int
+            number of samples to discard
+        n_chains: int
+            number of chains to sample
+
+        Returns
+        -------
+        Tuple[pytree, Tuple]
+            returns a tuple of parameters and a tuple of the training
+            information
+        """
+
+        super().fit(rng_key, observed)
 
         simulator_fn = partial(
             self._simulate_new_data_and_append,
@@ -60,7 +104,7 @@ class SNL:
             [],
             [],
         )
-        for i in range(n_rounds):
+        for _ in range(n_rounds):
             D, diagnostics = simulator_fn(params, D)
             self._train_iter, self._val_iter = generator.as_batch_iterators(
                 next(self._rng_seq),
@@ -77,7 +121,29 @@ class SNL:
         snl_info = namedtuple("snl_info", "params losses, diagnostics")
         return params, snl_info(all_params, all_losses, all_diagnostics)
 
+    # pylint: disable=arguments-differ
     def sample_posterior(self, params, n_chains, n_samples, n_warmup):
+        """
+        Sample from the approximate posterior
+
+        Parameters
+        ----------
+        params: pytree
+            a pytree of parameter for the model
+        n_chains: int
+        number of chains to sample
+        n_samples: int
+            number of samples per chain
+        n_warmup: int
+            number of samples to discard
+
+        Returns
+        -------
+        chex.Array
+            an array of samples from the posterior distribution of dimension
+            (n_samples \times p)
+        """
+
         return self._simulate_from_amortized_posterior(
             params, n_chains, n_samples, n_warmup
         )

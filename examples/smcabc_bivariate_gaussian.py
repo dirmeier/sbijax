@@ -46,7 +46,7 @@ def run():
 
     snl = SMCABC(fns, summary_fn, distance_fn)
     snl.fit(23, y_observed)
-    snl_samples = snl.sample_posterior(5, 1000, 10000, 0.9, 500)
+    snl_samples = snl.sample_posterior(10, 1000, 10000, 0.75, 500)
 
     fig, axes = plt.subplots(len_thetas)
     for i in range(len_thetas):
