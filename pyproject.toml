@@ -49,8 +49,9 @@ dependencies = [
 ]
 
 [tool.hatch.envs.test.scripts]
-lint = 'pylint sbi tests'
-test = 'pytest -v --doctest-modules --cov=./sbi --cov-report=xml sbi tests'
+lint = 'pylint sbi'
+test = 'pytest -v --doctest-modules --cov=./sbi --cov-report=xml sbi'
+
 
 [tool.black]
 line-length = 80
@@ -86,5 +87,5 @@ per-file-ignores = [
 
 [tool.pylint.messages_control]
 disable = """
-invalid-name,missing-module-docstring,R0801
+invalid-name,missing-module-docstring,R0801,E0633
 """

@@ -8,6 +8,7 @@ from jax import random
 named_dataset = namedtuple("named_dataset", "y x")
 
 
+# pylint: disable=missing-class-docstring,too-few-public-methods
 class DataLoader:
     def __init__(self, num_batches, idxs, get_batch):
         self.num_batches = num_batches
@@ -20,6 +21,7 @@ class DataLoader:
         return self.get_batch(idx, idxs)
 
 
+# pylint: disable=missing-function-docstring
 def as_batch_iterators(
     rng_key: chex.PRNGKey, data: named_dataset, batch_size, split, shuffle
 ):
@@ -42,6 +44,7 @@ def as_batch_iterators(
     return train_itr, val_itr
 
 
+# pylint: disable=missing-function-docstring
 def as_batch_iterator(
     rng_key: chex.PRNGKey, data: named_dataset, batch_size, shuffle
 ):

@@ -7,12 +7,37 @@ from jax import numpy as jnp
 from jax import random
 
 
+# pylint: disable=too-many-arguments
 def sample_with_nuts(rng_seq, lp, len_theta, n_chains, n_samples, n_warmup):
+    """
+    Sample from a distribution using the No-U-Turn sampler.
+
+    Parameters
+    ----------
+    rng_seq: hk.PRNGSequence
+        a hk.PRNGSequence
+    lp: Callable
+        the logdensity you wish to sample from
+    len_theta: int
+        the number of parameters to sample
+    n_chains: int
+        number of chains to sample
+    n_samples: int
+        number of samples per chain
+    n_warmup: int
+        number of samples to discard
+
+    Returns
+    -------
+    jnp.ndarrau
+        a JAX array of dimension n_samples \times n_chains \times len_theta
+    """
+
     def _inference_loop(rng_key, kernel, initial_state, n_samples):
         @jax.jit
         def _step(states, rng_key):
             keys = jax.random.split(rng_key, n_chains)
-            states, infos = jax.vmap(kernel)(keys, states)
+            states, _ = jax.vmap(kernel)(keys, states)
             return states, states
 
         sampling_keys = jax.random.split(rng_key, n_samples)
@@ -26,6 +51,7 @@ def sample_with_nuts(rng_seq, lp, len_theta, n_chains, n_samples, n_warmup):
     return thetas
 
 
+# pylint: disable=missing-function-docstring
 def _nuts_init(rng_seq, len_theta, n_chains, lp):
     initial_positions = distrax.MultivariateNormalDiag(
         jnp.zeros(len_theta),
@@ -46,6 +72,23 @@ def _nuts_init(rng_seq, len_theta, n_chains, lp):
 
 
 def mcmc_diagnostics(samples):
+    """
+    Computes MCMC diagnostics.
+
+    Compute effective sample sizes and R-hat for each parameter of a set of
+    MCMC chains.
+
+    Parameters
+    ----------
+    samples: jnp.ndarray
+        a JAX array of dimension n_samples \times n_chains \times n_dim
+
+    Returns
+    -------
+    tuple
+        a tuple of jnp.ndarrays with ess and rhat estimates.
+    """
+
     n_theta = samples.shape[-1]
     esses = [0] * n_theta
     rhats = [0] * n_theta

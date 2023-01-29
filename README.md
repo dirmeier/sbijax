@@ -40,7 +40,8 @@ pre-commit install
 3) Test your contribution/implementation by calling `hatch run test` on the (Unix) command line before submitting a PR
 
 ```bash
-hatch run test
+hatch run test:lint
+hatch run test:test
 ```
 
 4) Submit a pull request :slightly_smiling_face:
