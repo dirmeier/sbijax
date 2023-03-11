@@ -62,4 +62,3 @@ repos:
   rev: v0.18.0
   hooks:
     - id: gitlint
-    - id: gitlint-ci
