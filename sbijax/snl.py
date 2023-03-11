@@ -12,10 +12,10 @@ from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
 from jax import random
 
-from sbi import generator
-from sbi._sbi_base import SBI
-from sbi.generator import named_dataset
-from sbi.mcmc.sample import mcmc_diagnostics, sample_with_nuts
+from sbijax import generator
+from sbijax._sbi_base import SBI
+from sbijax.generator import named_dataset
+from sbijax.mcmc.sample import mcmc_diagnostics, sample_with_nuts
 
 
 # pylint: disable=too-many-arguments

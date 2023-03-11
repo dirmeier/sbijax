@@ -6,7 +6,7 @@ from blackjax.smc.ess import ess
 from jax import numpy as jnp
 from jax import scipy as jsp
 
-from sbi._sbi_base import SBI
+from sbijax._sbi_base import SBI
 
 
 class SMCABC(SBI):

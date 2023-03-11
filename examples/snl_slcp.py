@@ -24,8 +24,8 @@ from surjectors import (
 from surjectors.conditioners import mlp_conditioner
 from surjectors.util import make_alternating_binary_mask
 
-from sbi import SNL
-from sbi.mcmc import sample_with_nuts
+from sbijax import SNL
+from sbijax.mcmc import sample_with_nuts
 
 
 def prior_fns():

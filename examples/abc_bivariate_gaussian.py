@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from jax import numpy as jnp
 
-from sbi import RejectionABC
+from sbijax import RejectionABC
 
 
 def prior_model_fns(leng):
