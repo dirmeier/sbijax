@@ -1,5 +1,5 @@
 """
-Example using ABC
+SLCP example from [1] using SNL and masked coupling bijections or surjections
 """
 
 import distrax
@@ -12,7 +12,9 @@ from sbijax import RejectionABC
 
 
 def prior_model_fns(leng):
-    p = distrax.Uniform(jnp.full(leng, -1.0), jnp.full(leng, 1.0))
+    p = distrax.Independent(
+        distrax.Uniform(jnp.full(leng, -2.0), jnp.full(leng, 2.0)), 1
+    )
     return p.sample, p.log_prob
 
 
@@ -50,14 +52,14 @@ def kernel_fn(y_simulated, y_observed, scale=1.0):
 def run():
     print(kernel_fn(jnp.zeros((1, 2, 2)), jnp.zeros((1, 2, 2))))
     len_thetas = 2
-    y_observed = jnp.zeros(len_thetas)
+    y_observed = jnp.array([-1.0, 1.0])
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns(len_thetas)
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
     snl = RejectionABC(fns, summary_fn, kernel_fn)
     snl.fit(23, y_observed)
-    snl_samples = snl.sample_posterior(1000, 10000, 3.0)
+    snl_samples = snl.sample_posterior(1000, 10000, 3.0, 0.1)
 
     fig, axes = plt.subplots(len_thetas)
     for i in range(len_thetas):

@@ -20,7 +20,8 @@ from sbijax.mcmc import sample_with_nuts
 
 
 def prior_model_fns():
-    p = distrax.Uniform(jnp.full(2, -3.0), jnp.full(2, 3.0))
+    p = distrax.Independent(
+        distrax.Uniform(jnp.full(2, -3.0), jnp.full(2, 3.0)), 1)
     return p.sample, p.log_prob
 
 
@@ -59,7 +60,7 @@ def make_model(dim):
 
         base_distribution = distrax.Independent(
             distrax.Normal(jnp.zeros(dim), jnp.ones(dim)),
-            reinterpreted_batch_ndims=1,
+            1,
         )
         td = TransformedDistribution(base_distribution, chain)
         return td(method, **kwargs)
