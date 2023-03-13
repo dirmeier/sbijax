@@ -16,13 +16,15 @@ from jax import numpy as jnp
 from jax import random
 from jax import scipy as jsp
 from surjectors import (
-    AffineMaskedCouplingInferenceFunnel,
     Chain,
-    MaskedCoupling,
     TransformedDistribution,
 )
+from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
 from surjectors.conditioners import mlp_conditioner
-from surjectors.util import make_alternating_binary_mask
+from surjectors.nn.made import MADE
+from surjectors.surjectors.affine_masked_autoregressive_inference_funnel import \
+    AffineMaskedAutoregressiveInferenceFunnel
+from surjectors.util import make_alternating_binary_mask, unstack
 
 from sbijax import SNL
 from sbijax.mcmc import sample_with_nuts
@@ -78,10 +80,10 @@ def simulator_fn(seed, theta):
 
 def make_model(dim, use_surjectors):
     def _bijector_fn(params):
-        means, log_scales = jnp.split(params, 2, -1)
+        means, log_scales = unstack(params, -1)
         return distrax.ScalarAffine(means, jnp.exp(log_scales))
 
-    def _conditional_fn(n_dim):
+    def _decoder_fn(n_dim):
         decoder_net = mlp_conditioner([32, 32, n_dim * 2])
 
         def _fn(z):
@@ -95,20 +97,18 @@ def make_model(dim, use_surjectors):
         layers = []
         n_dimension = dim
         for i in range(5):
-            mask = make_alternating_binary_mask(n_dimension, i % 2 == 0)
             if i == 2 and use_surjectors:
-                n_latent = 6
-                layer = AffineMaskedCouplingInferenceFunnel(
+                n_latent = 7
+                layer = AffineMaskedAutoregressiveInferenceFunnel(
                     n_latent,
-                    _conditional_fn(n_dimension - n_latent),
-                    mlp_conditioner([32, 32, n_dimension * 2]),
+                    _decoder_fn(n_dimension - n_latent),
+                    MADE(n_latent, [32, 32, n_latent * 2], 2),
                 )
                 n_dimension = n_latent
             else:
-                layer = MaskedCoupling(
-                    mask=mask,
-                    bijector=_bijector_fn,
-                    conditioner=mlp_conditioner([32, 32, n_dimension * 2]),
+                layer = MaskedAutoregressive(
+                    bijector_fn=_bijector_fn,
+                    conditioner=MADE(n_dimension, [32, 32, n_dimension * 2], 2),
                 )
             layers.append(layer)
         chain = Chain(layers)
@@ -194,6 +194,6 @@ def run(use_surjectors):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use-surjectors", action="store_true", default=True)
+    parser.add_argument("--use-surjectors", action="store_true", default=False)
     args = parser.parse_args()
     run(args.use_surjectors)
