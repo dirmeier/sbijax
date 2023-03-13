@@ -6,7 +6,7 @@ from blackjax.smc.ess import ess
 from jax import numpy as jnp
 from jax import scipy as jsp
 
-from sbi._sbi_base import SBI
+from sbijax._sbi_base import SBI
 
 
 class SMCABC(SBI):
@@ -21,6 +21,7 @@ class SMCABC(SBI):
         self.summary_fn = summary_fn
         self.distance_fn = distance_fn
         self.summarized_observed: chex.Array
+        self.n_total_simulations = 0
 
     def fit(self, rng_key, observed):
         super().fit(rng_key, observed)
@@ -29,8 +30,8 @@ class SMCABC(SBI):
     # pylint: disable=too-many-arguments,arguments-differ
     def sample_posterior(
         self,
-        n_total_simulations,
-        n_samples,
+        n_rounds,
+        n_particles,
         n_simulations_per_theta,
         eps_step,
         ess_min,
@@ -41,10 +42,10 @@ class SMCABC(SBI):
 
         Parameters
         ----------
-        n_total_simulations: int
-            number of SMC steps
-        n_samples: int
-            number of samples to draw for each parameter
+        n_rounds: int
+            max number of SMC rounds
+        n_particles: int
+            number of n_particles to draw for each parameter
         n_simulations_per_theta: int
             number of simulations for each paramter sample
         eps_step:  float
@@ -62,12 +63,12 @@ class SMCABC(SBI):
         """
 
         particles, log_weights, epsilon = self._init_particles(
-            n_samples, n_simulations_per_theta
+            n_particles, n_simulations_per_theta
         )
-        for _ in range(n_total_simulations):
+        for _ in range(n_rounds):
             epsilon *= eps_step
             particles, log_weights = self._move(
-                n_samples,
+                n_particles,
                 particles,
                 log_weights,
                 n_simulations_per_theta,
@@ -85,9 +86,10 @@ class SMCABC(SBI):
         chol = jnp.linalg.cholesky(jnp.cov(particles.T) * cov_scale)
         return chol
 
-    def _init_particles(self, n_samples, n_simulations_per_theta):
+    def _init_particles(self, n_particles, n_simulations_per_theta):
+        self.n_total_simulations += n_particles
         particles = self.prior_sampler_fn(
-            seed=next(self._rng_seq), sample_shape=(n_samples * 10,)
+            seed=next(self._rng_seq), sample_shape=(n_particles * 10,)
         )
         ys = self.simulator_fn(
             seed=next(self._rng_seq),
@@ -100,14 +102,16 @@ class SMCABC(SBI):
         )
         sort_idx = jnp.argsort(distances)
 
-        particles = particles[sort_idx][:n_samples]
-        log_weights = -jnp.log(jnp.full(n_samples, n_samples))
+        particles = particles[sort_idx][:n_particles]
+        log_weights = -jnp.log(jnp.full(n_particles, n_particles))
         initial_epsilon = distances[-1]
 
         return particles, log_weights, initial_epsilon
 
     def _sample_candidates(self, particles, log_weights, n, cov_chol_factor):
         n_sim = jnp.minimum(n, 1000)
+        self.n_total_simulations += n_sim
+
         new_candidate_particles, _ = self._resample(
             particles, log_weights, n_sim
         )
@@ -137,7 +141,7 @@ class SMCABC(SBI):
     # pylint: disable=too-many-arguments
     def _move(
         self,
-        n_samples,
+        n_particles,
         particles,
         log_weights,
         n_simulations_per_theta,
@@ -146,7 +150,7 @@ class SMCABC(SBI):
     ):
         new_particles = None
         cov_chol_factor = self._chol_factor(particles, cov_scale)
-        n = n_samples
+        n = n_particles
         while n > 0:
             new_candidate_particles = self._sample_candidates(
                 particles, log_weights, n, cov_chol_factor
@@ -166,7 +170,7 @@ class SMCABC(SBI):
             n -= len(idxs)
 
         new_particles = new_particles[
-            :n_samples,
+            :n_particles,
         ]
         new_log_weights = self._new_log_weights(
             new_particles, particles, log_weights, cov_chol_factor

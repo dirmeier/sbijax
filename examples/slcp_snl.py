@@ -24,12 +24,15 @@ from surjectors import (
 from surjectors.conditioners import mlp_conditioner
 from surjectors.util import make_alternating_binary_mask
 
-from sbi import SNL
-from sbi.mcmc import sample_with_nuts
+from sbijax import SNL
+from sbijax.mcmc import sample_with_nuts
 
 
-def prior_fns():
-    p = distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0))
+def prior_model_fns():
+    p = distrax.Independent(
+        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)),
+        1
+    )
     return p.sample, p.log_prob
 
 
@@ -43,26 +46,34 @@ def likelihood_fn(theta, y):
     return p.log_prob(y)
 
 
-def simulator(seed, theta):
+def simulator_fn(seed, theta):
+    orig_shape = theta.shape
+    if theta.ndim == 2:
+        theta = theta[:, None, :]
+    us_key, noise_key = random.split(seed)
+
     def _unpack_params(ps):
-        m0 = ps[:, [0]]
-        m1 = ps[:, [1]]
-        s0 = ps[:, [2]] ** 2
-        s1 = ps[:, [3]] ** 2
-        r = np.tanh(ps[:, [4]])
+        m0 = ps[..., [0]]
+        m1 = ps[..., [1]]
+        s0 = ps[..., [2]] ** 2
+        s1 = ps[..., [3]] ** 2
+        r = np.tanh(ps[..., [4]])
         return m0, m1, s0, s1, r
 
     m0, m1, s0, s1, r = _unpack_params(theta)
     us = distrax.Normal(0.0, 1.0).sample(
-        seed=seed, sample_shape=(theta.shape[0], 4, 2)
+        seed=us_key, sample_shape=(theta.shape[0], theta.shape[1], 4, 2)
     )
     xs = jnp.empty_like(us)
-    xs = xs.at[:, :, 0].set(s0 * us[:, :, 0] + m0)
-    xs = xs.at[:, :, 1].set(
-        s1 * (r * us[:, :, 0] + np.sqrt(1.0 - r**2) * us[:, :, 1]) + m1
+    xs = xs.at[:, :, :, 0].set(s0 * us[:, :, :, 0] + m0)
+    y = xs.at[:, :, :, 1].set(
+        s1 * (r * us[:, :, :, 0] + np.sqrt(1.0 - r ** 2) * us[:, :, :, 1]) + m1
     )
-
-    return xs.reshape(theta.shape[0], 8)
+    if len(orig_shape) == 2:
+        y = y.reshape((*theta.shape[:1], 8))
+    else:
+        y = y.reshape((*theta.shape[:2], 8))
+    return y
 
 
 def make_model(dim, use_surjectors):
@@ -76,7 +87,7 @@ def make_model(dim, use_surjectors):
         def _fn(z):
             params = decoder_net(z)
             mu, log_scale = jnp.split(params, 2, -1)
-            return distrax.Independent(distrax.Normal(mu, jnp.exp(log_scale)))
+            return distrax.Independent(distrax.Normal(mu, jnp.exp(log_scale)), 1)
 
         return _fn
 
@@ -132,13 +143,14 @@ def run(use_surjectors):
             ]
         ]
     )
-    prior_sampler, prior_fn = prior_fns()
-    fns = (prior_sampler, prior_fn), simulator
-    snl = SNL(fns, make_model(y_observed.shape[1], use_surjectors))
+    prior_sampler, prior_fn = prior_model_fns()
+    fns = (prior_sampler, prior_fn), simulator_fn
+    model = make_model(y_observed.shape[1], use_surjectors)
+    snl = SNL(fns, model)
     optimizer = optax.adam(1e-3)
-    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer)
+    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer, n_rounds=10)
 
-    snl_samples, _ = snl.sample_posterior(params, 20, 50000, 10000)
+    snl_samples, _ = snl.sample_posterior(params, 10, 50000, 10000)
     snl_samples = snl_samples.reshape(-1, len_theta)
 
     def log_density_fn(theta, y):
@@ -153,7 +165,7 @@ def run(use_surjectors):
 
     rng_seq = hk.PRNGSequence(12)
     nuts_samples = sample_with_nuts(
-        rng_seq, log_density, len_theta, 20, 50000, 10000
+        rng_seq, log_density, len_theta, 10, 50000, 10000
     )
     nuts_samples = nuts_samples.reshape(-1, len_theta)
 

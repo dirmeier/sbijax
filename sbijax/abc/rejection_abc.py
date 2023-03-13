@@ -2,7 +2,7 @@ import chex
 from jax import numpy as jnp
 from jax import random
 
-from sbi._sbi_base import SBI
+from sbijax._sbi_base import SBI
 
 
 # pylint: disable=too-many-instance-attributes
