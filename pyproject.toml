@@ -8,7 +8,7 @@ description = " Simulation-based inference in JAX"
 authors = [{name = "Simon Dirmeier", email = "sfyrbnd@pm.me"}]
 readme = "README.md"
 license = "Apache-2.0"
-homepage = "https://github.com/dirmeier/sbi"
+homepage = "https://github.com/dirmeier/sbijax"
 keywords = ["abc", "simulation-based inference", "approximate Bayesian computation", "normalizing flows", "smc-abc"]
 classifiers = [
     "Development Status :: 1 - Planning",
@@ -29,7 +29,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-homepage = "https://github.com/dirmeier/sbi"
+homepage = "https://github.com/dirmeier/sbijax"
 
 [tool.hatch.version]
 path = "sbijax/__init__.py"
