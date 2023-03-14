@@ -20,11 +20,12 @@ from surjectors import (
     TransformedDistribution,
 )
 from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
+from surjectors.bijectors.permutation import Permutation
 from surjectors.conditioners import mlp_conditioner
 from surjectors.nn.made import MADE
 from surjectors.surjectors.affine_masked_autoregressive_inference_funnel import \
     AffineMaskedAutoregressiveInferenceFunnel
-from surjectors.util import make_alternating_binary_mask, unstack
+from surjectors.util import unstack
 
 from sbijax import SNL
 from sbijax.mcmc import sample_with_nuts
@@ -96,6 +97,7 @@ def make_model(dim, use_surjectors):
     def _flow(method, **kwargs):
         layers = []
         n_dimension = dim
+        order = jnp.arange(n_dimension)
         for i in range(5):
             if i == 2 and use_surjectors:
                 n_latent = 7
@@ -105,12 +107,16 @@ def make_model(dim, use_surjectors):
                     MADE(n_latent, [32, 32, n_latent * 2], 2),
                 )
                 n_dimension = n_latent
+                order = order[::-1]
+                order = order[:n_dimension] - jnp.min(order[:n_dimension])
             else:
                 layer = MaskedAutoregressive(
                     bijector_fn=_bijector_fn,
                     conditioner=MADE(n_dimension, [32, 32, n_dimension * 2], 2),
                 )
+                order = order[::-1]
             layers.append(layer)
+            layers.append(Permutation(order, 1))
         chain = Chain(layers)
 
         base_distribution = distrax.Independent(
@@ -148,7 +154,7 @@ def run(use_surjectors):
     model = make_model(y_observed.shape[1], use_surjectors)
     snl = SNL(fns, model)
     optimizer = optax.adam(1e-3)
-    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer, n_rounds=10)
+    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer, n_rounds=20)
 
     snl_samples, _ = snl.sample_posterior(params, 10, 50000, 10000)
     snl_samples = snl_samples.reshape(-1, len_theta)
@@ -194,6 +200,6 @@ def run(use_surjectors):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use-surjectors", action="store_true", default=False)
+    parser.add_argument("--use-surjectors", action="store_true", default=True)
     args = parser.parse_args()
     run(args.use_surjectors)

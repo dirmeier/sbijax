@@ -164,7 +164,7 @@ class SNL(SBI):
             return loss, new_params, new_state
 
         losses = np.zeros([max_n_iter, 2])
-        early_stop = EarlyStopping(1e-3, 20)
+        early_stop = EarlyStopping(1e-3, 10)
         logging.info("training model")
         for i in range(max_n_iter):
             train_loss = 0.0

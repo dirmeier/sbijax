@@ -150,7 +150,7 @@ def run(use_surjectors):
     optimizer = optax.adam(1e-3)
     params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer, n_rounds=10)
 
-    snl_samples, _ = snl.sample_posterior(params, 10, 50000, 10000)
+    snl_samples, _ = snl.sample_posterior(params, 20, 50000, 10000)
     snl_samples = snl_samples.reshape(-1, len_theta)
 
     def log_density_fn(theta, y):
@@ -165,7 +165,7 @@ def run(use_surjectors):
 
     rng_seq = hk.PRNGSequence(12)
     nuts_samples = sample_with_nuts(
-        rng_seq, log_density, len_theta, 10, 50000, 10000
+        rng_seq, log_density, len_theta, 20, 50000, 10000
     )
     nuts_samples = nuts_samples.reshape(-1, len_theta)
 
