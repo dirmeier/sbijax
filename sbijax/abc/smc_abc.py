@@ -87,15 +87,23 @@ class SMCABC(SBI):
         return chol
 
     def _init_particles(self, n_particles, n_simulations_per_theta):
-        self.n_total_simulations += n_particles
+        self.n_total_simulations += n_particles * 10
         particles = self.prior_sampler_fn(
             seed=next(self._rng_seq), sample_shape=(n_particles * 10,)
         )
+
+        thetas = jnp.tile(particles, [n_simulations_per_theta, 1, 1])
+        chex.assert_axis_dimension(thetas, 0, n_simulations_per_theta)
+        chex.assert_axis_dimension(thetas, 1, n_particles * 10)
+
         ys = self.simulator_fn(
             seed=next(self._rng_seq),
-            theta=jnp.tile(particles, [n_simulations_per_theta, 1, 1]),
+            theta=thetas,
         )
         ys = jnp.swapaxes(ys, 1, 0)
+        chex.assert_axis_dimension(ys, 0, n_particles * 10)
+        chex.assert_axis_dimension(ys, 1, n_simulations_per_theta)
+
         summary_statistics = self.summary_fn(ys)
         distances = self.distance_fn(
             summary_statistics, self.summarized_observed

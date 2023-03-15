@@ -104,7 +104,7 @@ def run():
 
     smc = SMCABC(fns, summary_fn, distance_fn)
     smc.fit(23, y_observed)
-    smc_samples = smc.sample_posterior(5, 1000, 1000, 0.9, 500)
+    smc_samples = smc.sample_posterior(5, 1000, 10, 0.9, 500)
 
     def log_density_fn(theta, y):
         prior_lp = prior_logdensity_fn(theta)
