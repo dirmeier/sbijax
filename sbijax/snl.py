@@ -50,6 +50,7 @@ class SNL(SBI):
         n_samples=10000,
         n_warmup=5000,
         n_chains=4,
+        n_early_stopping_patience=10,
     ):
         """
         Fit a SNL model
@@ -80,6 +81,9 @@ class SNL(SBI):
             number of samples to discard
         n_chains: int
             number of chains to sample
+        n_early_stopping_patience: int
+            number of iterations of no improvement of training the flow
+            before stopping optimisation
 
         Returns
         -------
@@ -113,7 +117,11 @@ class SNL(SBI):
                 1.0 - percentage_data_as_validation_set,
                 True,
             )
-            params, losses = self._fit_model_single_round(optimizer, max_n_iter)
+            params, losses = self._fit_model_single_round(
+                optimizer=optimizer,
+                max_n_iter=max_n_iter,
+                n_early_stopping_patience=n_early_stopping_patience,
+            )
             all_params.append(params)
             all_losses.append(losses)
             all_diagnostics.append(diagnostics)
@@ -148,7 +156,9 @@ class SNL(SBI):
             params, n_chains, n_samples, n_warmup
         )
 
-    def _fit_model_single_round(self, optimizer, max_n_iter):
+    def _fit_model_single_round(
+        self, optimizer, max_n_iter, n_early_stopping_patience
+    ):
         params = self._init_params(next(self._rng_seq), self._train_iter(0))
         state = optimizer.init(params)
 
@@ -164,7 +174,7 @@ class SNL(SBI):
             return loss, new_params, new_state
 
         losses = np.zeros([max_n_iter, 2])
-        early_stop = EarlyStopping(1e-3, 10)
+        early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
         logging.info("training model")
         for i in range(max_n_iter):
             train_loss = 0.0
