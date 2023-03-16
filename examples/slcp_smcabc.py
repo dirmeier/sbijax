@@ -2,7 +2,6 @@
 SLCP example from [1] using SMCABC
 """
 
-import argparse
 from functools import partial
 
 import distrax
@@ -22,8 +21,7 @@ from sbijax.mcmc import sample_with_nuts
 
 def prior_model_fns():
     p = distrax.Independent(
-        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)),
-        1
+        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
     )
     return p.sample, p.log_prob
 
@@ -59,7 +57,7 @@ def simulator_fn(seed, theta):
     xs = jnp.empty_like(us)
     xs = xs.at[:, :, :, 0].set(s0 * us[:, :, :, 0] + m0)
     y = xs.at[:, :, :, 1].set(
-        s1 * (r * us[:, :, :, 0] + np.sqrt(1.0 - r ** 2) * us[:, :, :, 1]) + m1
+        s1 * (r * us[:, :, :, 0] + np.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
     )
     if len(orig_shape) == 2:
         y = y.reshape((*theta.shape[:1], 8))

@@ -30,8 +30,7 @@ from sbijax.mcmc import sample_with_nuts
 
 def prior_model_fns():
     p = distrax.Independent(
-        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)),
-        1
+        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
     )
     return p.sample, p.log_prob
 
@@ -67,7 +66,7 @@ def simulator_fn(seed, theta):
     xs = jnp.empty_like(us)
     xs = xs.at[:, :, :, 0].set(s0 * us[:, :, :, 0] + m0)
     y = xs.at[:, :, :, 1].set(
-        s1 * (r * us[:, :, :, 0] + np.sqrt(1.0 - r ** 2) * us[:, :, :, 1]) + m1
+        s1 * (r * us[:, :, :, 0] + np.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
     )
     if len(orig_shape) == 2:
         y = y.reshape((*theta.shape[:1], 8))
@@ -87,7 +86,9 @@ def make_model(dim, use_surjectors):
         def _fn(z):
             params = decoder_net(z)
             mu, log_scale = jnp.split(params, 2, -1)
-            return distrax.Independent(distrax.Normal(mu, jnp.exp(log_scale)), 1)
+            return distrax.Independent(
+                distrax.Normal(mu, jnp.exp(log_scale)), 1
+            )
 
         return _fn
 
@@ -148,7 +149,9 @@ def run(use_surjectors):
     model = make_model(y_observed.shape[1], use_surjectors)
     snl = SNL(fns, model)
     optimizer = optax.adam(1e-3)
-    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer, n_rounds=10)
+    params, info = snl.fit(
+        random.PRNGKey(23), y_observed, optimizer, n_rounds=10
+    )
 
     snl_samples, _ = snl.sample_posterior(params, 20, 50000, 10000)
     snl_samples = snl_samples.reshape(-1, len_theta)

@@ -21,7 +21,8 @@ from sbijax.mcmc import sample_with_nuts
 
 def prior_model_fns():
     p = distrax.Independent(
-        distrax.Uniform(jnp.full(2, -3.0), jnp.full(2, 3.0)), 1)
+        distrax.Uniform(jnp.full(2, -3.0), jnp.full(2, 3.0)), 1
+    )
     return p.sample, p.log_prob
 
 
