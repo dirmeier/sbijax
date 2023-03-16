@@ -44,13 +44,13 @@ def run():
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns(len_thetas)
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    snl = SMCABC(fns, summary_fn, distance_fn)
-    snl.fit(23, y_observed)
-    snl_samples = snl.sample_posterior(10, 1000, 1000, 0.75, 500)
+    smc = SMCABC(fns, summary_fn, distance_fn)
+    smc.fit(23, y_observed)
+    smc_samples, _ = smc.sample_posterior(10, 1000, 1000, 0.75, 500)
 
     fig, axes = plt.subplots(len_thetas)
     for i in range(len_thetas):
-        sns.histplot(snl_samples[:, i], color="darkblue", ax=axes[i])
+        sns.histplot(smc_samples[:, i], color="darkblue", ax=axes[i])
         axes[i].set_title(rf"Approximated posterior $\theta_{i}$")
     sns.despine()
     plt.tight_layout()

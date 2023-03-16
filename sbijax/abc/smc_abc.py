@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import chex
 import distrax
 import jax
@@ -62,9 +64,11 @@ class SMCABC(SBI):
             (n_samples \times p)
         """
 
+        all_particles, all_n_simulations = [], []
         particles, log_weights, epsilon = self._init_particles(
             n_particles, n_simulations_per_theta
         )
+
         for _ in range(n_rounds):
             epsilon *= eps_step
             particles, log_weights = self._move(
@@ -80,7 +84,11 @@ class SMCABC(SBI):
                 particles, log_weights = self._resample(
                     particles, log_weights, particles.shape[0]
                 )
-        return particles
+            all_particles.append(particles.copy())
+            all_n_simulations.append(self.n_total_simulations)
+
+        smc_info = namedtuple("smc_info", "particles n_simulations")
+        return particles, smc_info(all_particles, all_n_simulations)
 
     def _chol_factor(self, particles, cov_scale):
         chol = jnp.linalg.cholesky(jnp.cov(particles.T) * cov_scale)
@@ -117,7 +125,7 @@ class SMCABC(SBI):
         return particles, log_weights, initial_epsilon
 
     def _sample_candidates(self, particles, log_weights, n, cov_chol_factor):
-        n_sim = jnp.minimum(n, 1000)
+        n_sim = jnp.maximum(jnp.minimum(n, 1000), 100)
         self.n_total_simulations += n_sim
 
         new_candidate_particles, _ = self._resample(

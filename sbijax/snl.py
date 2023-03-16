@@ -122,11 +122,11 @@ class SNL(SBI):
                 max_n_iter=max_n_iter,
                 n_early_stopping_patience=n_early_stopping_patience,
             )
-            all_params.append(params)
+            all_params.append(params.copy())
             all_losses.append(losses)
             all_diagnostics.append(diagnostics)
 
-        snl_info = namedtuple("snl_info", "params losses, diagnostics")
+        snl_info = namedtuple("snl_info", "params losses diagnostics")
         return params, snl_info(all_params, all_losses, all_diagnostics)
 
     # pylint: disable=arguments-differ
