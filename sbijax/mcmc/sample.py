@@ -1,7 +1,6 @@
 from collections import namedtuple
 
 import blackjax as bj
-from jax import numpy as jnp
 
 
 def mcmc_diagnostics(samples):
