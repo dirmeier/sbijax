@@ -274,6 +274,7 @@ class SNL(SBI):
             def lp__(theta):
                 return jax.vmap(_joint_logdensity_fn)(theta)
 
+            kwargs.pop("sampler", None)
             samples = sample_with_slice(
                 self._rng_seq,
                 lp__,

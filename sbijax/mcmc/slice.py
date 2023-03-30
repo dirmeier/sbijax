@@ -1,5 +1,3 @@
-from typing import Callable
-
 import distrax
 import tensorflow_probability.substrates.jax as tfp
 
@@ -15,7 +13,6 @@ def sample_with_slice(
     n_thin=2,
     n_doubling=5,
     step_size=1,
-    **kwargs,
 ):
     """
     Sample from a distribution using the No-U-Turn sampler.
@@ -39,7 +36,7 @@ def sample_with_slice(
         a JAX array of dimension n_samples \times n_chains \times len_theta
     """
 
-    initial_states = _slice_init(rng_seq, n_chains, lp, prior)
+    initial_states = _slice_init(rng_seq, n_chains, prior)
     samples = tfp.mcmc.sample_chain(
         num_results=n_samples,
         current_state=initial_states,
@@ -55,9 +52,7 @@ def sample_with_slice(
 
 
 # pylint: disable=missing-function-docstring
-def _slice_init(
-    rng_seq, n_chains, logdensity_fn: Callable, prior: distrax.Distribution
-):
+def _slice_init(rng_seq, n_chains, prior: distrax.Distribution):
     initial_positions = prior(seed=next(rng_seq), sample_shape=(n_chains,))
 
     return initial_positions
