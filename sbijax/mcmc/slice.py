@@ -1,13 +1,22 @@
 from typing import Callable
 
 import distrax
-import jax
-
-from sbijax.mcmc import _slice_sampler
+import tensorflow_probability.substrates.jax as tfp
 
 
 # pylint: disable=too-many-arguments
-def sample_with_slice(rng_seq, lp, n_chains, n_samples, n_warmup, prior):
+def sample_with_slice(
+    rng_seq,
+    lp,
+    n_chains,
+    n_samples,
+    n_warmup,
+    prior,
+    n_thin=2,
+    n_doubling=5,
+    step_size=1,
+    **kwargs,
+):
     """
     Sample from a distribution using the No-U-Turn sampler.
 
@@ -30,34 +39,25 @@ def sample_with_slice(rng_seq, lp, n_chains, n_samples, n_warmup, prior):
         a JAX array of dimension n_samples \times n_chains \times len_theta
     """
 
-    def _inference_loop(rng_key, kernel, initial_state, n_samples):
-        @jax.jit
-        def _step(states, rng_key):
-            keys = jax.random.split(rng_key, n_chains)
-            states, _ = jax.vmap(kernel)(keys, states)
-            return states, states
-
-        sampling_keys = jax.random.split(rng_key, n_samples)
-        _, states = jax.lax.scan(_step, initial_state, sampling_keys)
-        return states
-
-    initial_states, kernel = _slice_init(rng_seq, n_chains, lp, prior)
-    states = _inference_loop(next(rng_seq), kernel, initial_states, n_samples)
-    _ = states.position["theta"].block_until_ready()
-    thetas = states.position["theta"][n_warmup:, :, :]
-    return thetas
+    initial_states = _slice_init(rng_seq, n_chains, lp, prior)
+    samples = tfp.mcmc.sample_chain(
+        num_results=n_samples,
+        current_state=initial_states,
+        num_steps_between_results=n_thin,
+        kernel=tfp.mcmc.SliceSampler(
+            lp, step_size=step_size, max_doublings=n_doubling
+        ),
+        num_burnin_steps=n_warmup,
+        trace_fn=None,
+        seed=next(rng_seq),
+    )
+    return samples
 
 
 # pylint: disable=missing-function-docstring
 def _slice_init(
     rng_seq, n_chains, logdensity_fn: Callable, prior: distrax.Distribution
 ):
-    slice = _slice_sampler.slice(logdensity_fn, prior)
-    initial_positions = prior.sample(
-        seed=next(rng_seq), sample_shape=(n_chains,)
-    )
-    initial_positions = {"theta": initial_positions}
-    initial_states = jax.vmap(slice.init, in_axes=(0))(initial_positions)
-    kernel = slice.step
+    initial_positions = prior(seed=next(rng_seq), sample_shape=(n_chains,))
 
-    return initial_states, kernel
+    return initial_positions

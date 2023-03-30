@@ -1,5 +1,3 @@
-from collections import namedtuple
-
 import blackjax as bj
 import distrax
 import jax

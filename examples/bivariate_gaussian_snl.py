@@ -83,7 +83,13 @@ def run():
 
     snl = SNL(fns, make_model(2))
     optimizer = optax.adam(1e-3)
-    params, info = snl.fit(random.PRNGKey(23), y_observed, optimizer)
+    params, info = snl.fit(
+        random.PRNGKey(23),
+        y_observed,
+        n_rounds=1,
+        optimizer=optimizer,
+        sampler="slice",
+    )
 
     nuts_samples = sample_with_nuts(rng_seq, log_density, 2, 4, 2000, 1000)
     snl_samples, _ = snl.sample_posterior(params, 4, 10000, 7500)
