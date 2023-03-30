@@ -15,10 +15,13 @@ from jax import random
 from sbijax import generator
 from sbijax._sbi_base import SBI
 from sbijax.generator import named_dataset
-from sbijax.mcmc.sample import mcmc_diagnostics, sample_with_nuts
-
+from sbijax.mcmc import sample_with_nuts
+from sbijax.mcmc.sample import mcmc_diagnostics
 
 # pylint: disable=too-many-arguments
+from sbijax.mcmc.slice import sample_with_slice
+
+
 class SNL(SBI):
     """
     Sequential neural likelihood
@@ -51,6 +54,7 @@ class SNL(SBI):
         n_warmup=5000,
         n_chains=4,
         n_early_stopping_patience=10,
+        **kwargs,
     ):
         """
         Fit a SNL model
@@ -84,6 +88,11 @@ class SNL(SBI):
         n_early_stopping_patience: int
             number of iterations of no improvement of training the flow
             before stopping optimisation
+        kwargs: keyword arguments with sampler specific parameters. For slice
+            sampling the following arguments are possible:
+            - n_thin: number of thinning steps
+            - n_doubling: number of doubling steps of the interval
+            - step_size: step size of the initial interval
 
         Returns
         -------
@@ -109,7 +118,7 @@ class SNL(SBI):
             [],
         )
         for _ in range(n_rounds):
-            D, diagnostics = simulator_fn(params, D)
+            D, diagnostics = simulator_fn(params, D, **kwargs)
             self._train_iter, self._val_iter = generator.as_batch_iterators(
                 next(self._rng_seq),
                 D,
@@ -211,7 +220,14 @@ class SNL(SBI):
         return params
 
     def _simulate_new_data_and_append(
-        self, params, D, n_simulations_per_round, n_chains, n_samples, n_warmup
+        self,
+        params,
+        D,
+        n_simulations_per_round,
+        n_chains,
+        n_samples,
+        n_warmup,
+        **kwargs,
     ):
         if D is None:
             diagnostics = None
@@ -221,7 +237,7 @@ class SNL(SBI):
             )
         else:
             new_thetas, diagnostics = self._simulate_from_amortized_posterior(
-                params, n_chains, n_samples, n_warmup
+                params, n_chains, n_samples, n_warmup, **kwargs
             )
             new_thetas = new_thetas.reshape(-1, self._len_theta)
             new_thetas = random.permutation(next(self._rng_seq), new_thetas)
@@ -238,7 +254,7 @@ class SNL(SBI):
         return d_new, diagnostics
 
     def _simulate_from_amortized_posterior(
-        self, params, n_chains, n_samples, n_warmup
+        self, params, n_chains, n_samples, n_warmup, **kwargs
     ):
         part = partial(
             self.model.apply, params=params, method="log_prob", y=self.observed
@@ -253,11 +269,33 @@ class SNL(SBI):
             lp = _log_likelihood_fn(theta)
             return jnp.sum(lp) + jnp.sum(lp_prior)
 
-        def lp__(x):
-            return _joint_logdensity_fn(**x)
+        if "sampler" in kwargs and kwargs["sampler"] == "slice":
 
-        samples = sample_with_nuts(
-            self._rng_seq, lp__, self._len_theta, n_chains, n_samples, n_warmup
-        )
+            def lp__(theta):
+                return jax.vmap(_joint_logdensity_fn)(theta)
+
+            kwargs.pop("sampler", None)
+            samples = sample_with_slice(
+                self._rng_seq,
+                lp__,
+                n_chains,
+                n_samples,
+                n_warmup,
+                self.prior_sampler_fn,
+                **kwargs,
+            )
+        else:
+
+            def lp__(theta):
+                return _joint_logdensity_fn(**theta)
+
+            samples = sample_with_nuts(
+                self._rng_seq,
+                lp__,
+                self._len_theta,
+                n_chains,
+                n_samples,
+                n_warmup,
+            )
         diagnostics = mcmc_diagnostics(samples)
         return samples, diagnostics

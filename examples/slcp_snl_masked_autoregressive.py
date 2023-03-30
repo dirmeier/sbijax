@@ -15,6 +15,7 @@ import seaborn as sns
 from jax import numpy as jnp
 from jax import random
 from jax import scipy as jsp
+from jax import vmap
 from surjectors import Chain, TransformedDistribution
 from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
 from surjectors.bijectors.permutation import Permutation
@@ -26,7 +27,7 @@ from surjectors.surjectors.affine_masked_autoregressive_inference_funnel import 
 from surjectors.util import unstack
 
 from sbijax import SNL
-from sbijax.mcmc import sample_with_nuts
+from sbijax.mcmc.slice import sample_with_slice
 
 
 def prior_model_fns():
@@ -154,10 +155,10 @@ def run(use_surjectors):
     snl = SNL(fns, model)
     optimizer = optax.adam(1e-3)
     params, info = snl.fit(
-        random.PRNGKey(23), y_observed, optimizer, n_rounds=20
+        random.PRNGKey(23), y_observed, optimizer, n_rounds=3, sampler="slice"
     )
 
-    snl_samples, _ = snl.sample_posterior(params, 10, 50000, 10000)
+    snl_samples, _ = snl.sample_posterior(params, 4, 20000, 10000)
     snl_samples = snl_samples.reshape(-1, len_theta)
 
     def log_density_fn(theta, y):
@@ -168,15 +169,15 @@ def run(use_surjectors):
         return lp
 
     log_density_partial = partial(log_density_fn, y=y_observed)
-    log_density = lambda x: log_density_partial(**x)
+    log_density = lambda x: vmap(log_density_partial)(x)
 
     rng_seq = hk.PRNGSequence(12)
-    nuts_samples = sample_with_nuts(
-        rng_seq, log_density, len_theta, 10, 50000, 10000
+    slice_samples = sample_with_slice(
+        rng_seq, log_density, 4, 20000, 10000, prior_sampler
     )
-    nuts_samples = nuts_samples.reshape(-1, len_theta)
+    slice_samples = slice_samples.reshape(-1, len_theta)
 
-    g = sns.PairGrid(pd.DataFrame(nuts_samples))
+    g = sns.PairGrid(pd.DataFrame(slice_samples))
     g.map_upper(sns.scatterplot, color="black", marker=".", edgecolor=None, s=2)
     g.map_diag(plt.hist, color="black")
     for ax in g.axes.flatten():
@@ -188,7 +189,7 @@ def run(use_surjectors):
 
     fig, axes = plt.subplots(len_theta, 2)
     for i in range(len_theta):
-        sns.histplot(nuts_samples[:, i], color="darkgrey", ax=axes[i, 0])
+        sns.histplot(slice_samples[:, i], color="darkgrey", ax=axes[i, 0])
         sns.histplot(snl_samples[:, i], color="darkblue", ax=axes[i, 1])
         axes[i, 0].set_title(rf"Sampled posterior $\theta_{i}$")
         axes[i, 1].set_title(rf"Approximated posterior $\theta_{i}$")
