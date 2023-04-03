@@ -92,7 +92,9 @@ def run():
     )
 
     nuts_samples = sample_with_nuts(rng_seq, log_density, 2, 4, 2000, 1000)
-    snl_samples, _ = snl.sample_posterior(params, 4, 10000, 7500)
+    snl_samples, _ = snl.sample_posterior(
+        params, 4, 10000, 7500, sampler="slice"
+    )
 
     snl_samples = snl_samples.reshape(-1, 2)
     nuts_samples = nuts_samples.reshape(-1, 2)

@@ -158,7 +158,9 @@ def run(use_surjectors):
         random.PRNGKey(23), y_observed, optimizer, n_rounds=3, sampler="slice"
     )
 
-    snl_samples, _ = snl.sample_posterior(params, 4, 20000, 10000)
+    snl_samples, _ = snl.sample_posterior(
+        params, 4, 20000, 10000, sampler="slice"
+    )
     snl_samples = snl_samples.reshape(-1, len_theta)
 
     def log_density_fn(theta, y):

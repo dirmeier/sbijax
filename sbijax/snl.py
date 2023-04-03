@@ -90,6 +90,7 @@ class SNL(SBI):
             before stopping optimisation
         kwargs: keyword arguments with sampler specific parameters. For slice
             sampling the following arguments are possible:
+            - sampler: either 'nuts', 'slice' or None (defaults to nuts)
             - n_thin: number of thinning steps
             - n_doubling: number of doubling steps of the interval
             - step_size: step size of the initial interval
@@ -139,7 +140,7 @@ class SNL(SBI):
         return params, snl_info(all_params, all_losses, all_diagnostics)
 
     # pylint: disable=arguments-differ
-    def sample_posterior(self, params, n_chains, n_samples, n_warmup):
+    def sample_posterior(self, params, n_chains, n_samples, n_warmup, **kwargs):
         """
         Sample from the approximate posterior
 
@@ -153,6 +154,12 @@ class SNL(SBI):
             number of samples per chain
         n_warmup: int
             number of samples to discard
+        kwargs: keyword arguments with sampler specific parameters. For slice
+            sampling the following arguments are possible:
+            - sampler: either 'nuts', 'slice' or None (defaults to nuts)
+            - n_thin: number of thinning steps
+            - n_doubling: number of doubling steps of the interval
+            - step_size: step size of the initial interval
 
         Returns
         -------
@@ -162,7 +169,7 @@ class SNL(SBI):
         """
 
         return self._simulate_from_amortized_posterior(
-            params, n_chains, n_samples, n_warmup
+            params, n_chains, n_samples, n_warmup, **kwargs
         )
 
     def _fit_model_single_round(
