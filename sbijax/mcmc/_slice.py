@@ -28,10 +28,10 @@ class slice_sampler:
     @staticmethod
     def _kernel():
         def one_step(
-                rng_key: PRNGKey,
-                state: SliceState,
-                logdensity_fn: Callable,
-                n_doublings=5,
+            rng_key: PRNGKey,
+            state: SliceState,
+            logdensity_fn: Callable,
+            n_doublings=5,
         ):
             order_key, rng_key = random.split(rng_key)
             n = state.n[0]
@@ -42,12 +42,7 @@ class slice_sampler:
                 seed, idx = rn
                 positions, widths = carry
                 xi, wi = _sample_conditionally(
-                    seed,
-                    idx,
-                    positions,
-                    logdensity_fn,
-                    widths,
-                    n_doublings
+                    seed, idx, positions, logdensity_fn, widths, n_doublings
                 )
                 positions = positions.at[idx].set(xi)
                 nw = widths[idx] + (wi - widths[idx]) / (n + 1)
@@ -57,7 +52,9 @@ class slice_sampler:
             if positions.ndim == 0:
                 positions = jnp.atleast_1d(positions)
                 widths = jnp.atleast_1d(widths)
-                (new_positions, new_widths), _ = inner_body_fn((positions, widths), (rng_key, 0))
+                (new_positions, new_widths), _ = inner_body_fn(
+                    (positions, widths), (rng_key, 0)
+                )
             else:
                 order = random.choice(
                     order_key,
@@ -72,9 +69,11 @@ class slice_sampler:
                 )
 
             new_state = {
-                "theta": new_positions.reshape(state.position["theta"].shape)}
+                "theta": new_positions.reshape(state.position["theta"].shape)
+            }
             new_widths = {
-                "theta": new_widths.reshape(state.widths["theta"].shape)}
+                "theta": new_widths.reshape(state.widths["theta"].shape)
+            }
             new_state = SliceState(
                 new_state,
                 jnp.atleast_1d(logdensity_fn(new_state)),
@@ -86,9 +85,9 @@ class slice_sampler:
         return one_step
 
     def __new__(  # type: ignore[misc]
-            cls,
-            logdensity_fn: Callable,
-            n_doublings=1,
+        cls,
+        logdensity_fn: Callable,
+        n_doublings=1,
     ) -> MCMCSamplingAlgorithm:
         step = cls._kernel()
 
@@ -101,7 +100,9 @@ class slice_sampler:
         return MCMCSamplingAlgorithm(init_fn, step_fn)
 
 
-def _sample_conditionally(seed, idx, position, logdensity_fn, widths, n_doublings):
+def _sample_conditionally(
+    seed, idx, position, logdensity_fn, widths, n_doublings
+):
     def cond_lp_fn(xi_to_set):
         return logdensity_fn({"theta": position.at[idx].set(xi_to_set)})
 
@@ -132,9 +133,10 @@ def _doubling_fn(rng, y, x0, cond_lp_fn, w, n_doublings):
         return jnp.where(
             jnp.logical_and(
                 K > 0,
-                jnp.logical_or(y < cond_lp_fn(left), y < cond_lp_fn(right))
+                jnp.logical_or(y < cond_lp_fn(left), y < cond_lp_fn(right)),
             ),
-            True, False
+            True,
+            False,
         )
 
     def body_fn(state):
@@ -145,7 +147,9 @@ def _doubling_fn(rng, y, x0, cond_lp_fn, w, n_doublings):
         right = jnp.where(v < 0.5, right, 2 * right - left)
         return left, right, K - 1, seed
 
-    left, right, _, _ = jax.lax.while_loop(cond_fn, body_fn, (left, right, K, rng))
+    left, right, _, _ = jax.lax.while_loop(
+        cond_fn, body_fn, (left, right, K, rng)
+    )
     return left, right
 
 
@@ -156,11 +160,11 @@ def _shrinkage_fn(seed, y, x0, cond_lp_fn, left, right, w):
             jnp.logical_not(
                 jnp.logical_and(
                     y < cond_lp_fn(x1),
-                    _accept_fn(seed, y, x1, x0, cond_lp_fn, left, right, w)
+                    _accept_fn(seed, y, x1, x0, cond_lp_fn, left, right, w),
                 )
             ),
             True,
-            False
+            False,
         )
 
     def body_fn(state):
@@ -176,9 +180,7 @@ def _shrinkage_fn(seed, y, x0, cond_lp_fn, left, right, w):
     v = random.uniform(key)
     x1 = left + v * (right - left)
     x1, left, right, seed = jax.lax.while_loop(
-        cond_fn,
-        body_fn,
-        (x1, left, right, seed)
+        cond_fn, body_fn, (x1, left, right, seed)
     )
     return x1
 
@@ -186,11 +188,7 @@ def _shrinkage_fn(seed, y, x0, cond_lp_fn, left, right, w):
 def _accept_fn(seed, y, x1, x0, cond_lp_fn, left, right, w):
     def cond_fn(state):
         x1, x0, left, right, w, D, is_acceptable = state
-        ret = jnp.where(
-            right - left > 1.1 * w,
-            True,
-            False
-        )
+        ret = jnp.where(right - left > 1.1 * w, True, False)
         return ret
 
     def body_fn(state):
@@ -199,29 +197,28 @@ def _accept_fn(seed, y, x1, x0, cond_lp_fn, left, right, w):
         D = jnp.where(
             jnp.logical_or(
                 jnp.logical_and(x0 < mid, x1 >= mid),
-                jnp.logical_and(x0 >= mid, x1 < mid)
+                jnp.logical_and(x0 >= mid, x1 < mid),
             ),
             True,
-            D
+            D,
         )
         right = jnp.where(x1 < mid, mid, right)
         left = jnp.where(x1 < mid, left, mid)
         is_acceptable = jnp.where(
             jnp.logical_and(
                 D,
-                jnp.logical_and(y >= cond_lp_fn(left), y >= cond_lp_fn(right))
+                jnp.logical_and(y >= cond_lp_fn(left), y >= cond_lp_fn(right)),
             ),
             False,
-            True
+            True,
         )
         return x1, x0, left, right, w, D, is_acceptable
 
     _, _, _, _, _, _, is_acceptable = jax.lax.while_loop(
-        cond_fn,
-        body_fn,
-        (x1, x0, left, right, w, False, True)
+        cond_fn, body_fn, (x1, x0, left, right, w, False, True)
     )
     return is_acceptable
+
 
 #
 # prior = distrax.Independent(distrax.Normal(jnp.zeros(4), 1.0), 1)
