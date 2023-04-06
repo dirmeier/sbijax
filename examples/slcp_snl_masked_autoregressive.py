@@ -171,7 +171,7 @@ def run(use_surjectors):
         return lp
 
     log_density_partial = partial(log_density_fn, y=y_observed)
-    log_density = lambda x: vmap(log_density_partial)(x)
+    log_density = lambda x: log_density_partial(**x)
 
     rng_seq = hk.PRNGSequence(12)
     slice_samples = sample_with_slice(
