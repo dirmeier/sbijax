@@ -11,9 +11,8 @@ def sample_with_slice(
     n_samples,
     n_warmup,
     prior,
-    n_thin=1,
-    n_doubling=5,
-    step_size=1,
+    n_thin=0,
+    n_doubling=5
 ):
     """
     Sample from a distribution using the No-U-Turn sampler.

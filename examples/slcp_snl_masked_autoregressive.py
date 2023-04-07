@@ -155,7 +155,7 @@ def run(use_surjectors):
     snl = SNL(fns, model)
     optimizer = optax.adam(1e-3)
     params, info = snl.fit(
-        random.PRNGKey(23), y_observed, optimizer, n_rounds=3, sampler="slice"
+        random.PRNGKey(23), y_observed, optimizer, n_rounds=3, sampler="slice", max_n_iter=20,
     )
 
     snl_samples, _ = snl.sample_posterior(
@@ -169,7 +169,7 @@ def run(use_surjectors):
 
         lp = jnp.sum(prior_lp) + jnp.sum(likelihood_lp)
         return lp
-
+    #
     log_density_partial = partial(log_density_fn, y=y_observed)
     log_density = lambda x: log_density_partial(**x)
 
@@ -188,8 +188,8 @@ def run(use_surjectors):
     g.fig.set_figheight(5)
     g.fig.set_figwidth(5)
     plt.show()
-
     fig, axes = plt.subplots(len_theta, 2)
+
     for i in range(len_theta):
         sns.histplot(slice_samples[:, i], color="darkgrey", ax=axes[i, 0])
         sns.histplot(snl_samples[:, i], color="darkblue", ax=axes[i, 1])
@@ -204,6 +204,8 @@ def run(use_surjectors):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use-surjectors", action="store_true", default=True)
+    parser.add_argument("--use-surjectors", action="store_true", default=False)
     args = parser.parse_args()
     run(args.use_surjectors)
+
+

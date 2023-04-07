@@ -1,8 +1,7 @@
-import random
 from typing import Callable, NamedTuple
 
-import distrax
 import jax
+import numpy as np
 from blackjax.base import MCMCSamplingAlgorithm
 from blackjax.types import PRNGKey, PyTree
 from jax import numpy as jnp
@@ -20,7 +19,7 @@ class slice_sampler:
     @staticmethod
     def _init(position: PyTree, logdensity_fn: Callable):
         logdensity = logdensity_fn(position)
-        widths = jax.tree_map(lambda x: jnp.full(x.shape, 0.01), position)
+        widths = jax.tree_map(lambda x: jnp.full(x.shape, 1.0), position)
         return SliceState(
             position, jnp.atleast_1d(logdensity), widths, jnp.atleast_1d(0.0)
         )
@@ -35,8 +34,8 @@ class slice_sampler:
         ):
             order_key, rng_key = random.split(rng_key)
             n = state.n[0]
-            positions = state.position["theta"]
-            widths = state.widths["theta"]
+            positions, unravel_fn = jax.flatten_util.ravel_pytree( state.position)
+            widths, _ = jax.flatten_util.ravel_pytree(state.widths)
 
             def inner_body_fn(carry, rn):
                 seed, idx = rn
@@ -45,8 +44,8 @@ class slice_sampler:
                     seed, idx, positions, logdensity_fn, widths, n_doublings
                 )
                 positions = positions.at[idx].set(xi)
-                nw = widths[idx] + (wi - widths[idx]) / (n + 1)
-                widths = widths.at[idx].set(nw)
+                #nw = widths[idx] + (wi - widths[idx]) / (n + 1)
+                #widths = widths.at[idx].set(nw)
                 return (positions, widths), (positions, widths)
 
             if positions.ndim == 0:
@@ -68,15 +67,11 @@ class slice_sampler:
                     inner_body_fn, (positions, widths), (keys, order)
                 )
 
-            new_state = {
-                "theta": new_positions.reshape(state.position["theta"].shape)
-            }
-            new_widths = {
-                "theta": new_widths.reshape(state.widths["theta"].shape)
-            }
+            new_positions = unravel_fn(new_positions)
+            new_widths = unravel_fn(new_widths)
             new_state = SliceState(
-                new_state,
-                jnp.atleast_1d(logdensity_fn(new_state)),
+                new_positions,
+                jnp.atleast_1d(logdensity_fn(new_positions)),
                 new_widths,
                 jnp.atleast_1d(n + 1.0),
             )
@@ -108,8 +103,8 @@ def _sample_conditionally(
 
     key, seed1, seed2 = random.split(seed, 3)
     x0, w0 = position[idx], widths[idx]
-    y = jnp.log(random.uniform(key)) + cond_lp_fn(x0)
-    left, right = _doubling_fn(seed1, y, x0, cond_lp_fn, w0, n_doublings)
+    y = cond_lp_fn(x0) - random.exponential(key)
+    left, right, _ = _doubling_fn(seed1, y, x0, cond_lp_fn, w0, n_doublings)
     x1 = _shrinkage_fn(seed2, y, x0, cond_lp_fn, left, right, w0)
     return x1, right - left
 
@@ -117,7 +112,6 @@ def _sample_conditionally(
 def _doubling_fn(rng, y, x0, cond_lp_fn, w, n_doublings):
     """
     Implementation according to Fig 4 in [1]
-
     References
     -------
     [1] Radford Neil, Slice Sampling 2003
@@ -150,134 +144,73 @@ def _doubling_fn(rng, y, x0, cond_lp_fn, w, n_doublings):
     left, right, _, _ = jax.lax.while_loop(
         cond_fn, body_fn, (left, right, K, rng)
     )
-    return left, right
+    return left, right, None
+
+
+def _best_interval(x):
+    k = x.shape[0]
+    mults = jnp.arange(2 * k, k, -1, dtype=x.dtype)
+    shifts = jnp.arange(k, dtype=x.dtype)
+    indices = jnp.argmax(mults * x + shifts).astype(x.dtype)
+    return indices
 
 
 def _shrinkage_fn(seed, y, x0, cond_lp_fn, left, right, w):
     def cond_fn(state):
-        x1, left, right, seed = state
-        return jnp.where(
-            jnp.logical_not(
-                jnp.logical_and(
-                    y < cond_lp_fn(x1),
-                    _accept_fn(seed, y, x1, x0, cond_lp_fn, left, right, w),
-                )
-            ),
-            True,
-            False,
-        )
+        *_, found = state
+        return jnp.logical_not(found)
 
     def body_fn(state):
-        x1, left, right, seed = state
+        x1, left, right, seed, _ = state
         key, seed = random.split(seed)
-        left = jnp.where(x1 < x0, x1, left)
-        right = jnp.where(x1 >= x0, x1, right)
         v = random.uniform(key)
         x1 = left + v * (right - left)
-        return x1, left, right, seed
 
-    key, seed = random.split(seed)
-    v = random.uniform(key)
-    x1 = left + v * (right - left)
-    x1, left, right, seed = jax.lax.while_loop(
-        cond_fn, body_fn, (x1, left, right, seed)
+        found = jnp.logical_and(
+            y < cond_lp_fn(x1),
+            _accept_fn(y, x1, x0, cond_lp_fn, left, right, w),
+        )
+
+        left = jnp.where(x1 < x0, x1, left)
+        right = jnp.where(x1 >= x0, x1, right)
+
+        return x1, left, right, seed, found
+
+    x1, left, right, seed, _ = jax.lax.while_loop(
+        cond_fn, body_fn, (x0, left, right, seed, False)
     )
     return x1
 
 
-def _accept_fn(seed, y, x1, x0, cond_lp_fn, left, right, w):
+def _accept_fn(y, x1, x0, cond_lp_fn, left, right, w):
     def cond_fn(state):
-        x1, x0, left, right, w, D, is_acceptable = state
-        ret = jnp.where(right - left > 1.1 * w, True, False)
-        return ret
+        _, _, left, right, w, _, is_acceptable = state
+        return jnp.logical_and(right - left > 1.1 * w, is_acceptable)
 
     def body_fn(state):
-        x1, x0, left, right, w, D, is_acceptable = state
+        x1, x0, left, right, w, D, _ = state
         mid = (left + right) / 2
-        D = jnp.where(
+        D = jnp.logical_or(
             jnp.logical_or(
                 jnp.logical_and(x0 < mid, x1 >= mid),
                 jnp.logical_and(x0 >= mid, x1 < mid),
             ),
-            True,
             D,
         )
         right = jnp.where(x1 < mid, mid, right)
-        left = jnp.where(x1 < mid, left, mid)
-        is_acceptable = jnp.where(
-            jnp.logical_and(
-                D,
-                jnp.logical_and(y >= cond_lp_fn(left), y >= cond_lp_fn(right)),
-            ),
-            False,
-            True,
-        )
-        return x1, x0, left, right, w, D, is_acceptable
+        left = jnp.where(x1 >= mid, mid, left)
 
-    _, _, _, _, _, _, is_acceptable = jax.lax.while_loop(
+        left_is_not_acceptable = y >= cond_lp_fn(left)
+        right_is_not_acceptable = y >= cond_lp_fn(right)
+        interval_is_not_acceptable = jnp.logical_and(
+            left_is_not_acceptable, right_is_not_acceptable
+        )
+        is_still_acceptable = jnp.logical_not(
+            jnp.logical_and(D, interval_is_not_acceptable)
+        )
+        return x1, x0, left, right, w, D, is_still_acceptable
+
+    *_, is_acceptable = jax.lax.while_loop(
         cond_fn, body_fn, (x1, x0, left, right, w, False, True)
     )
     return is_acceptable
-
-
-#
-# prior = distrax.Independent(distrax.Normal(jnp.zeros(4), 1.0), 1)
-#
-# observed1 = distrax.Normal(jnp.array([-4.0, 2.0]), 1.0).sample(
-#     seed=3, sample_shape=(100,)
-# )
-# observed2 = distrax.Normal(jnp.array([-3.0, 0.0]), 1.0).sample(
-#     seed=1, sample_shape=(100,)
-# )
-# observed = jnp.concatenate([observed2, observed1], axis=0)
-#
-#
-# def logdensity_fn(theta, observed=observed):
-#     lprio = prior.log_prob(theta)
-#     logpdf1 = jnp.log(0.5) + distrax.Normal(theta[..., :2], 1.0).log_prob(observed)
-#     logpdf2 = jnp.log(0.5) + distrax.Normal(theta[..., 2:], 1.0).log_prob(observed)
-#     logpdf = logaddexp(logpdf2, logpdf1)
-#     return jnp.sum(logpdf) + jnp.sum(lprio)
-#
-#
-# def logdensity(x):
-#     return logdensity_fn(**x)
-#
-# v = logdensity_fn(jnp.zeros(4))
-#
-#
-# ss = slice(logdensity, prior, 5)
-#
-# n_chains = 4
-# s = {"theta": prior.sample(seed=12, sample_shape=(n_chains, ))}
-# state = jax.vmap(ss.init)(s)
-# sampling_keys = jax.random.split(random.PRNGKey(3), 20000)
-#
-#
-# def _step(states, rng_key):
-#     keys = jax.random.split(rng_key, n_chains)
-#     states = jax.vmap(ss.step)(keys, states)
-#     return states, states
-#
-#
-# _, states = jax.lax.scan(_step, state, sampling_keys)
-# _ = states.position["theta"].block_until_ready()
-#
-#
-# theta = states.position["theta"]
-# theta = theta[10000:, :, :].reshape(-1, 4)
-#
-# import matplotlib.pyplot as plt
-# plt.hist(theta[:, 0])
-# plt.hist(theta[:, 1])
-# plt.hist(theta[:, 2])
-# plt.hist(theta[:, 3])
-# plt.show()
-#
-# #
-# # print(jnp.mean(theta[:, 0]))
-# # print(jnp.mean(theta[:, 1]))
-# # print(jnp.mean(theta[:, 2]))
-# # print(jnp.mean(theta[:, 3]))
-# #
-# k = 2
