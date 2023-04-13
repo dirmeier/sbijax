@@ -6,16 +6,15 @@ import distrax
 import haiku as hk
 import jax.nn
 import matplotlib.pyplot as plt
-import numpy as np
 import optax
 import seaborn as sns
 from jax import numpy as jnp
 from jax import random
-from surjectors import Chain, MaskedCoupling, TransformedDistribution
+from surjectors import Chain, TransformedDistribution
 from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
 from surjectors.bijectors.permutation import Permutation
-from surjectors.conditioners import MADE, mlp_conditioner
-from surjectors.util import make_alternating_binary_mask, unstack
+from surjectors.conditioners import MADE
+from surjectors.util import unstack
 
 from sbijax import SNP
 
@@ -70,7 +69,6 @@ def make_model(dim):
 
 
 def run():
-    rng_seq = hk.PRNGSequence(0)
     y_observed = jnp.array([-2.0, 1.0])
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
@@ -89,7 +87,7 @@ def run():
         max_iter=200,
     )
 
-    snp_samples = np.asarray(snp.sample_posterior(params, 10000))
+    snp_samples, _ = snp.sample_posterior(params, 10000)
     fig, axes = plt.subplots(2)
     for i, ax in enumerate(axes):
         sns.histplot(snp_samples[:, i], color="darkblue", ax=ax)

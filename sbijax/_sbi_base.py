@@ -36,6 +36,12 @@ class SBI(abc.ABC):
     def data(self):
         return self._data
 
+    @data.setter
+    def data(self, data):
+        if not isinstance(data, named_dataset):
+            raise TypeError("data is not of type 'named_dataset'")
+        self._data = data
+
     @property
     def rng_seq(self):
         return self._rng_seq
@@ -62,4 +68,11 @@ class SBI(abc.ABC):
 
     @abc.abstractmethod
     def sample_posterior(self, **kwargs):
-        """Sample from the posterior"""
+        """
+        Sample from the posterior distribution
+
+        Parameters
+        ----------
+        kwargs
+            keyword arguments
+        """
