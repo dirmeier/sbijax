@@ -1,10 +1,6 @@
 from collections import namedtuple
 from functools import partial
-from typing import Iterable
 
-import chex
-import distrax
-import haiku as hk
 import jax
 import numpy as np
 import optax
@@ -15,13 +11,11 @@ from jax import random
 from jax import scipy as jsp
 
 from sbijax import generator
-from sbijax._sbi_base import SBI
-from sbijax.generator import named_dataset
-from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
+from sbijax._sne_base import SNE
 
 
-# pylint: disable=too-many-arg.uments
-class SNP(SBI):
+# pylint: disable=too-many-arguments
+class SNP(SNE):
     """
     Sequential neural posterior estimation
 
@@ -29,14 +23,7 @@ class SNP(SBI):
     """
 
     def __init__(self, model_fns, density_estimator):
-        super().__init__(model_fns)
-        self.model = density_estimator
-        self._len_theta = len(self.prior_sampler_fn(seed=random.PRNGKey(0)))
-
-        self.observed: chex.Array
-        self._rng_seq: hk.PRNGSequence
-        self._train_iter: Iterable
-        self._val_iter: Iterable
+        super().__init__(model_fns, density_estimator)
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -128,36 +115,6 @@ class SNP(SBI):
         snp_info = namedtuple("snl_info", "params losses")
         return params, snp_info(all_params, all_losses)
 
-    # pylint: disable=arguments-differ
-    def sample_posterior(self, params, n_samples, **kwargs):
-        """
-        Sample from the approximate posterior
-
-        Parameters
-        ----------
-        params: pytree
-            a pytree of parameter for the model
-        n_chains: int
-        number of chains to sample
-        n_samples: int
-            number of samples per chain
-        n_warmup: int
-            number of samples to discard
-        kwargs: keyword arguments with sampler specific parameters. For slice
-            sampling the following arguments are possible:
-            - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-            - n_thin: number of thinning steps
-            - n_doubling: number of doubling steps of the interval
-            - step_size: step size of the initial interval
-
-        Returns
-        -------
-        chex.Array
-            an array of samples from the posterior distribution of dimension
-            (n_samples \times p)
-        """
-        return self._simulate_from_amortized_posterior(params, n_samples)
-
     def _fit_model_single_round(
         self, optimizer, max_n_iter, n_early_stopping_patience, n_round, n_atoms
     ):
@@ -173,8 +130,8 @@ class SNP(SBI):
                         params,
                         None,
                         method="log_prob",
-                        y=batch["y"],
-                        x=batch["x"],
+                        y=batch["x"],
+                        x=batch["y"],
                     )
                     return -jnp.mean(lp)
 
@@ -182,7 +139,11 @@ class SNP(SBI):
 
                 def loss_fn(params):
                     lp = self._proposal_posterior_log_prob(
-                        params, rng, n_atoms, batch["y"], batch["x"]
+                        params,
+                        rng,
+                        n_atoms,
+                        batch["x"],
+                        batch["y"],
                     )
                     return -jnp.mean(lp)
 
@@ -212,11 +173,7 @@ class SNP(SBI):
                 logging.info("early stopping criterion found")
                 break
 
-        import matplotlib.pyplot as plt
-
         losses = jnp.vstack(losses)[:i, :]
-        plt.plot(losses)
-        plt.show()
         return params, losses
 
     def _proposal_posterior_log_prob(self, params, rng, n_atoms, theta, x):
@@ -282,34 +239,23 @@ class SNP(SBI):
         params = self.model.init(rng_key, method="log_prob", **init_data)
         return params
 
-    def _simulate_new_data_and_append(
-        self,
-        params,
-        D,
-        n_simulations_per_round,
-        **kwargs,
-    ):
-        if D is None:
-            new_thetas = self.prior_sampler_fn(
-                seed=next(self._rng_seq),
-                sample_shape=(n_simulations_per_round,),
-            )
-        else:
-            new_thetas = self._simulate_from_amortized_posterior(
-                params, n_simulations_per_round
-            )
+    def sample_posterior(self, params, n_samples):
+        """
+        Sample from the approximate posterior
 
-        new_obs = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
-        new_data = named_dataset(new_thetas, new_obs)
-        if D is None:
-            d_new = new_data
-        else:
-            d_new = named_dataset(
-                *[jnp.vstack([a, b]) for a, b in zip(D, new_data)]
-            )
-        return d_new
+        Parameters
+        ----------
+        params: pytree
+            a pytree of parameter for the model
+        n_samples: int
+            number of samples per chain
 
-    def _simulate_from_amortized_posterior(self, params, n_samples):
+        Returns
+        -------
+        chex.Array
+            an array of samples from the posterior distribution of dimension
+            (n_samples \times p)
+        """
         thetas = None
         n_curr = n_samples
         while n_curr > 0:

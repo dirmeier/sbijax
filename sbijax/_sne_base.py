@@ -1,28 +1,15 @@
-from collections import namedtuple
-from functools import partial
+from abc import ABC
 from typing import Iterable
 
-import chex
-import haiku as hk
-import jax
-import numpy as np
-import optax
-from absl import logging
-from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
-from jax import random
 
-from sbijax import generator
 from sbijax._sbi_base import SBI
-from sbijax.generator import named_dataset
-from sbijax.mcmc import sample_with_nuts
-from sbijax.mcmc.sample import mcmc_diagnostics
 
 # pylint: disable=too-many-arguments
-from sbijax.mcmc.slice import sample_with_slice
+from sbijax.generator import named_dataset
 
 
-class SNE(SBI):
+class SNE(SBI, ABC):
     """
     Sequential neural estimation
     """
@@ -30,57 +17,39 @@ class SNE(SBI):
     def __init__(self, model_fns, density_estimator):
         super().__init__(model_fns)
         self.model = density_estimator
-        self._len_theta = len(self.prior_sampler_fn(seed=random.PRNGKey(0)))
 
         self._train_iter: Iterable
         self._val_iter: Iterable
 
-    def _fit_model_single_round(
-        self, optimizer, max_n_iter, n_early_stopping_patience
-    ):
-        params = self._init_params(next(self._rng_seq), self._train_iter(0))
-        state = optimizer.init(params)
-
-        @jax.jit
-        def step(params, state, **batch):
-            def loss_fn(params):
-                lp = self.model.apply(params, method="log_prob", **batch)
-                return -jnp.sum(lp)
-
-            loss, grads = jax.value_and_grad(loss_fn)(params)
-            updates, new_state = optimizer.update(grads, state, params)
-            new_params = optax.apply_updates(params, updates)
-            return loss, new_params, new_state
-
-        losses = np.zeros([max_n_iter, 2])
-        early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
-        logging.info("training model")
-        for i in range(max_n_iter):
-            train_loss = 0.0
-            for j in range(self._train_iter.num_batches):
-                batch = self._train_iter(j)
-                batch_loss, params, state = step(params, state, **batch)
-                train_loss += batch_loss
-            validation_loss = self._validation_loss(params)
-            losses[i] = jnp.array([train_loss, validation_loss])
-
-            _, early_stop = early_stop.update(validation_loss)
-            if early_stop.should_stop:
-                logging.info("early stopping criterion found")
-                break
-
-        losses = jnp.vstack(losses)[:i, :]
-        return params, losses
-
-    def _validation_loss(self, params):
-        def _loss_fn(**batch):
-            lp = self.model.apply(params, method="log_prob", **batch)
-            return -jnp.sum(lp)
-
-        losses = jnp.array(
-            [
-                _loss_fn(**self._val_iter(j))
-                for j in range(self._val_iter.num_batches)
-            ]
+    def simulate_new_data_and_append(self, params, n_simulations):
+        self._data = self._simulate_new_data_and_append(
+            params, self.data, n_simulations
         )
-        return jnp.sum(losses)
+        return self.data
+
+    def _simulate_new_data_and_append(
+        self,
+        params,
+        D,
+        n_simulations_per_round,
+        **kwargs,
+    ):
+        if D is None:
+            new_thetas = self.prior_sampler_fn(
+                seed=next(self._rng_seq),
+                sample_shape=(n_simulations_per_round,),
+            )
+        else:
+            new_thetas = self.sample_posterior(
+                params, n_simulations_per_round, **kwargs
+            )
+
+        new_obs = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
+        new_data = named_dataset(new_obs, new_thetas)
+        if D is None:
+            d_new = new_data
+        else:
+            d_new = named_dataset(
+                *[jnp.vstack([a, b]) for a, b in zip(D, new_data)]
+            )
+        return d_new
