@@ -1,3 +1,5 @@
+import abc
+
 import chex
 import haiku as hk
 from jax import numpy as jnp
@@ -5,7 +7,7 @@ from jax import random
 
 
 # pylint: disable=too-many-instance-attributes
-class SBI:
+class SBI(abc.ABC):
     """
     SBI base class
     """
@@ -14,8 +16,24 @@ class SBI:
         self.prior_sampler_fn, self.prior_log_density_fn = model_fns[0]
         self.simulator_fn = model_fns[1]
         self._len_theta = len(self.prior_sampler_fn(seed=random.PRNGKey(0)))
-        self.observed: chex.Array
+        self._observed: chex.Array
         self._rng_seq: hk.PRNGSequence
+
+    @property
+    def observed(self):
+        return self._observed
+
+    @observed.setter
+    def observed(self, observed):
+        self._observed = jnp.atleast_2d(observed)
+
+    @property
+    def rng_seq(self):
+        return self._rng_seq
+
+    @rng_seq.setter
+    def rng_seq(self, rng_seq):
+        self._rng_seq = rng_seq
 
     def fit(self, rng_key, observed):
         """
@@ -30,8 +48,8 @@ class SBI:
             number of samples
         """
 
-        self._rng_seq = hk.PRNGSequence(rng_key)
-        self.observed = jnp.atleast_2d(observed)
+        self.rng_seq = hk.PRNGSequence(rng_key)
+        self.observed = observed
 
     def sample_posterior(self, **kwargs):
         """Sample from the posterior"""

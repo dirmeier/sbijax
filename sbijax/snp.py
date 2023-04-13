@@ -3,6 +3,7 @@ from functools import partial
 from typing import Iterable
 
 import chex
+import distrax
 import haiku as hk
 import jax
 import numpy as np
@@ -11,6 +12,7 @@ from absl import logging
 from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
 from jax import random
+from jax import scipy as jsp
 
 from sbijax import generator
 from sbijax._sbi_base import SBI
@@ -18,12 +20,12 @@ from sbijax.generator import named_dataset
 from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
 
 
-# pylint: disable=too-many-arguments
-class SNL(SBI):
+# pylint: disable=too-many-arg.uments
+class SNP(SBI):
     """
-    Sequential neural likelihood
+    Sequential neural posterior estimation
 
-    From the Papamakarios paper
+    From the Greenberg paper
     """
 
     def __init__(self, model_fns, density_estimator):
@@ -47,10 +49,8 @@ class SNL(SBI):
         max_n_iter=1000,
         batch_size=128,
         percentage_data_as_validation_set=0.05,
-        n_samples=10000,
-        n_warmup=5000,
-        n_chains=4,
         n_early_stopping_patience=10,
+        n_atoms=100,
         **kwargs,
     ):
         """
@@ -104,19 +104,10 @@ class SNL(SBI):
         simulator_fn = partial(
             self._simulate_new_data_and_append,
             n_simulations_per_round=n_simulations_per_round,
-            n_chains=n_chains,
-            n_samples=n_samples,
-            n_warmup=n_warmup,
         )
-        D, params, all_diagnostics, all_losses, all_params = (
-            None,
-            None,
-            [],
-            [],
-            [],
-        )
-        for _ in range(n_rounds):
-            D, diagnostics = simulator_fn(params, D, **kwargs)
+        D, params, all_losses, all_params = None, None, [], []
+        for round in range(n_rounds):
+            D = simulator_fn(params, D, **kwargs)
             self._train_iter, self._val_iter = generator.as_batch_iterators(
                 next(self._rng_seq),
                 D,
@@ -128,16 +119,17 @@ class SNL(SBI):
                 optimizer=optimizer,
                 max_n_iter=max_n_iter,
                 n_early_stopping_patience=n_early_stopping_patience,
+                n_round=round,
+                n_atoms=n_atoms,
             )
             all_params.append(params.copy())
             all_losses.append(losses)
-            all_diagnostics.append(diagnostics)
 
-        snl_info = namedtuple("snl_info", "params losses diagnostics")
-        return params, snl_info(all_params, all_losses, all_diagnostics)
+        snp_info = namedtuple("snl_info", "params losses")
+        return params, snp_info(all_params, all_losses)
 
     # pylint: disable=arguments-differ
-    def sample_posterior(self, params, n_chains, n_samples, n_warmup, **kwargs):
+    def sample_posterior(self, params, n_samples, **kwargs):
         """
         Sample from the approximate posterior
 
@@ -164,22 +156,35 @@ class SNL(SBI):
             an array of samples from the posterior distribution of dimension
             (n_samples \times p)
         """
-
-        return self._simulate_from_amortized_posterior(
-            params, n_chains, n_samples, n_warmup, **kwargs
-        )
+        return self._simulate_from_amortized_posterior(params, n_samples)
 
     def _fit_model_single_round(
-        self, optimizer, max_n_iter, n_early_stopping_patience
+        self, optimizer, max_n_iter, n_early_stopping_patience, n_round, n_atoms
     ):
         params = self._init_params(next(self._rng_seq), self._train_iter(0))
         state = optimizer.init(params)
 
         @jax.jit
-        def step(params, state, **batch):
-            def loss_fn(params):
-                lp = self.model.apply(params, method="log_prob", **batch)
-                return -jnp.sum(lp)
+        def step(params, rng, state, **batch):
+            if n_round == 0:
+
+                def loss_fn(params):
+                    lp = self.model.apply(
+                        params,
+                        None,
+                        method="log_prob",
+                        y=batch["y"],
+                        x=batch["x"],
+                    )
+                    return -jnp.mean(lp)
+
+            else:
+
+                def loss_fn(params):
+                    lp = self._proposal_posterior_log_prob(
+                        params, rng, n_atoms, batch["y"], batch["x"]
+                    )
+                    return -jnp.mean(lp)
 
             loss, grads = jax.value_and_grad(loss_fn)(params)
             updates, new_state = optimizer.update(grads, state, params)
@@ -193,9 +198,13 @@ class SNL(SBI):
             train_loss = 0.0
             for j in range(self._train_iter.num_batches):
                 batch = self._train_iter(j)
-                batch_loss, params, state = step(params, state, **batch)
+                batch_loss, params, state = step(
+                    params, next(self.rng_seq), state, **batch
+                )
                 train_loss += batch_loss
-            validation_loss = self._validation_loss(params)
+            validation_loss = self._validation_loss(
+                params, next(self.rng_seq), n_round, n_atoms
+            )
             losses[i] = jnp.array([train_loss, validation_loss])
 
             _, early_stop = early_stop.update(validation_loss)
@@ -203,21 +212,71 @@ class SNL(SBI):
                 logging.info("early stopping criterion found")
                 break
 
+        import matplotlib.pyplot as plt
+
         losses = jnp.vstack(losses)[:i, :]
+        plt.plot(losses)
+        plt.show()
         return params, losses
 
-    def _validation_loss(self, params):
-        def _loss_fn(**batch):
-            lp = self.model.apply(params, method="log_prob", **batch)
-            return -jnp.sum(lp)
+    def _proposal_posterior_log_prob(self, params, rng, n_atoms, theta, x):
+        n = theta.shape[0]
+        n_atoms = np.maximum(2, np.minimum(n_atoms, n))
+        repeated_x = jnp.repeat(x, n_atoms, axis=0)
+        probs = jnp.ones((n, n)) * (1 - jnp.eye(n)) / (n - 1)
 
-        losses = jnp.array(
-            [
-                _loss_fn(**self._val_iter(j))
-                for j in range(self._val_iter.num_batches)
-            ]
+        choice = partial(
+            random.choice, a=jnp.arange(n), replace=False, shape=(n_atoms - 1,)
         )
-        return jnp.sum(losses)
+        sample_keys = random.split(rng, probs.shape[0])
+        choices = jax.vmap(lambda key, prob: choice(key, p=prob))(
+            sample_keys, probs
+        )
+        contrasting_theta = theta[choices]
+
+        atomic_theta = jnp.concatenate(
+            (theta[:, None, :], contrasting_theta), axis=1
+        )
+        atomic_theta = atomic_theta.reshape(n * n_atoms, -1)
+
+        log_prob_posterior = self.model.apply(
+            params, None, method="log_prob", y=atomic_theta, x=repeated_x
+        )
+        log_prob_posterior = log_prob_posterior.reshape(n, n_atoms)
+        log_prob_prior = self.prior_log_density_fn(atomic_theta)
+        log_prob_prior = log_prob_prior.reshape(n, n_atoms)
+
+        unnormalized_log_prob = log_prob_posterior - log_prob_prior
+        log_prob_proposal_posterior = unnormalized_log_prob[
+            :, 0
+        ] - jsp.special.logsumexp(unnormalized_log_prob, axis=-1)
+
+        return log_prob_proposal_posterior
+
+    def _validation_loss(self, params, seed, n_round, n_atoms):
+        if n_round == 0:
+
+            @jax.jit
+            def loss_fn(rng, **batch):
+                lp = self.model.apply(
+                    params, None, method="log_prob", y=batch["y"], x=batch["x"]
+                )
+                return -jnp.sum(lp)
+
+        else:
+
+            @jax.jit
+            def loss_fn(rng, **batch):
+                lp = self._proposal_posterior_log_prob(
+                    params, rng, n_atoms, batch["y"], batch["x"]
+                )
+                return -jnp.sum(lp)
+
+        loss = 0
+        for j in range(self._val_iter.num_batches):
+            rng, seed = random.split(seed)
+            loss += loss_fn(rng, **self._val_iter(j))
+        return loss
 
     def _init_params(self, rng_key, init_data):
         params = self.model.init(rng_key, method="log_prob", **init_data)
@@ -228,78 +287,45 @@ class SNL(SBI):
         params,
         D,
         n_simulations_per_round,
-        n_chains,
-        n_samples,
-        n_warmup,
         **kwargs,
     ):
         if D is None:
-            diagnostics = None
             new_thetas = self.prior_sampler_fn(
                 seed=next(self._rng_seq),
                 sample_shape=(n_simulations_per_round,),
             )
         else:
-            new_thetas, diagnostics = self._simulate_from_amortized_posterior(
-                params, n_chains, n_samples, n_warmup, **kwargs
+            new_thetas = self._simulate_from_amortized_posterior(
+                params, n_simulations_per_round
             )
-            new_thetas = new_thetas.reshape(-1, self._len_theta)
-            new_thetas = random.permutation(next(self._rng_seq), new_thetas)
-            new_thetas = new_thetas[:n_simulations_per_round, :]
 
         new_obs = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
-        new_data = named_dataset(new_obs, new_thetas)
+        new_data = named_dataset(new_thetas, new_obs)
         if D is None:
             d_new = new_data
         else:
             d_new = named_dataset(
                 *[jnp.vstack([a, b]) for a, b in zip(D, new_data)]
             )
-        return d_new, diagnostics
+        return d_new
 
-    def _simulate_from_amortized_posterior(
-        self, params, n_chains, n_samples, n_warmup, **kwargs
-    ):
-        part = partial(
-            self.model.apply, params=params, method="log_prob", y=self.observed
-        )
-
-        def _log_likelihood_fn(theta):
-            theta = jnp.tile(theta, [self.observed.shape[0], 1])
-            return part(x=theta)
-
-        def _joint_logdensity_fn(theta):
-            lp_prior = self.prior_log_density_fn(theta)
-            lp = _log_likelihood_fn(theta)
-            return jnp.sum(lp) + jnp.sum(lp_prior)
-
-        if "sampler" in kwargs and kwargs["sampler"] == "slice":
-
-            def lp__(theta):
-                return jax.vmap(_joint_logdensity_fn)(theta)
-
-            kwargs.pop("sampler", None)
-            samples = sample_with_slice(
-                self._rng_seq,
-                lp__,
-                n_chains,
-                n_samples,
-                n_warmup,
-                self.prior_sampler_fn,
-                **kwargs,
+    def _simulate_from_amortized_posterior(self, params, n_samples):
+        thetas = None
+        n_curr = n_samples
+        while n_curr > 0:
+            n = jnp.maximum(100, n_curr)
+            proposal = self.model.apply(
+                params,
+                next(self.rng_seq),
+                method="sample",
+                sample_shape=(n,),
+                x=jnp.tile(self.observed, [n, 1]),
             )
-        else:
-
-            def lp__(theta):
-                return _joint_logdensity_fn(**theta)
-
-            samples = sample_with_nuts(
-                self._rng_seq,
-                lp__,
-                self._len_theta,
-                n_chains,
-                n_samples,
-                n_warmup,
-            )
-        diagnostics = mcmc_diagnostics(samples)
-        return samples, diagnostics
+            proposal_probs = self.prior_log_density_fn(proposal)
+            proposal_accepted = proposal[jnp.isfinite(proposal_probs)]
+            if thetas is None:
+                thetas = proposal_accepted
+            else:
+                thetas = jnp.vstack([thetas, proposal_accepted])
+            n_curr -= proposal_accepted.shape[0]
+        return thetas[:n_samples]
