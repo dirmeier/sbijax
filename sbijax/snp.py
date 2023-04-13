@@ -13,16 +13,13 @@ from jax import scipy as jsp
 from sbijax._sne_base import SNE
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,unused-argument
 class SNP(SNE):
     """
     Sequential neural posterior estimation
 
     From the Greenberg paper
     """
-
-    def __init__(self, model_fns, density_estimator):
-        super().__init__(model_fns, density_estimator)
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -82,7 +79,7 @@ class SNP(SNE):
             n_simulations_per_round=n_simulations_per_round,
         )
         D, params, all_losses, all_params = None, None, [], []
-        for round in range(n_rounds):
+        for i_round in range(n_rounds):
             D, _ = simulator_fn(params, D, **kwargs)
             self._train_iter, self._val_iter = self.as_iterators(
                 D, batch_size, percentage_data_as_validation_set
@@ -91,7 +88,7 @@ class SNP(SNE):
                 optimizer=optimizer,
                 max_n_iter=max_n_iter,
                 n_early_stopping_patience=n_early_stopping_patience,
-                n_round=round,
+                n_round=i_round,
                 n_atoms=n_atoms,
             )
             all_params.append(params.copy())

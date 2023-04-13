@@ -9,7 +9,7 @@ from jax import random
 from sbijax.generator import named_dataset
 
 
-# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-instance-attributes,unused-argument
 class SBI(abc.ABC):
     """
     SBI base class
@@ -26,24 +26,29 @@ class SBI(abc.ABC):
 
     @property
     def observed(self):
+        """Get the observation to condition on"""
         return self._observed
 
     @observed.setter
     def observed(self, observed):
+        """Set the observation to condition on"""
         self._observed = jnp.atleast_2d(observed)
 
     @property
     def data(self):
+        """Get the data set"""
         return self._data
 
     @data.setter
     def data(self, data):
+        """Set the data set"""
         if not isinstance(data, named_dataset):
             raise TypeError("data is not of type 'named_dataset'")
         self._data = data
 
     @property
     def rng_seq(self):
+        """Rng sequence"""
         return self._rng_seq
 
     @rng_seq.setter

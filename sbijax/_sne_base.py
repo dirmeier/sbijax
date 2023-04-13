@@ -8,7 +8,8 @@ from sbijax._sbi_base import SBI
 from sbijax.generator import named_dataset
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,unused-argument
+# pylint: disable=too-many-function-args,arguments-differ
 class SNE(SBI, ABC):
     """
     Sequential neural estimation
@@ -22,6 +23,22 @@ class SNE(SBI, ABC):
         self._val_iter: Iterable
 
     def simulate_new_data_and_append(self, params, n_simulations):
+        """
+        Simulate novel data-parameters pairs and append to the
+        existing data set.
+
+        Parameters
+        ----------
+        params: pytree
+            parameter set of the neural network
+        n_simulations: int
+            number of data-parameter pairs to draw
+
+        Returns
+        -------
+        Returns the data set.
+        """
+
         self.data = self._simulate_new_data_and_append(
             params, self.data, n_simulations
         )
@@ -57,6 +74,7 @@ class SNE(SBI, ABC):
         return d_new, diagnostics
 
     def as_iterators(self, D, batch_size, percentage_data_as_validation_set):
+        """Convert the data set to an iterable for training"""
         return generator.as_batch_iterators(
             next(self._rng_seq),
             D,

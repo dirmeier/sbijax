@@ -12,16 +12,13 @@ from sbijax._sne_base import SNE
 from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,unused-argument
 class SNL(SNE):
     """
     Sequential neural likelihood
 
     From the Papamakarios paper
     """
-
-    def __init__(self, model_fns, density_estimator):
-        super().__init__(model_fns, density_estimator)
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
