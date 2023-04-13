@@ -5,7 +5,7 @@ from jax import lax
 from jax import numpy as jnp
 from jax import random
 
-named_dataset = namedtuple("named_dataset", "y x")
+named_dataset = namedtuple("named_dataset", "y theta")
 
 
 # pylint: disable=missing-class-docstring,too-few-public-methods

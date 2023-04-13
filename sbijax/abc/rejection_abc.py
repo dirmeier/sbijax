@@ -19,7 +19,7 @@ class RejectionABC(SBI):
         self.summary_fn = summary_fn
         self.summarized_observed: chex.Array
 
-    def fit(self, rng_key, observed):
+    def fit(self, rng_key, observed, **kwargs):
         super().fit(rng_key, observed)
         self.summarized_observed = self.summary_fn(self.observed)
 

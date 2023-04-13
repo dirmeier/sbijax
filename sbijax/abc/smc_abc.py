@@ -11,6 +11,7 @@ from jax import scipy as jsp
 from sbijax._sbi_base import SBI
 
 
+# pylint: disable=arguments-differ,too-many-function-args
 class SMCABC(SBI):
     """
     Sisson et al. - Handbook of approximate Bayesian computation
