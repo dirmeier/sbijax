@@ -2,13 +2,14 @@
 
 [![status](http://www.repostatus.org/badges/latest/concept.svg)](http://www.repostatus.org/#concept)
 [![ci](https://github.com/dirmeier/sbijax/actions/workflows/ci.yaml/badge.svg)](https://github.com/dirmeier/sbijax/actions/workflows/ci.yaml)
+[![version](https://img.shields.io/pypi/v/sbijax.svg?colorB=black&style=flat)](https://pypi.org/project/sbijax/)
 
 > Simulation-based inference in JAX
 
 ## About
 
 SbiJAX implements several algorithms for simulation-based inference using
-[BlackJAX](https://github.com/blackjax-devs/blackjax), [Haiku](https://github.com/deepmind/dm-haiku) and [JAX](https://github.com/google/jax).
+[JAX](https://github.com/google/jax), [Haiku](https://github.com/deepmind/dm-haiku) and [BlackJAX](https://github.com/blackjax-devs/blackjax).
 
 SbiJAX so far implements
 
@@ -36,29 +37,6 @@ To install the latest GitHub <RELEASE>, use:
 ```bash
 pip install git+https://github.com/dirmeier/sbijax@<RELEASE>
 ```
-
-## Contributing
-
-Contributions in the form of pull requests are more than welcome. A good way to start is to check out issues labelled
-["good first issue"](https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). In order to contribute:
-
-1) Fork the repository and install `hatch` and `pre-commit`
-
-```bash
-pip install hatch pre-commit
-pre-commit install
-```
-
-2) Create a new branch in your fork and implement your contribution
-
-3) Test your contribution/implementation by calling `hatch run test` on the (Unix) command line before submitting a PR
-
-```bash
-hatch run test:lint
-hatch run test:test
-```
-
-4) Submit a pull request :slightly_smiling_face:
 
 ## Author
 

@@ -40,6 +40,8 @@ repos:
     language: python
     language_version: python3
     types: [python]
+    args: ["-c", "pyproject.toml"]
+    additional_dependencies: ["toml"]
     files: "(sbijax|examples)"
 
 - repo: https://github.com/PyCQA/flake8
@@ -57,6 +59,17 @@ repos:
   - id: mypy
     args: ["--ignore-missing-imports"]
     files: "(sbijax|examples)"
+
+- repo: https://github.com/nbQA-dev/nbQA
+  rev: 1.6.3
+  hooks:
+  - id: nbqa-black
+  - id: nbqa-pyupgrade
+    args: [--py39-plus]
+  - id: nbqa-isort
+    args: ['--profile=black']
+  - id: nbqa-flake8
+    args: ['--ignore=E501,E203,E302,E402,E731,W503']
 
 - repo: https://github.com/jorisroovers/gitlint
   rev: v0.18.0

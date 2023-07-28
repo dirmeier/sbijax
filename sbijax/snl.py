@@ -5,6 +5,8 @@ import jax
 import numpy as np
 import optax
 from absl import logging
+
+# TODO(simon): this is a bit an annoying dependency to have
 from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
 
