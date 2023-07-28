@@ -77,4 +77,4 @@ def test_snl():
         optimizer=optax.adam(1e-4),
         sampler="slice",
     )
-    _ = snl.sample_posterior(params, 1, 100, 50, sampler="slice")
+    _ = snl.sample_posterior(params, 2, 100, 50, sampler="slice")
