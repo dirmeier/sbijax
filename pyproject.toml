@@ -32,6 +32,9 @@ dynamic = ["version"]
 [project.urls]
 homepage = "https://github.com/dirmeier/sbijax"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.version]
 path = "sbijax/__init__.py"
 
