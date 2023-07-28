@@ -25,11 +25,15 @@ dependencies = [
     "dm-haiku>=0.0.9",
     "flax>=0.6.3",
     "optax>=0.1.3",
+    "surjectors@git+https://git@github.com/dirmeier/surjectors@v0.2.2",
 ]
 dynamic = ["version"]
 
 [project.urls]
 homepage = "https://github.com/dirmeier/sbijax"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.version]
 path = "sbijax/__init__.py"
@@ -50,7 +54,7 @@ dependencies = [
 
 [tool.hatch.envs.test.scripts]
 lint = 'pylint sbijax'
-test = 'pytest -v --doctest-modules --cov=./sbi --cov-report=xml sbijax'
+test = 'pytest -v --doctest-modules --cov=./sbijax --cov-report=xml sbijax'
 
 
 [tool.black]
