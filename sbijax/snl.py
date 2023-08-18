@@ -163,7 +163,7 @@ class SNL(SNE):
         if "sampler" in kwargs and kwargs["sampler"] == "slice":
 
             def lp__(theta):
-                return jax.vmap(_joint_logdensity_fn)(theta)
+                return _joint_logdensity_fn(**theta)
 
             kwargs.pop("sampler", None)
             samples = sample_with_slice(

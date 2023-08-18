@@ -15,7 +15,6 @@ import seaborn as sns
 from jax import numpy as jnp
 from jax import random
 from jax import scipy as jsp
-from jax import vmap
 from surjectors import Chain, TransformedDistribution
 from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
 from surjectors.bijectors.permutation import Permutation
@@ -155,7 +154,16 @@ def run(use_surjectors):
     snl = SNL(fns, model)
     optimizer = optax.adam(1e-3)
     params, info = snl.fit(
-        random.PRNGKey(23), y_observed, optimizer, n_rounds=3, sampler="slice"
+        random.PRNGKey(23),
+        y_observed,
+        optimizer,
+        n_rounds=5,
+        sampler="slice",
+        n_thin=0,
+        max_n_iter=1,
+        n_samples=100,
+        n_warmup=50,
+        n_simulations_per_round=10,
     )
 
     snl_samples, _ = snl.sample_posterior(
@@ -170,8 +178,9 @@ def run(use_surjectors):
         lp = jnp.sum(prior_lp) + jnp.sum(likelihood_lp)
         return lp
 
+    #
     log_density_partial = partial(log_density_fn, y=y_observed)
-    log_density = lambda x: vmap(log_density_partial)(x)
+    log_density = lambda x: log_density_partial(**x)
 
     rng_seq = hk.PRNGSequence(12)
     slice_samples = sample_with_slice(
@@ -204,6 +213,6 @@ def run(use_surjectors):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use-surjectors", action="store_true", default=True)
+    parser.add_argument("--use-surjectors", action="store_true", default=False)
     args = parser.parse_args()
     run(args.use_surjectors)
