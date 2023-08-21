@@ -27,15 +27,13 @@ def as_batch_iterators(
 ):
     n = data.y.shape[0]
     n_train = int(n * split)
+
     if shuffle:
-        data = named_dataset(
-            *[
-                random.permutation(rng_key, el, independent=False)
-                for _, el in enumerate(data)
-            ]
-        )
-    y_train = named_dataset(*[el[:n_train, :] for el in data])
-    y_val = named_dataset(*[el[n_train:, :] for el in data])
+        idxs = random.permutation(rng_key, jnp.arange(n))
+        data = named_dataset(*[el[idxs] for _, el in enumerate(data)])
+
+    y_train = named_dataset(*[el[:n_train] for el in data])
+    y_val = named_dataset(*[el[n_train:] for el in data])
     train_rng_key, val_rng_key = random.split(rng_key)
 
     train_itr = as_batch_iterator(train_rng_key, y_train, batch_size, shuffle)

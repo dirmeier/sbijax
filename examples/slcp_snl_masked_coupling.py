@@ -7,6 +7,7 @@ from functools import partial
 
 import distrax
 import haiku as hk
+import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import optax
@@ -25,7 +26,7 @@ from surjectors.conditioners import mlp_conditioner
 from surjectors.util import make_alternating_binary_mask
 
 from sbijax import SNL
-from sbijax.mcmc import sample_with_nuts
+from sbijax.mcmc import sample_with_slice
 
 
 def prior_model_fns():
@@ -144,17 +145,9 @@ def run(use_surjectors):
             ]
         ]
     )
-    prior_sampler, prior_fn = prior_model_fns()
-    fns = (prior_sampler, prior_fn), simulator_fn
-    model = make_model(y_observed.shape[1], use_surjectors)
-    snl = SNL(fns, model)
-    optimizer = optax.adam(1e-3)
-    params, info = snl.fit(
-        random.PRNGKey(23), y_observed, optimizer, n_rounds=10
-    )
 
-    snl_samples, _ = snl.sample_posterior(params, 20, 50000, 10000)
-    snl_samples = snl_samples.reshape(-1, len_theta)
+    prior_simulator_fn, prior_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_fn), simulator_fn
 
     def log_density_fn(theta, y):
         prior_lp = prior_fn(theta)
@@ -164,15 +157,28 @@ def run(use_surjectors):
         return lp
 
     log_density_partial = partial(log_density_fn, y=y_observed)
-    log_density = lambda x: log_density_partial(**x)
+    log_density = lambda x: jax.vmap(log_density_partial)(x)
 
-    rng_seq = hk.PRNGSequence(12)
-    nuts_samples = sample_with_nuts(
-        rng_seq, log_density, len_theta, 20, 50000, 10000
+    snl = SNL(fns, make_model(y_observed.shape[1], use_surjectors))
+    optimizer = optax.adam(1e-3)
+    params, info = snl.fit(
+        random.PRNGKey(23),
+        y_observed,
+        optimizer,
+        n_rounds=5,
+        max_n_iter=100,
+        batch_size=64,
+        n_early_stopping_patience=10,
+        sampler="slice",
     )
-    nuts_samples = nuts_samples.reshape(-1, len_theta)
 
-    g = sns.PairGrid(pd.DataFrame(nuts_samples))
+    slice_samples = sample_with_slice(
+        hk.PRNGSequence(12), log_density, 4, 5000, 2500, prior_simulator_fn
+    )
+    slice_samples = slice_samples.reshape(-1, len_theta)
+    snl_samples, _ = snl.sample_posterior(params, 4, 5000, 2500)
+
+    g = sns.PairGrid(pd.DataFrame(slice_samples))
     g.map_upper(sns.scatterplot, color="black", marker=".", edgecolor=None, s=2)
     g.map_diag(plt.hist, color="black")
     for ax in g.axes.flatten():
@@ -184,7 +190,7 @@ def run(use_surjectors):
 
     fig, axes = plt.subplots(len_theta, 2)
     for i in range(len_theta):
-        sns.histplot(nuts_samples[:, i], color="darkgrey", ax=axes[i, 0])
+        sns.histplot(slice_samples[:, i], color="darkgrey", ax=axes[i, 0])
         sns.histplot(snl_samples[:, i], color="darkblue", ax=axes[i, 1])
         axes[i, 0].set_title(rf"Sampled posterior $\theta_{i}$")
         axes[i, 1].set_title(rf"Approximated posterior $\theta_{i}$")

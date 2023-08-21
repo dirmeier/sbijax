@@ -2,7 +2,7 @@ import distrax
 import tensorflow_probability.substrates.jax as tfp
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,unused-argument
 def sample_with_slice(
     rng_seq,
     lp,
@@ -13,6 +13,7 @@ def sample_with_slice(
     n_thin=2,
     n_doubling=5,
     step_size=1,
+    **kwargs,
 ):
     """
     Sample from a distribution using the No-U-Turn sampler.
@@ -48,6 +49,7 @@ def sample_with_slice(
         trace_fn=None,
         seed=next(rng_seq),
     )
+    samples = samples[n_warmup:, ...]
     return samples
 
 

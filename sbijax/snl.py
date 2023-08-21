@@ -1,6 +1,7 @@
 from collections import namedtuple
 from functools import partial
 
+import chex
 import jax
 import numpy as np
 import optax
@@ -32,7 +33,7 @@ class SNL(SNE):
         n_simulations_per_round=1000,
         max_n_iter=1000,
         batch_size=128,
-        percentage_data_as_validation_set=0.05,
+        percentage_data_as_validation_set=0.1,
         n_samples=10000,
         n_warmup=5000,
         n_chains=4,
@@ -188,7 +189,10 @@ class SNL(SNE):
                 n_samples,
                 n_warmup,
             )
+        chex.assert_shape(samples, [n_samples - n_warmup, n_chains, None])
         diagnostics = mcmc_diagnostics(samples)
+        samples = samples.reshape((n_samples - n_warmup) * n_chains, -1)
+
         return samples, diagnostics
 
     def _fit_model_single_round(
@@ -219,6 +223,7 @@ class SNL(SNE):
                 batch = self._train_iter(j)
                 batch_loss, params, state = step(params, state, **batch)
                 train_loss += batch_loss
+            print(train_loss)
             validation_loss = self._validation_loss(params)
             losses[i] = jnp.array([train_loss, validation_loss])
 
