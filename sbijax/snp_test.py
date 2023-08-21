@@ -8,7 +8,7 @@ from surjectors import Chain, MaskedCoupling, TransformedDistribution
 from surjectors.conditioners import mlp_conditioner
 from surjectors.util import make_alternating_binary_mask
 
-from sbijax import SNL
+from sbijax import SNP
 
 
 def prior_model_fns():
@@ -60,22 +60,19 @@ def make_model(dim):
     return td
 
 
-def test_snl():
+def test_snp():
     rng_seq = hk.PRNGSequence(0)
     y_observed = jnp.array([-1.0, 1.0])
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    snl = SNL(fns, make_model(2))
-    params, info = snl.fit(
+    snp = SNP(fns, make_model(2))
+    params, info = snp.fit(
         next(rng_seq),
         y_observed,
         n_rounds=2,
         optimizer=optax.adam(1e-4),
         sampler="slice",
-        n_chains=2,
-        n_samples=100,
-        n_warmup=50,
     )
-    _ = snl.sample_posterior(params, 2, 100, 50, sampler="slice")
+    _ = snp.sample_posterior(params, 100)
