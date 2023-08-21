@@ -73,7 +73,7 @@ def test_snl():
     params, info = snl.fit(
         next(rng_seq),
         y_observed,
-        n_rounds=1,
+        n_rounds=2,
         optimizer=optax.adam(1e-4),
         sampler="slice",
     )

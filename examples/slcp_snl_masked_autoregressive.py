@@ -7,6 +7,7 @@ from functools import partial
 
 import distrax
 import haiku as hk
+import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import optax
@@ -19,8 +20,7 @@ from jax import vmap
 from surjectors import Chain, TransformedDistribution
 from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
 from surjectors.bijectors.permutation import Permutation
-from surjectors.conditioners import mlp_conditioner
-from surjectors.nn.made import MADE
+from surjectors.conditioners import MADE, mlp_conditioner
 from surjectors.surjectors.affine_masked_autoregressive_inference_funnel import (  # type: ignore # noqa: E501
     AffineMaskedAutoregressiveInferenceFunnel,
 )
@@ -83,7 +83,10 @@ def make_model(dim, use_surjectors):
         return distrax.ScalarAffine(means, jnp.exp(log_scales))
 
     def _decoder_fn(n_dim):
-        decoder_net = mlp_conditioner([32, 32, n_dim * 2])
+        decoder_net = mlp_conditioner(
+            [50, n_dim * 2],
+            w_init=hk.initializers.TruncatedNormal(stddev=0.001),
+        )
 
         def _fn(z):
             params = decoder_net(z)
@@ -100,11 +103,18 @@ def make_model(dim, use_surjectors):
         order = jnp.arange(n_dimension)
         for i in range(5):
             if i == 2 and use_surjectors:
-                n_latent = 7
+                n_latent = 6
                 layer = AffineMaskedAutoregressiveInferenceFunnel(
                     n_latent,
                     _decoder_fn(n_dimension - n_latent),
-                    MADE(n_latent, [32, 32, n_latent * 2], 2),
+                    conditioner=MADE(
+                        n_latent,
+                        [50, n_latent * 2],
+                        2,
+                        w_init=hk.initializers.TruncatedNormal(0.001),
+                        b_init=jnp.zeros,
+                        activation=jax.nn.tanh,
+                    ),
                 )
                 n_dimension = n_latent
                 order = order[::-1]
@@ -112,7 +122,14 @@ def make_model(dim, use_surjectors):
             else:
                 layer = MaskedAutoregressive(
                     bijector_fn=_bijector_fn,
-                    conditioner=MADE(n_dimension, [32, 32, n_dimension * 2], 2),
+                    conditioner=MADE(
+                        n_dimension,
+                        [50, n_dimension * 2],
+                        2,
+                        w_init=hk.initializers.TruncatedNormal(0.001),
+                        b_init=jnp.zeros,
+                        activation=jax.nn.tanh,
+                    ),
                 )
                 order = order[::-1]
             layers.append(layer)
@@ -149,19 +166,9 @@ def run(use_surjectors):
             ]
         ]
     )
-    prior_sampler, prior_fn = prior_model_fns()
-    fns = (prior_sampler, prior_fn), simulator_fn
-    model = make_model(y_observed.shape[1], use_surjectors)
-    snl = SNL(fns, model)
-    optimizer = optax.adam(1e-3)
-    params, info = snl.fit(
-        random.PRNGKey(23), y_observed, optimizer, n_rounds=3, sampler="slice"
-    )
 
-    snl_samples, _ = snl.sample_posterior(
-        params, 4, 20000, 10000, sampler="slice"
-    )
-    snl_samples = snl_samples.reshape(-1, len_theta)
+    prior_simulator_fn, prior_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_fn), simulator_fn
 
     def log_density_fn(theta, y):
         prior_lp = prior_fn(theta)
@@ -173,11 +180,25 @@ def run(use_surjectors):
     log_density_partial = partial(log_density_fn, y=y_observed)
     log_density = lambda x: vmap(log_density_partial)(x)
 
-    rng_seq = hk.PRNGSequence(12)
+    model = make_model(y_observed.shape[1], use_surjectors)
+    snl = SNL(fns, model)
+    optimizer = optax.adam(1e-3)
+    params, info = snl.fit(
+        random.PRNGKey(23),
+        y_observed,
+        optimizer,
+        n_rounds=5,
+        max_n_iter=100,
+        batch_size=64,
+        n_early_stopping_patience=5,
+        sampler="slice",
+    )
+
     slice_samples = sample_with_slice(
-        rng_seq, log_density, 4, 20000, 10000, prior_sampler
+        hk.PRNGSequence(12), log_density, 4, 5000, 2500, prior_simulator_fn
     )
     slice_samples = slice_samples.reshape(-1, len_theta)
+    snl_samples, _ = snl.sample_posterior(params, 4, 5000, 2500)
 
     g = sns.PairGrid(pd.DataFrame(slice_samples))
     g.map_upper(sns.scatterplot, color="black", marker=".", edgecolor=None, s=2)

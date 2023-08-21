@@ -1,5 +1,5 @@
 """
-Example using SNL and masked coupling flows
+Example using SNP and masked autoregressive flows
 """
 
 import distrax
@@ -20,9 +20,7 @@ from sbijax import SNP
 
 
 def prior_model_fns():
-    p = distrax.Independent(
-        distrax.Uniform(-2 * jnp.ones(2), 2 * jnp.ones(2)), 1
-    )
+    p = distrax.Independent(distrax.Normal(jnp.zeros(2), jnp.ones(2)), 1)
     return p.sample, p.log_prob
 
 
@@ -45,7 +43,7 @@ def make_model(dim):
                 bijector_fn=_bijector_fn,
                 conditioner=MADE(
                     dim,
-                    [50, 50, dim * 2],
+                    [50, dim * 2],
                     2,
                     w_init=hk.initializers.TruncatedNormal(0.001),
                     b_init=jnp.zeros,
@@ -74,24 +72,25 @@ def run():
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    optimizer = optax.chain(optax.clip(5.0), optax.adamw(1e-04))
+    optimizer = optax.adamw(1e-04)
     snp = SNP(fns, make_model(2))
     params, info = snp.fit(
         random.PRNGKey(2),
         y_observed,
-        n_rounds=5,
+        n_rounds=3,
         optimizer=optimizer,
         n_early_stopping_patience=10,
-        batch_size=128,
+        batch_size=64,
         n_atoms=10,
-        max_iter=200,
+        max_n_iter=100,
     )
 
+    print(f"Took n={snp.n_total_simulations} simulations in total")
     snp_samples, _ = snp.sample_posterior(params, 10000)
     fig, axes = plt.subplots(2)
     for i, ax in enumerate(axes):
         sns.histplot(snp_samples[:, i], color="darkblue", ax=ax)
-        ax.set_xlim([-2.0, 2.0])
+        ax.set_xlim([-3.0, 3.0])
     sns.despine()
     plt.tight_layout()
     plt.show()

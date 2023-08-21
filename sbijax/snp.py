@@ -32,7 +32,7 @@ class SNP(SNE):
         n_atoms=10,
         max_n_iter=1000,
         batch_size=128,
-        percentage_data_as_validation_set=0.05,
+        percentage_data_as_validation_set=0.1,
         n_early_stopping_patience=10,
         **kwargs,
     ):
@@ -86,7 +86,7 @@ class SNP(SNE):
             )
             params, losses = self._fit_model_single_round(
                 optimizer=optimizer,
-                max_n_iter=max_n_iter,
+                max_iter=max_n_iter,
                 n_early_stopping_patience=n_early_stopping_patience,
                 n_round=i_round,
                 n_atoms=n_atoms,
@@ -97,7 +97,7 @@ class SNP(SNE):
         snp_info = namedtuple("snl_info", "params losses")
         return params, snp_info(all_params, all_losses)
 
-    def sample_posterior(self, params, n_samples, **kwargs):
+    def sample_posterior(self, params, n_simulations_per_round, **kwargs):
         """
         Sample from the approximate posterior
 
@@ -105,7 +105,7 @@ class SNP(SNE):
         ----------
         params: pytree
             a pytree of parameter for the model
-        n_samples: int
+        n_simulations_per_round: int
             number of samples per chain
 
         Returns
@@ -114,8 +114,9 @@ class SNP(SNE):
             an array of samples from the posterior distribution of dimension
             (n_samples \times p)
         """
+
         thetas = None
-        n_curr = n_samples
+        n_curr = n_simulations_per_round
         n_total_simulations_round = 0
         while n_curr > 0:
             n_sim = jnp.maximum(100, n_curr)
@@ -135,10 +136,13 @@ class SNP(SNE):
                 thetas = jnp.vstack([thetas, proposal_accepted])
             n_curr -= proposal_accepted.shape[0]
         self.n_total_simulations += n_total_simulations_round
-        return thetas[:n_samples], thetas.shape[0] / n_total_simulations_round
+        return (
+            thetas[:n_simulations_per_round],
+            thetas.shape[0] / n_total_simulations_round,
+        )
 
     def _fit_model_single_round(
-        self, optimizer, max_n_iter, n_early_stopping_patience, n_round, n_atoms
+        self, optimizer, max_iter, n_early_stopping_patience, n_round, n_atoms
     ):
         params = self._init_params(next(self._rng_seq), **self._train_iter(0))
         state = optimizer.init(params)
@@ -174,10 +178,10 @@ class SNP(SNE):
             new_params = optax.apply_updates(params, updates)
             return loss, new_params, new_state
 
-        losses = np.zeros([max_n_iter, 2])
+        losses = np.zeros([max_iter, 2])
         early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
         logging.info("training model")
-        for i in range(max_n_iter):
+        for i in range(max_iter):
             train_loss = 0.0
             for j in range(self._train_iter.num_batches):
                 batch = self._train_iter(j)

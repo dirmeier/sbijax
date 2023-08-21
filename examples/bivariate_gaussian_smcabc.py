@@ -11,16 +11,14 @@ from jax import numpy as jnp
 from sbijax import SMCABC
 
 
-def prior_model_fns(leng):
-    p = distrax.Independent(
-        distrax.Uniform(jnp.full(leng, -2.0), jnp.full(leng, 2.0)), 1
-    )
+def prior_model_fns():
+    p = distrax.Independent(distrax.Normal(jnp.zeros(2), jnp.ones(2)), 1)
     return p.sample, p.log_prob
 
 
 def simulator_fn(seed, theta):
-    p = distrax.MultivariateNormalDiag(theta, 0.1 * jnp.ones_like(theta))
-    y = p.sample(seed=seed)
+    p = distrax.Normal(jnp.zeros_like(theta), 0.1)
+    y = theta + p.sample(seed=seed)
     return y
 
 
@@ -38,18 +36,17 @@ def distance_fn(y_simulated, y_observed):
 
 
 def run():
-    len_thetas = 2
-    y_observed = jnp.ones(len_thetas)
+    y_observed = jnp.array([-2.0, 1.0])
 
-    prior_simulator_fn, prior_logdensity_fn = prior_model_fns(len_thetas)
+    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
     smc = SMCABC(fns, summary_fn, distance_fn)
     smc.fit(23, y_observed)
-    smc_samples, _ = smc.sample_posterior(10, 1000, 1000, 0.75, 500)
+    smc_samples, _ = smc.sample_posterior(10, 1000, 1000, 0.8, 500)
 
-    fig, axes = plt.subplots(len_thetas)
-    for i in range(len_thetas):
+    fig, axes = plt.subplots(2)
+    for i in range(2):
         sns.histplot(smc_samples[:, i], color="darkblue", ax=axes[i])
         axes[i].set_title(rf"Approximated posterior $\theta_{i}$")
     sns.despine()

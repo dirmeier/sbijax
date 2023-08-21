@@ -60,7 +60,9 @@ class SNE(SBI, ABC):
             )
         else:
             new_thetas, diagnostics = self.sample_posterior(
-                params, n_simulations_per_round, **kwargs
+                params=params,
+                n_simulations_per_round=n_simulations_per_round,
+                **kwargs,
             )
 
         new_obs = self.simulator_fn(seed=next(self._rng_seq), theta=new_thetas)
