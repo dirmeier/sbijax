@@ -56,7 +56,6 @@ def make_model(dim):
         return td(method, **kwargs)
 
     td = hk.transform(_flow)
-    td = hk.without_apply_rng(td)
     return td
 
 

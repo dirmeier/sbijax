@@ -2,7 +2,7 @@ import distrax
 import tensorflow_probability.substrates.jax as tfp
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,unused-argument
 def sample_with_slice(
     rng_seq,
     lp,
