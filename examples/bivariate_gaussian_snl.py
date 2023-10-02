@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import optax
 import seaborn as sns
 from jax import numpy as jnp
-from jax import random
+from jax import random as jr
 from surjectors import (
     Chain,
     MaskedAutoregressive,
@@ -31,16 +31,14 @@ def prior_model_fns():
 
 
 def simulator_fn(seed, theta):
-    p = distrax.Normal(jnp.zeros_like(theta), 0.1)
+    p = distrax.Normal(jnp.zeros_like(theta), 1.0)
     y = theta + p.sample(seed=seed)
     return y
 
 
 def log_density_fn(theta, y):
     prior = distrax.Independent(distrax.Normal(jnp.zeros(2), jnp.ones(2)), 1)
-    likelihood = distrax.MultivariateNormalDiag(
-        theta, 0.1 * jnp.ones_like(theta)
-    )
+    likelihood = distrax.MultivariateNormalDiag(theta, jnp.ones_like(theta))
 
     lp = jnp.sum(prior.log_prob(theta)) + jnp.sum(likelihood.log_prob(y))
     return lp
@@ -94,26 +92,28 @@ def run():
 
     snl = SNL(fns, make_model(2))
     optimizer = optax.adam(1e-3)
-    params, info = snl.fit(
-        random.PRNGKey(23),
-        y_observed,
-        optimizer=optimizer,
-        n_rounds=3,
-        max_n_iter=100,
-        batch_size=64,
-        n_early_stopping_patience=5,
-        sampler="slice",
-    )
 
+    data, params = None, {}
+    for i in range(2):
+        data, _ = snl.simulate_data_and_possibly_append(
+            jr.fold_in(jr.PRNGKey(12), i),
+            params=params,
+            observable=y_observed,
+            data=data,
+        )
+        params, info = snl.fit(
+            jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer
+        )
+
+    sample_key, rng_key = jr.split(jr.PRNGKey(123))
     slice_samples = sample_with_slice(
-        hk.PRNGSequence(0), log_density, 4, 2000, 1000, prior_simulator_fn
+        sample_key, log_density, prior_simulator_fn
     )
     slice_samples = slice_samples.reshape(-1, 2)
-    snl_samples, _ = snl.sample_posterior(
-        params, 4, 2000, 1000, sampler="slice"
-    )
 
-    print(f"Took n={snl.n_total_simulations} simulations in total")
+    sample_key, rng_key = jr.split(rng_key)
+    snl_samples, _ = snl.sample_posterior(sample_key, params, y_observed)
+
     fig, axes = plt.subplots(2, 2)
     for i in range(2):
         sns.histplot(

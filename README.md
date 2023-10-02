@@ -16,10 +16,14 @@ SbiJAX so far implements
 - Rejection ABC (`RejectionABC`),
 - Sequential Monte Carlo ABC (`SMCABC`),
 - Sequential Neural Likelihood Estimation (`SNL`)
+- Surjective Sequential Neural Likelihood Estimation (`SSNL`)
+- Sequential Neural Posterior Estimation C (short `SNP`)
 
 ## Examples
 
 You can find several self-contained examples on how to use the algorithms in `examples`.
+
+## Usage
 
 ## Installation
 
