@@ -1,5 +1,6 @@
 """
-SLCP example from [1] using SNL and masked coupling bijections or surjections
+SLCP example from [1] using SNL and masked autoregressive bijections
+or surjections
 """
 
 import argparse
@@ -14,16 +15,17 @@ import optax
 import pandas as pd
 import seaborn as sns
 from jax import numpy as jnp
-from jax import random
+from jax import random as jr
 from jax import scipy as jsp
 from jax import vmap
-from surjectors import Chain, TransformedDistribution
-from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
-from surjectors.bijectors.permutation import Permutation
-from surjectors.conditioners import MADE, mlp_conditioner
-from surjectors.surjectors.affine_masked_autoregressive_inference_funnel import (  # type: ignore # noqa: E501
+from surjectors import (
     AffineMaskedAutoregressiveInferenceFunnel,
+    Chain,
+    MaskedAutoregressive,
+    Permutation,
+    TransformedDistribution,
 )
+from surjectors.conditioners import MADE, mlp_conditioner
 from surjectors.util import unstack
 
 from sbijax import SNL
@@ -37,21 +39,11 @@ def prior_model_fns():
     return p.sample, p.log_prob
 
 
-def likelihood_fn(theta, y):
-    mu = jnp.tile(theta[:2], 4)
-    s1, s2 = theta[2] ** 2, theta[3] ** 2
-    corr = s1 * s2 * jnp.tanh(theta[4])
-    cov = jnp.array([[s1**2, corr], [corr, s2**2]])
-    cov = jsp.linalg.block_diag(*[cov for _ in range(4)])
-    p = distrax.MultivariateNormalFullCovariance(mu, cov)
-    return p.log_prob(y)
-
-
 def simulator_fn(seed, theta):
     orig_shape = theta.shape
     if theta.ndim == 2:
         theta = theta[:, None, :]
-    us_key, noise_key = random.split(seed)
+    us_key, noise_key = jr.split(seed)
 
     def _unpack_params(ps):
         m0 = ps[..., [0]]
@@ -75,6 +67,26 @@ def simulator_fn(seed, theta):
     else:
         y = y.reshape((*theta.shape[:2], 8))
     return y
+
+
+def likelihood_fn(theta, y):
+    mu = jnp.tile(theta[:2], 4)
+    s1, s2 = theta[2] ** 2, theta[3] ** 2
+    corr = s1 * s2 * jnp.tanh(theta[4])
+    cov = jnp.array([[s1**2, corr], [corr, s2**2]])
+    cov = jsp.linalg.block_diag(*[cov for _ in range(4)])
+    p = distrax.MultivariateNormalFullCovariance(mu, cov)
+    return p.log_prob(y)
+
+
+def log_density_fn(theta, y):
+    prior_lp = distrax.Independent(
+        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
+    ).log_prob(theta)
+    likelihood_lp = likelihood_fn(theta, y)
+
+    lp = jnp.sum(prior_lp) + jnp.sum(likelihood_lp)
+    return lp
 
 
 def make_model(dim, use_surjectors):
@@ -167,38 +179,38 @@ def run(use_surjectors):
         ]
     )
 
-    prior_simulator_fn, prior_fn = prior_model_fns()
-    fns = (prior_simulator_fn, prior_fn), simulator_fn
-
-    def log_density_fn(theta, y):
-        prior_lp = prior_fn(theta)
-        likelihood_lp = likelihood_fn(theta, y)
-
-        lp = jnp.sum(prior_lp) + jnp.sum(likelihood_lp)
-        return lp
-
     log_density_partial = partial(log_density_fn, y=y_observed)
     log_density = lambda x: vmap(log_density_partial)(x)
 
-    model = make_model(y_observed.shape[1], use_surjectors)
-    snl = SNL(fns, model)
-    optimizer = optax.adam(1e-3)
-    params, info = snl.fit(
-        random.PRNGKey(23),
-        y_observed,
-        optimizer,
-        n_rounds=5,
-        max_n_iter=100,
-        batch_size=64,
-        n_early_stopping_patience=5,
-        sampler="slice",
-    )
+    prior_simulator_fn, prior_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_fn), simulator_fn
 
+    snl = SNL(fns, make_model(y_observed.shape[1], use_surjectors))
+    optimizer = optax.adam(1e-3)
+
+    data, params = None, {}
+    for i in range(5):
+        data, _ = snl.simulate_data_and_possibly_append(
+            jr.fold_in(jr.PRNGKey(12), i),
+            params=params,
+            observable=y_observed,
+            data=data,
+            sampler="slice",
+        )
+        params, info = snl.fit(
+            jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer
+        )
+
+    sample_key, rng_key = jr.split(jr.PRNGKey(123))
+    snl_samples, _ = snl.sample_posterior(sample_key, params, y_observed)
+
+    sample_key, rng_key = jr.split(rng_key)
     slice_samples = sample_with_slice(
-        hk.PRNGSequence(12), log_density, 4, 5000, 2500, prior_simulator_fn
+        sample_key,
+        log_density,
+        prior_simulator_fn,
     )
     slice_samples = slice_samples.reshape(-1, len_theta)
-    snl_samples, _ = snl.sample_posterior(params, 4, 5000, 2500)
 
     g = sns.PairGrid(pd.DataFrame(slice_samples))
     g.map_upper(sns.scatterplot, color="black", marker=".", edgecolor=None, s=2)

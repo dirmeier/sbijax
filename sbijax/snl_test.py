@@ -2,7 +2,6 @@
 
 import distrax
 import haiku as hk
-import optax
 from jax import numpy as jnp
 from surjectors import Chain, MaskedCoupling, TransformedDistribution
 from surjectors.conditioners import mlp_conditioner
@@ -68,14 +67,24 @@ def test_snl():
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
     snl = SNL(fns, make_model(2))
-    params, info = snl.fit(
+    data, params = None, {}
+    for i in range(2):
+        data, _ = snl.simulate_data_and_possibly_append(
+            next(rng_seq),
+            params=params,
+            observable=y_observed,
+            data=data,
+            n_simulations=100,
+            n_chains=2,
+            n_samples=200,
+            n_warmup=100,
+        )
+        params, info = snl.fit(next(rng_seq), data=data)
+    _ = snl.sample_posterior(
         next(rng_seq),
+        params,
         y_observed,
-        n_rounds=2,
-        optimizer=optax.adam(1e-4),
-        sampler="slice",
         n_chains=2,
-        n_samples=100,
-        n_warmup=50,
+        n_samples=200,
+        n_warmup=100,
     )
-    _ = snl.sample_posterior(params, 2, 100, 50, sampler="slice")

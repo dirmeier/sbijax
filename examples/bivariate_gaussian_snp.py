@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import optax
 import seaborn as sns
 from jax import numpy as jnp
-from jax import random
+from jax import random as jr
 from surjectors import Chain, TransformedDistribution
 from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
 from surjectors.bijectors.permutation import Permutation
@@ -25,7 +25,7 @@ def prior_model_fns():
 
 
 def simulator_fn(seed, theta):
-    p = distrax.Normal(jnp.zeros_like(theta), 0.1)
+    p = distrax.Normal(jnp.zeros_like(theta), 1.0)
     y = theta + p.sample(seed=seed)
     return y
 
@@ -72,21 +72,25 @@ def run():
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    optimizer = optax.adamw(1e-04)
     snp = SNP(fns, make_model(2))
-    params, info = snp.fit(
-        random.PRNGKey(2),
-        y_observed,
-        n_rounds=3,
-        optimizer=optimizer,
-        n_early_stopping_patience=10,
-        batch_size=64,
-        n_atoms=10,
-        max_n_iter=100,
-    )
+    optimizer = optax.adam(1e-3)
 
-    print(f"Took n={snp.n_total_simulations} simulations in total")
-    snp_samples, _ = snp.sample_posterior(params, 10000)
+    data, params = None, {}
+    for i in range(2):
+        data, _ = snp.simulate_data_and_possibly_append(
+            jr.fold_in(jr.PRNGKey(1), i),
+            params=params,
+            observable=y_observed,
+            data=data,
+        )
+        params, info = snp.fit(
+            jr.fold_in(jr.PRNGKey(2), i),
+            data=data,
+            optimizer=optimizer,
+        )
+
+    rng_key = jr.PRNGKey(23)
+    snp_samples, _ = snp.sample_posterior(rng_key, params, y_observed)
     fig, axes = plt.subplots(2)
     for i, ax in enumerate(axes):
         sns.histplot(snp_samples[:, i], color="darkblue", ax=ax)

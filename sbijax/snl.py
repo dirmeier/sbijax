@@ -1,4 +1,3 @@
-from collections import namedtuple
 from functools import partial
 
 import chex
@@ -6,16 +5,16 @@ import jax
 import numpy as np
 import optax
 from absl import logging
-
-# TODO(simon): this is a bit an annoying dependency to have
-from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
+from jax import random as jr
 
 from sbijax._sne_base import SNE
 from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
 
-
 # pylint: disable=too-many-arguments,unused-argument
+from sbijax.nn.early_stopping import EarlyStopping
+
+
 class SNL(SNE):
     """
     Sequential neural likelihood
@@ -27,16 +26,11 @@ class SNL(SNE):
     def fit(
         self,
         rng_key,
-        observed,
-        optimizer,
-        n_rounds=10,
-        n_simulations_per_round=1000,
-        max_n_iter=1000,
+        data,
+        optimizer=optax.adam(0.0003),
+        n_iter=1000,
         batch_size=128,
         percentage_data_as_validation_set=0.1,
-        n_samples=10000,
-        n_warmup=5000,
-        n_chains=4,
         n_early_stopping_patience=10,
         **kwargs,
     ):
@@ -47,28 +41,17 @@ class SNL(SNE):
         ----------
         rng_seq: hk.PRNGSequence
             a hk.PRNGSequence
-        observed: chex.Array
-            (n \times p)-dimensional array of observations, where `n` is the n
-            number of samples
+        data: NamedTuple
+            data set obtained from calling `simulate_data_and_possibly_append`
         optimizer: optax.Optimizer
             an optax optimizer object
-        n_rounds: int
-            number of rounds to optimize
-        n_simulations_per_round: int
-            number of data simulations per round
-        max_n_iter:
+        n_iter:
             maximal number of training iterations per round
         batch_size: int
             batch size used for training the model
         percentage_data_as_validation_set:
             percentage of the simulated data that is used for valitation and
             early stopping
-         n_samples: int
-            number of samples to draw to approximate the posterior
-        n_warmup: int
-            number of samples to discard
-        n_chains: int
-            number of chains to sample
         n_early_stopping_patience: int
             number of iterations of no improvement of training the flow
             before stopping optimisation
@@ -86,50 +69,177 @@ class SNL(SNE):
             information
         """
 
-        super().fit(rng_key, observed)
+        itr_key, rng_key = jr.split(rng_key)
+        train_iter, val_iter = self.as_iterators(
+            itr_key, data, batch_size, percentage_data_as_validation_set
+        )
+        params, losses = self._fit_model_single_round(
+            seed=rng_key,
+            train_iter=train_iter,
+            val_iter=val_iter,
+            optimizer=optimizer,
+            n_iter=n_iter,
+            n_early_stopping_patience=n_early_stopping_patience,
+        )
 
-        simulator_fn = partial(
-            self._simulate_new_data_and_append,
-            n_simulations_per_round=n_simulations_per_round,
+        return params, losses
+
+    # pylint: disable=arguments-differ
+    def _fit_model_single_round(
+        self,
+        seed,
+        train_iter,
+        val_iter,
+        optimizer,
+        n_iter,
+        n_early_stopping_patience,
+    ):
+        init_key, seed = jr.split(seed)
+        params = self._init_params(init_key, **train_iter(0))
+        state = optimizer.init(params)
+
+        @jax.jit
+        def step(params, state, **batch):
+            def loss_fn(params):
+                lp = self.model.apply(
+                    params, method="log_prob", y=batch["y"], x=batch["theta"]
+                )
+                return -jnp.mean(lp)
+
+            loss, grads = jax.value_and_grad(loss_fn)(params)
+            updates, new_state = optimizer.update(grads, state, params)
+            new_params = optax.apply_updates(params, updates)
+            return loss, new_params, new_state
+
+        losses = np.zeros([n_iter, 2])
+        early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
+        logging.info("training model")
+        for i in range(n_iter):
+            train_loss = 0.0
+            for j in range(train_iter.num_batches):
+                batch = train_iter(j)
+                batch_loss, params, state = step(params, state, **batch)
+                train_loss += batch_loss * (
+                    batch["y"].shape[0] / train_iter.num_samples
+                )
+            validation_loss = self._validation_loss(params, val_iter)
+            losses[i] = jnp.array([train_loss, validation_loss])
+
+            _, early_stop = early_stop.update(validation_loss)
+            if early_stop.should_stop:
+                logging.info("early stopping criterion found")
+                break
+
+        losses = jnp.vstack(losses)[:i, :]
+        return params, losses
+
+    def _validation_loss(self, params, val_iter):
+        @jax.jit
+        def loss_fn(**batch):
+            lp = self.model.apply(
+                params, method="log_prob", y=batch["y"], x=batch["theta"]
+            )
+            return -jnp.mean(lp)
+
+        def body_fn(i):
+            batch = val_iter(i)
+            loss = loss_fn(**batch)
+            return loss * (batch["y"].shape[0] / val_iter.num_samples)
+
+        losses = 0.0
+        for i in range(val_iter.num_batches):
+            losses += body_fn(i)
+        return losses
+
+    def _init_params(self, rng_key, **init_data):
+        params = self.model.init(
+            rng_key, method="log_prob", y=init_data["y"], x=init_data["theta"]
+        )
+        return params
+
+    def simulate_data_and_possibly_append(
+        self,
+        rng_key,
+        params=None,
+        observable=None,
+        data=None,
+        n_simulations=1_000,
+        n_chains=4,
+        n_samples=2_000,
+        n_warmup=1_000,
+        **kwargs,
+    ):
+        """
+        Simulate data from the posteriorand append it to an existing data set
+        (if provided)
+
+        Parameters
+        ----------
+        rng_key: jax.PRNGKey
+           a random key
+        params: pytree
+           a dictionary of neural network parameters
+        observable: jnp.ndarray
+           an observation
+        data: NamedTuple
+           existing data set
+        n_simulations: int
+           number of newly simulated data
+        n_chains: int
+            number of MCMC chains
+        n_samples: int
+            number of sa les to draw in total
+        n_warmup: int
+            number of draws to discared
+        kwargs: keyword arguments
+           dictionary of ey value pairs passed to `sample_posterior`.
+           The following arguments are possible:
+           - sampler: either 'nuts', 'slice' or None (defaults to nuts)
+           - n_thin: number of thinning steps (int)
+           - n_doubling: number of doubling steps of the interval (int)
+           - step_size: step size of the initial interval (float)
+
+        Returns
+        -------
+        NamedTuple:
+           returns a NamedTuple of two axis, y and theta
+        """
+        return super().simulate_data_and_possibly_append(
+            rng_key=rng_key,
+            params=params,
+            observable=observable,
+            data=data,
+            n_simulations=n_simulations,
             n_chains=n_chains,
             n_samples=n_samples,
             n_warmup=n_warmup,
+            **kwargs,
         )
-        D, params, all_diagnostics, all_losses, all_params = (
-            None,
-            None,
-            [],
-            [],
-            [],
-        )
-        for _ in range(n_rounds):
-            D, diagnostics = simulator_fn(params, D, **kwargs)
-            self._train_iter, self._val_iter = self.as_iterators(
-                D, batch_size, percentage_data_as_validation_set
-            )
-            params, losses = self._fit_model_single_round(
-                optimizer=optimizer,
-                max_n_iter=max_n_iter,
-                n_early_stopping_patience=n_early_stopping_patience,
-            )
-            all_params.append(params.copy())
-            all_losses.append(losses)
-            all_diagnostics.append(diagnostics)
 
-        snl_info = namedtuple("snl_info", "params losses diagnostics")
-        return params, snl_info(all_params, all_losses, all_diagnostics)
-
-    # pylint: disable=arguments-differ
-    def sample_posterior(self, params, n_chains, n_samples, n_warmup, **kwargs):
+    def sample_posterior(
+        self,
+        rng_key,
+        params,
+        observable,
+        *,
+        n_chains=4,
+        n_samples=2_000,
+        n_warmup=1_000,
+        **kwargs,
+    ):
         """
         Sample from the approximate posterior
 
         Parameters
         ----------
+        rng_key: jax.PRNGKey
+            a random key
         params: pytree
             a pytree of parameter for the model
+        observable: jnp.Array
+            observation to condition on
         n_chains: int
-        number of chains to sample
+            number of MCMC chains
         n_samples: int
             number of samples per chain
         n_warmup: int
@@ -148,12 +258,13 @@ class SNL(SNE):
             (n_samples \times p)
         """
 
+        observable = jnp.atleast_2d(observable)
         part = partial(
-            self.model.apply, params=params, method="log_prob", y=self.observed
+            self.model.apply, params=params, method="log_prob", y=observable
         )
 
         def _log_likelihood_fn(theta):
-            theta = jnp.tile(theta, [self.observed.shape[0], 1])
+            theta = jnp.tile(theta, [observable.shape[0], 1])
             return part(x=theta)
 
         def _joint_logdensity_fn(theta):
@@ -162,96 +273,30 @@ class SNL(SNE):
             return jnp.sum(lp) + jnp.sum(lp_prior)
 
         if "sampler" in kwargs and kwargs["sampler"] == "slice":
+            kwargs.pop("sampler", None)
 
             def lp__(theta):
                 return jax.vmap(_joint_logdensity_fn)(theta)
 
-            kwargs.pop("sampler", None)
-            samples = sample_with_slice(
-                self._rng_seq,
-                lp__,
-                n_chains,
-                n_samples,
-                n_warmup,
-                self.prior_sampler_fn,
-                **kwargs,
-            )
+            sampling_fn = sample_with_slice
         else:
 
             def lp__(theta):
                 return _joint_logdensity_fn(**theta)
 
-            samples = sample_with_nuts(
-                self._rng_seq,
-                lp__,
-                self._len_theta,
-                n_chains,
-                n_samples,
-                n_warmup,
-            )
+            sampling_fn = sample_with_nuts
+
+        samples = sampling_fn(
+            rng_key=rng_key,
+            lp=lp__,
+            prior=self.prior_sampler_fn,
+            n_chains=n_chains,
+            n_samples=n_samples,
+            n_warmup=n_warmup,
+            **kwargs,
+        )
         chex.assert_shape(samples, [n_samples - n_warmup, n_chains, None])
         diagnostics = mcmc_diagnostics(samples)
         samples = samples.reshape((n_samples - n_warmup) * n_chains, -1)
 
         return samples, diagnostics
-
-    def _fit_model_single_round(
-        self, optimizer, max_n_iter, n_early_stopping_patience
-    ):
-        params = self._init_params(next(self._rng_seq), **self._train_iter(0))
-        state = optimizer.init(params)
-
-        @jax.jit
-        def step(params, state, **batch):
-            def loss_fn(params):
-                lp = self.model.apply(
-                    params, method="log_prob", y=batch["y"], x=batch["theta"]
-                )
-                return -jnp.sum(lp)
-
-            loss, grads = jax.value_and_grad(loss_fn)(params)
-            updates, new_state = optimizer.update(grads, state, params)
-            new_params = optax.apply_updates(params, updates)
-            return loss, new_params, new_state
-
-        losses = np.zeros([max_n_iter, 2])
-        early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
-        logging.info("training model")
-        for i in range(max_n_iter):
-            train_loss = 0.0
-            for j in range(self._train_iter.num_batches):
-                batch = self._train_iter(j)
-                batch_loss, params, state = step(params, state, **batch)
-                train_loss += batch_loss
-            print(train_loss)
-            validation_loss = self._validation_loss(params)
-            losses[i] = jnp.array([train_loss, validation_loss])
-
-            _, early_stop = early_stop.update(validation_loss)
-            if early_stop.should_stop:
-                logging.info("early stopping criterion found")
-                break
-
-        losses = jnp.vstack(losses)[:i, :]
-        return params, losses
-
-    def _validation_loss(self, params):
-        def _loss_fn(**batch):
-            lp = self.model.apply(
-                params, method="log_prob", y=batch["y"], x=batch["theta"]
-            )
-            return -jnp.sum(lp)
-
-        losses = jnp.array(
-            [
-                _loss_fn(**self._val_iter(j))
-                for j in range(self._val_iter.num_batches)
-            ]
-        )
-        return jnp.sum(losses)
-
-    def _init_params(self, rng_key, **init_data):
-        params = self.model.init(
-            rng_key, method="log_prob", y=init_data["y"], x=init_data["theta"]
-        )
-        return params
