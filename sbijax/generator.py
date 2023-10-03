@@ -2,7 +2,8 @@ from collections import namedtuple
 
 import chex
 from jax import lax
-from jax import numpy as jnp, random as jr
+from jax import numpy as jnp
+from jax import random as jr
 
 named_dataset = namedtuple("named_dataset", "y theta")
 

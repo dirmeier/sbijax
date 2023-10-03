@@ -6,7 +6,8 @@ import distrax
 import jax
 import matplotlib.pyplot as plt
 import seaborn as sns
-from jax import numpy as jnp, random as jr
+from jax import numpy as jnp
+from jax import random as jr
 
 from sbijax import SMCABC
 
@@ -43,8 +44,7 @@ def run():
 
     smc = SMCABC(fns, summary_fn, distance_fn)
     smc_samples, _ = smc.sample_posterior(
-        jr.PRNGKey(22), y_observed,
-        10, 1000, 1000, 0.6, 500
+        jr.PRNGKey(22), y_observed, 10, 1000, 1000, 0.6, 500
     )
 
     fig, axes = plt.subplots(2)
