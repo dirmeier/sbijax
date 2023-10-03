@@ -4,15 +4,16 @@ import jax
 import numpy as np
 import optax
 from absl import logging
-from flax.training.early_stopping import EarlyStopping
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
 
 from sbijax._sne_base import SNE
 
-
 # pylint: disable=too-many-arguments,unused-argument
+from sbijax.nn.early_stopping import EarlyStopping
+
+
 class SNP(SNE):
     """
     Sequential neural posterior estimation
