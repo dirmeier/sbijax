@@ -108,6 +108,19 @@ def test_stack_data():
     chex.assert_trees_all_equal(also_data[1], stacked_data[1][n:])
 
 
+def test_stack_data_with_none():
+    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
+
+    snl = SNL(fns, make_model(2))
+    n = 100
+    data, _ = snl.simulate_data(jr.PRNGKey(1), n_simulations=n)
+    stacked_data = snl.stack_data(None, data)
+
+    chex.assert_trees_all_equal(data[0], stacked_data[0])
+    chex.assert_trees_all_equal(data[1], stacked_data[1])
+
+
 def test_simulate_data_from_posterior_fail():
     rng_seq = hk.PRNGSequence(0)
 
