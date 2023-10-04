@@ -2,7 +2,7 @@
 sbijax: Simulation-based inference in JAX
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 from sbijax.abc.rejection_abc import RejectionABC
