@@ -158,6 +158,10 @@ class SNE(SBI, ABC):
             returns the stack of the two data sets
         """
 
+        if data is None:
+            return also_data
+        if also_data is None:
+            return data
         return named_dataset(
             *[jnp.vstack([a, b]) for a, b in zip(data, also_data)]
         )
