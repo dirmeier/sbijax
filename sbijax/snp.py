@@ -9,11 +9,10 @@ from jax import random as jr
 from jax import scipy as jsp
 
 from sbijax._sne_base import SNE
-
-# pylint: disable=too-many-arguments,unused-argument
 from sbijax.nn.early_stopping import EarlyStopping
 
 
+# pylint: disable=too-many-arguments,unused-argument
 class SNP(SNE):
     """
     Sequential neural posterior estimation
@@ -133,6 +132,7 @@ class SNP(SNE):
 
         losses = np.zeros([n_iter, 2])
         early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
+        best_params, best_loss = None, np.inf
         logging.info("training model")
         for i in range(n_iter):
             train_loss = 0.0
@@ -156,10 +156,13 @@ class SNP(SNE):
             if early_stop.should_stop:
                 logging.info("early stopping criterion found")
                 break
+            if validation_loss < best_loss:
+                best_loss = validation_loss
+                best_params = params.copy()
 
         self.n_round += 1
         losses = jnp.vstack(losses)[:i, :]
-        return params, losses
+        return best_params, losses
 
     def _init_params(self, rng_key, **init_data):
         params = self.model.init(
