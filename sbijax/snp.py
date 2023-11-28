@@ -9,11 +9,10 @@ from jax import random as jr
 from jax import scipy as jsp
 
 from sbijax._sne_base import SNE
-
-# pylint: disable=too-many-arguments,unused-argument
 from sbijax.nn.early_stopping import EarlyStopping
 
 
+# pylint: disable=too-many-arguments,unused-argument
 class SNP(SNE):
     """
     Sequential neural posterior estimation
