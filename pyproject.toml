@@ -20,7 +20,7 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "blackjax-nightly>=0.9.6.post127",
+    "blackjax-nightly>=1.0.0.post17",
     "distrax>=0.1.2",
     "dm-haiku>=0.0.9",
     "optax>=0.1.3",

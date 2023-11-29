@@ -5,6 +5,7 @@ or surjections
 
 import argparse
 from functools import partial
+from timeit import default_timer as timer
 
 import distrax
 import haiku as hk
@@ -189,6 +190,7 @@ def run(use_surjectors):
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
+    start = timer()
     for i in range(5):
         data, _ = snl.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(12), i),
@@ -200,6 +202,8 @@ def run(use_surjectors):
         params, info = snl.fit(
             jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer
         )
+    end = timer()
+    print(end - start)
 
     sample_key, rng_key = jr.split(jr.PRNGKey(123))
     snl_samples, _ = snl.sample_posterior(sample_key, params, y_observed)
