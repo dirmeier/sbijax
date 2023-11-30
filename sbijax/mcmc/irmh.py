@@ -54,18 +54,20 @@ def sample_with_imh(
     return thetas
 
 
-def irmh_proposal_distribution(shape):
+def _irmh_proposal_distribution(shape):
     def fn(rng_key):
         return {"theta": jax.random.normal(rng_key, shape=(shape,))}
 
     return fn
 
 
-# pylint: disable=missing-function-docstring
+# pylint: disable=missing-function-docstring,no-member
 def _mh_init(rng_key, n_chains, prior: distrax.Distribution, lp):
     init_key, rng_key = jr.split(rng_key)
     initial_positions = prior(seed=init_key, sample_shape=(n_chains,))
-    kernel = bj.irmh(lp, irmh_proposal_distribution(initial_positions.shape[1]))
+    kernel = bj.irmh(
+        lp, _irmh_proposal_distribution(initial_positions.shape[1])
+    )
     initial_positions = {"theta": initial_positions}
     initial_state = jax.vmap(kernel.init)(initial_positions)
     return initial_state, kernel.step

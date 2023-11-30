@@ -53,7 +53,7 @@ def sample_with_mala(
     return thetas
 
 
-# pylint: disable=missing-function-docstring
+# pylint: disable=missing-function-docstring,no-member
 def _mala_init(rng_key, n_chains, prior: distrax.Distribution, lp):
     init_key, rng_key = jr.split(rng_key)
     initial_positions = prior(seed=init_key, sample_shape=(n_chains,))
