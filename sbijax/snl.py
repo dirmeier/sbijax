@@ -12,6 +12,9 @@ from sbijax._sne_base import SNE
 from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
 
 # pylint: disable=too-many-arguments,unused-argument
+from sbijax.mcmc.irmh import sample_with_imh
+from sbijax.mcmc.mala import sample_with_mala
+from sbijax.mcmc.rmh import sample_with_rmh
 from sbijax.nn.early_stopping import EarlyStopping
 
 
@@ -283,6 +286,27 @@ class SNL(SNE):
                 return jax.vmap(_joint_logdensity_fn)(theta)
 
             sampling_fn = sample_with_slice
+        elif "sampler" in kwargs and kwargs["sampler"] == "rmh":
+            kwargs.pop("sampler", None)
+
+            def lp__(theta):
+                return _joint_logdensity_fn(**theta)
+
+            sampling_fn = sample_with_rmh
+        elif "sampler" in kwargs and kwargs["sampler"] == "imh":
+            kwargs.pop("sampler", None)
+
+            def lp__(theta):
+                return _joint_logdensity_fn(**theta)
+
+            sampling_fn = sample_with_imh
+        elif "sampler" in kwargs and kwargs["sampler"] == "mala":
+            kwargs.pop("sampler", None)
+
+            def lp__(theta):
+                return _joint_logdensity_fn(**theta)
+
+            sampling_fn = sample_with_mala
         else:
 
             def lp__(theta):

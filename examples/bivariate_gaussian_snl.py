@@ -100,6 +100,7 @@ def run():
             params=params,
             observable=y_observed,
             data=data,
+            sampler="imh",
         )
         params, info = snl.fit(
             jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer
