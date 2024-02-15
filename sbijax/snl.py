@@ -177,7 +177,7 @@ class SNL(SNE):
         **kwargs,
     ):
         """
-        Simulate data from the posteriorand append it to an existing data set
+        Simulate data from the posterior and append it to an existing data set
         (if provided)
 
         Parameters
@@ -266,6 +266,28 @@ class SNL(SNE):
         """
 
         observable = jnp.atleast_2d(observable)
+        return self._sample_posterior(
+            rng_key,
+            params,
+            observable,
+            n_chains=4,
+            n_samples=2_000,
+            n_warmup=1_000,
+            **kwargs,
+        )
+
+    def _sample_posterior(
+        self,
+        rng_key,
+        params,
+        observable,
+        *,
+        n_chains=4,
+        n_samples=2_000,
+        n_warmup=1_000,
+        **kwargs,
+    ):
+
         part = partial(
             self.model.apply, params=params, method="log_prob", y=observable
         )

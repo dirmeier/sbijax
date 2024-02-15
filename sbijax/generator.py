@@ -11,13 +11,20 @@ named_dataset = namedtuple("named_dataset", "y theta")
 
 # pylint: disable=missing-class-docstring,too-few-public-methods
 class DataLoader:
-    def __init__(self, num_batches, idxs, get_batch):
+    def __init__(self, num_batches, idxs=None, get_batch=None, batches=None):
         self.num_batches = num_batches
         self.idxs = idxs
-        self.num_samples = len(idxs)
+        if idxs is not None:
+            self.num_samples = len(idxs)
+        else:
+            self.num_samples = self.num_batches * batches[0]["y"].shape[0]
         self.get_batch = get_batch
+        self.batches = batches
 
     def __call__(self, idx, idxs=None):
+        if self.batches is not None:
+            return self.batches[idx]
+
         if idxs is None:
             idxs = self.idxs
         return self.get_batch(idx, idxs)
