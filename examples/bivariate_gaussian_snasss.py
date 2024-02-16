@@ -28,6 +28,8 @@ from surjectors.util import unstack
 
 from sbijax import SNASSS
 
+W = jr.normal(jr.PRNGKey(0), (2, 10))
+
 
 def prior_model_fns():
     p = distrax.Independent(distrax.Normal(jnp.zeros(2), jnp.ones(2)), 1)
@@ -35,9 +37,8 @@ def prior_model_fns():
 
 
 def simulator_fn(seed, theta):
-    theta = jnp.tile(theta, jnp.array([1, 5]))
-    p = distrax.Normal(jnp.zeros_like(theta), 1.0)
-    y = theta + p.sample(seed=seed)
+    y = theta @ W
+    y = y + distrax.Normal(jnp.zeros_like(y), 0.1).sample(seed=seed)
     return y
 
 
@@ -49,12 +50,12 @@ def make_model(dim):
     def _flow(method, **kwargs):
         layers = []
         order = jnp.arange(dim)
-        for i in range(2):
+        for i in range(5):
             layer = MaskedAutoregressive(
                 bijector_fn=_bijector_fn,
                 conditioner=MADE(
                     dim,
-                    [50, dim * 2],
+                    [50, 50, dim * 2],
                     2,
                     w_init=hk.initializers.TruncatedNormal(0.001),
                     b_init=jnp.zeros,
@@ -79,12 +80,12 @@ def make_model(dim):
 
 
 def run():
-    y_observed = jnp.tile(jnp.array([2.0, 1.0]), [1, 5])
+    y_observed = jnp.array([[2.0, -2.0]]) @ W
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    snp = SNASSS(fns, make_model(2))
+    snp = SNASSS(fns, make_model(2), 2, 1)
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}

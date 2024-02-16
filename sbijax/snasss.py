@@ -8,9 +8,9 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax import SNL
 from sbijax.generator import DataLoader
 from sbijax.nn.early_stopping import EarlyStopping
+from sbijax.snl import SNL
 
 
 def _sample_unit_sphere(rng_key, n, dim):
@@ -50,7 +50,7 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
     )
     a, b = -jax.nn.softplus(-f_pos), jax.nn.softplus(f_neg)
     mi = a.mean() - b.mean()
-    return mi
+    return -mi
 
 
 class _SNASSSNets:
@@ -58,12 +58,14 @@ class _SNASSSNets:
         self.dim = dim
         self.secondary_dim = second_dim
         self._summary = hk.nets.MLP(
-            output_sizes=[50, dim], activation=jax.nn.tanh
+            output_sizes=[50, 50, dim], activation=jax.nn.tanh
         )
         self._secondary_summary = hk.nets.MLP(
-            output_sizes=[50, self.secondary_dim], activation=jax.nn.tanh
+            output_sizes=[50, 50, self.secondary_dim], activation=jax.nn.tanh
         )
-        self._critic = hk.nets.MLP(output_sizes=[50, 1], activation=jax.nn.tanh)
+        self._critic = hk.nets.MLP(
+            output_sizes=[50, 50, 1], activation=jax.nn.tanh
+        )
 
     def __call__(self, method, **kwargs):
         return getattr(self, method)(**kwargs)
@@ -103,9 +105,9 @@ class SNASSS(SNL):
            Likelihood-free Inference". ICML, 2023
     """
 
-    def __init__(self, model_fns, density_estimator):
+    def __init__(self, model_fns, density_estimator, dim, dim2):
         super().__init__(model_fns, density_estimator)
-        self.sc_net = _make_critic(2, 1)
+        self.sc_net = _make_critic(dim, dim2)
         self._s_params = {}
 
     # pylint: disable=arguments-differ,too-many-locals
@@ -237,7 +239,8 @@ class SNASSS(SNL):
                 best_loss = validation_loss
                 best_params = params.copy()
 
-        losses = jnp.vstack(losses)[:i, :]
+        losses = jnp.vstack(losses)[: (i + 1), :]
+        print(losses)
         return best_params, losses
 
     def _init_summary_net_params(self, rng_key, **init_data):

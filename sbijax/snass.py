@@ -8,9 +8,9 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax import SNL
 from sbijax.generator import DataLoader
 from sbijax.nn.early_stopping import EarlyStopping
+from sbijax.snl import SNL
 
 
 def _jsd_summary_loss(params, rng, apply_fn, **batch):
@@ -27,7 +27,7 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
     )
     a, b = -jax.nn.softplus(-f_pos), jax.nn.softplus(f_neg)
     mi = a.mean() - b.mean()
-    return mi
+    return -mi
 
 
 class _SNASSNets:
