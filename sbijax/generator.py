@@ -1,7 +1,6 @@
 from collections import namedtuple
 
 import chex
-import numpy as np
 from jax import lax
 from jax import numpy as jnp
 from jax import random as jr
@@ -70,7 +69,7 @@ def as_batch_iterator(
 
     def get_batch(idx, idxs=idxs):
         start_idx = idx * batch_size
-        step_size = np.minimum(n - start_idx, batch_size)
+        step_size = jnp.minimum(n - start_idx, batch_size)
         ret_idx = lax.dynamic_slice_in_dim(idxs, idx * batch_size, step_size)
         batch = {
             name: lax.index_take(array, (ret_idx,), axes=(0,))

@@ -26,7 +26,7 @@ from surjectors import (
 from surjectors.nn import MADE
 from surjectors.util import unstack
 
-from sbijax import SNASS
+from sbijax import SNASSS
 
 
 def prior_model_fns():
@@ -49,12 +49,12 @@ def make_model(dim):
     def _flow(method, **kwargs):
         layers = []
         order = jnp.arange(dim)
-        for i in range(5):
+        for i in range(2):
             layer = MaskedAutoregressive(
                 bijector_fn=_bijector_fn,
                 conditioner=MADE(
                     dim,
-                    [64, dim * 2],
+                    [50, dim * 2],
                     2,
                     w_init=hk.initializers.TruncatedNormal(0.001),
                     b_init=jnp.zeros,
@@ -78,33 +78,13 @@ def make_model(dim):
     return td
 
 
-def make_summary_net(dim):
-    @hk.without_apply_rng
-    @hk.transform
-    def _net(inputs):
-        net = hk.nets.MLP(output_sizes=[64, 64, dim], activation=jax.nn.tanh)
-        return net(inputs)
-
-    return _net
-
-
-def make_critic():
-    @hk.without_apply_rng
-    @hk.transform
-    def _net(inputs):
-        net = hk.nets.MLP(output_sizes=[64, 64, 1], activation=jax.nn.tanh)
-        return net(inputs)
-
-    return _net
-
-
 def run():
     y_observed = jnp.tile(jnp.array([2.0, 1.0]), [1, 5])
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    snp = SNASS(fns, make_model(2), None, None)
+    snp = SNASSS(fns, make_model(2))
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
@@ -119,6 +99,7 @@ def run():
             jr.fold_in(jr.PRNGKey(2), i),
             data=data,
             optimizer=optimizer,
+            batch_size=100,
         )
 
     rng_key = jr.PRNGKey(23)

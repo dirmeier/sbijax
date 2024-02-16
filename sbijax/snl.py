@@ -10,14 +10,13 @@ from jax import random as jr
 
 from sbijax._sne_base import SNE
 from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
-
-# pylint: disable=too-many-arguments,unused-argument
 from sbijax.mcmc.irmh import sample_with_imh
 from sbijax.mcmc.mala import sample_with_mala
 from sbijax.mcmc.rmh import sample_with_rmh
 from sbijax.nn.early_stopping import EarlyStopping
 
 
+# pylint: disable=too-many-arguments,unused-argument
 class SNL(SNE):
     """
     Sequential neural likelihood

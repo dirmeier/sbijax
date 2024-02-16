@@ -13,67 +13,99 @@ from sbijax.generator import DataLoader
 from sbijax.nn.early_stopping import EarlyStopping
 
 
-def _jsd_summary_loss(params, rng, apply_fn, **batch):
+def _sample_unit_sphere(rng_key, n, dim):
+    u = jr.normal(rng_key, (n, dim))
+    norm = jnp.linalg.norm(u, ord=2, axis=-1, keepdims=True)
+    return u / norm
+
+
+def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
     y, theta = batch["y"], batch["theta"]
-    m, _ = y.shape
+    n, p = theta.shape
+
+    phi_key, rng_key = jr.split(rng_key)
     summr = apply_fn(params, method="summary", y=y)
-    idx_pos = jnp.tile(jnp.arange(m), 10)
-    idx_neg = jax.vmap(lambda x: jr.permutation(x, m))(
-        jr.split(rng, 10)
+    summr = jnp.tile(summr, [10, 1])
+    theta = jnp.tile(theta, [10, 1])
+
+    phi = _sample_unit_sphere(phi_key, 10, p)
+    phi = jnp.repeat(phi, n, axis=0)
+
+    second_summr = apply_fn(
+        params, method="secondary_summary", y=summr, theta=phi
+    )
+    theta_prime = jnp.sum(theta * phi, axis=1).reshape(-1, 1)
+
+    idx_pos = jnp.tile(jnp.arange(n), 10)
+    perm_key, rng_key = jr.split(rng_key)
+    idx_neg = jax.vmap(lambda x: jr.permutation(x, n))(
+        jr.split(perm_key, 10)
     ).reshape(-1)
-    f_pos = apply_fn(params, method="critic", y=summr, theta=theta)
+    f_pos = apply_fn(params, method="critic", y=second_summr, theta=theta_prime)
     f_neg = apply_fn(
-        params, method="critic", y=summr[idx_pos], theta=theta[idx_neg]
+        params,
+        method="critic",
+        y=second_summr[idx_pos],
+        theta=theta_prime[idx_neg],
     )
     a, b = -jax.nn.softplus(-f_pos), jax.nn.softplus(f_neg)
     mi = a.mean() - b.mean()
     return mi
 
 
-class _SNASSNets:
-    def __init__(self, dim):
+class _SNASSSNets:
+    def __init__(self, dim, second_dim):
         self.dim = dim
+        self.secondary_dim = second_dim
         self._summary = hk.nets.MLP(
-            output_sizes=[64, dim], activation=jax.nn.tanh
+            output_sizes=[50, dim], activation=jax.nn.tanh
         )
-        self._critic = hk.nets.MLP(output_sizes=[64, 1], activation=jax.nn.tanh)
+        self._secondary_summary = hk.nets.MLP(
+            output_sizes=[50, self.secondary_dim], activation=jax.nn.tanh
+        )
+        self._critic = hk.nets.MLP(output_sizes=[50, 1], activation=jax.nn.tanh)
 
     def __call__(self, method, **kwargs):
         return getattr(self, method)(**kwargs)
 
     def forward(self, y, theta):
-        s, c = self.summary(y), self.critic(y[:, : self.dim], theta)
-        return s, c
+        s = self.summary(y)
+        s2 = self.secondary_summary(s, theta)
+        c = self.critic(y[:, : self.secondary_dim], y[:, [0]])
+        return s, s2, c
 
     def summary(self, y):
         return self._summary(y)
+
+    def secondary_summary(self, y, theta):
+        return self._secondary_summary(jnp.concatenate([y, theta], axis=-1))
 
     def critic(self, y, theta):
         return self._critic(jnp.concatenate([y, theta], axis=-1))
 
 
-def _make_critic(dim):
+def _make_critic(dim, dim2):
     @hk.without_apply_rng
     @hk.transform
     def _net(method, **kwargs):
-        net = _SNASSNets(dim)
+        net = _SNASSSNets(dim, dim2)
         return net(method, **kwargs)
 
     return _net
 
 
 # pylint: disable=too-many-arguments,unused-argument
-class SNASS(SNL):
-    """Sequential neural approximate summary statistics.
+class SNASSS(SNL):
+    """Sequential neural approximate slice sufficient statistics.
 
     References:
-        .. [1] Yanzhi Chen et al. "Neural Approximate Sufficient Statistics for
-           Implicit Models". ICLR, 2021
+        .. [1] Yanzhi Chen et al. "Is Learning Summary Statistics Necessary for
+           Likelihood-free Inference". ICML, 2023
     """
 
     def __init__(self, model_fns, density_estimator):
         super().__init__(model_fns, density_estimator)
-        self.sc_net = _make_critic(2)
+        self.sc_net = _make_critic(2, 1)
         self._s_params = {}
 
     # pylint: disable=arguments-differ,too-many-locals
@@ -88,7 +120,7 @@ class SNASS(SNL):
         n_early_stopping_patience=10,
         **kwargs,
     ):
-        """Fit a SNASS model.
+        """Fit a SNASSS model.
 
         Args:
             rng_seq: a hk.PRNGSequence
@@ -167,9 +199,7 @@ class SNASS(SNL):
         init_key, rng_key = jr.split(rng_key)
         params = self._init_summary_net_params(init_key, **train_iter(0))
         state = optimizer.init(params)
-        loss_fn = jax.jit(
-            partial(_jsd_summary_loss, apply_fn=self.sc_net.apply)
-        )
+        loss_fn = partial(_jsd_summary_loss, apply_fn=self.sc_net.apply)
 
         @jax.jit
         def step(rng, params, state, **batch):
