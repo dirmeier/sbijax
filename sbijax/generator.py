@@ -1,7 +1,6 @@
 from collections import namedtuple
 
 import chex
-import numpy as np
 from jax import lax
 from jax import numpy as jnp
 from jax import random as jr
@@ -11,13 +10,20 @@ named_dataset = namedtuple("named_dataset", "y theta")
 
 # pylint: disable=missing-class-docstring,too-few-public-methods
 class DataLoader:
-    def __init__(self, num_batches, idxs, get_batch):
+    def __init__(self, num_batches, idxs=None, get_batch=None, batches=None):
         self.num_batches = num_batches
         self.idxs = idxs
-        self.num_samples = len(idxs)
+        if idxs is not None:
+            self.num_samples = len(idxs)
+        else:
+            self.num_samples = self.num_batches * batches[0]["y"].shape[0]
         self.get_batch = get_batch
+        self.batches = batches
 
     def __call__(self, idx, idxs=None):
+        if self.batches is not None:
+            return self.batches[idx]
+
         if idxs is None:
             idxs = self.idxs
         return self.get_batch(idx, idxs)
@@ -63,7 +69,7 @@ def as_batch_iterator(
 
     def get_batch(idx, idxs=idxs):
         start_idx = idx * batch_size
-        step_size = np.minimum(n - start_idx, batch_size)
+        step_size = jnp.minimum(n - start_idx, batch_size)
         ret_idx = lax.dynamic_slice_in_dim(idxs, idx * batch_size, step_size)
         batch = {
             name: lax.index_take(array, (ret_idx,), axes=(0,))

@@ -1,5 +1,5 @@
 """
-Example using ABC
+Example using sequential Monte Carlo ABC on a bivariate Gaussian
 """
 
 import distrax

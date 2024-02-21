@@ -10,17 +10,15 @@ from jax import random as jr
 
 from sbijax._sne_base import SNE
 from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
-
-# pylint: disable=too-many-arguments,unused-argument
 from sbijax.mcmc.irmh import sample_with_imh
 from sbijax.mcmc.mala import sample_with_mala
 from sbijax.mcmc.rmh import sample_with_rmh
 from sbijax.nn.early_stopping import EarlyStopping
 
 
+# pylint: disable=too-many-arguments,unused-argument
 class SNL(SNE):
-    """
-    Sequential neural likelihood
+    """Sequential neural likelihood.
 
     From the Papamakarios paper
     """
@@ -177,7 +175,7 @@ class SNL(SNE):
         **kwargs,
     ):
         """
-        Simulate data from the posteriorand append it to an existing data set
+        Simulate data from the posterior and append it to an existing data set
         (if provided)
 
         Parameters
@@ -266,6 +264,28 @@ class SNL(SNE):
         """
 
         observable = jnp.atleast_2d(observable)
+        return self._sample_posterior(
+            rng_key,
+            params,
+            observable,
+            n_chains=4,
+            n_samples=2_000,
+            n_warmup=1_000,
+            **kwargs,
+        )
+
+    def _sample_posterior(
+        self,
+        rng_key,
+        params,
+        observable,
+        *,
+        n_chains=4,
+        n_samples=2_000,
+        n_warmup=1_000,
+        **kwargs,
+    ):
+
         part = partial(
             self.model.apply, params=params, method="log_prob", y=observable
         )

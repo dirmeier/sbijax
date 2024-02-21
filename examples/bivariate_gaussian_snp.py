@@ -1,5 +1,5 @@
 """
-Example using SNP and masked autoregressive flows
+Example using sequential posterior estimation  on a bivariate Gaussian
 """
 
 import distrax
@@ -10,10 +10,13 @@ import optax
 import seaborn as sns
 from jax import numpy as jnp
 from jax import random as jr
-from surjectors import Chain, TransformedDistribution
-from surjectors.bijectors.masked_autoregressive import MaskedAutoregressive
-from surjectors.bijectors.permutation import Permutation
-from surjectors.conditioners import MADE
+from surjectors import (
+    Chain,
+    MaskedAutoregressive,
+    Permutation,
+    TransformedDistribution,
+)
+from surjectors.nn import MADE
 from surjectors.util import unstack
 
 from sbijax import SNP

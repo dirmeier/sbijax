@@ -1,5 +1,4 @@
 from abc import ABC
-from typing import Iterable
 
 import chex
 from jax import numpy as jnp
@@ -21,8 +20,6 @@ class SNE(SBI, ABC):
         super().__init__(model_fns)
         self.model = density_estimator
         self.n_total_simulations = 0
-        self._train_iter: Iterable
-        self._val_iter: Iterable
 
     def simulate_data_and_possibly_append(
         self,

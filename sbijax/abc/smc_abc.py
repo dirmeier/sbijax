@@ -208,9 +208,7 @@ class SMCABC(SBI):
                 )
             n -= len(idxs)
 
-        new_particles = new_particles[
-            :n_particles,
-        ]
+        new_particles = new_particles[:n_particles,]
         new_log_weights = self._new_log_weights(
             new_particles, particles, log_weights, cov_chol_factor
         )

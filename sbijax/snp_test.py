@@ -4,7 +4,7 @@ import distrax
 import haiku as hk
 from jax import numpy as jnp
 from surjectors import Chain, MaskedCoupling, TransformedDistribution
-from surjectors.conditioners import mlp_conditioner
+from surjectors.nn import make_mlp
 from surjectors.util import make_alternating_binary_mask
 
 from sbijax import SNP
@@ -42,8 +42,8 @@ def make_model(dim):
             mask = make_alternating_binary_mask(dim, i % 2 == 0)
             layer = MaskedCoupling(
                 mask=mask,
-                bijector=_bijector_fn,
-                conditioner=mlp_conditioner([8, 8, dim * 2]),
+                bijector_fn=_bijector_fn,
+                conditioner=make_mlp([8, 8, dim * 2]),
             )
             layers.append(layer)
         chain = Chain(layers)
