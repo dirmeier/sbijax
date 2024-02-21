@@ -109,7 +109,7 @@ class SNASS(SNL):
             snet_losses,
         )
 
-    def _as_summary(self, iter, params):
+    def _as_summary(self, iters, params):
         @jax.jit
         def as_batch(y, theta):
             return {
@@ -118,8 +118,8 @@ class SNASS(SNL):
             }
 
         return DataLoader(
-            num_batches=iter.num_batches,
-            batches=[as_batch(**iter(i)) for i in range(iter.num_batches)],
+            num_batches=iters.num_batches,
+            batches=[as_batch(**iters(i)) for i in range(iters.num_batches)],
         )
 
     def _fit_summary_net(

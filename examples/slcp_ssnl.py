@@ -1,6 +1,5 @@
 """
-SLCP example from [1] using SNL and masked autoregressive bijections
-or surjections
+Example using SSNL on the SLCP experiment
 """
 
 import argparse

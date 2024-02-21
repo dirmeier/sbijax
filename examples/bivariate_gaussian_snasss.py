@@ -1,14 +1,7 @@
 """
-Example using sequential neural approximate (slice) summary statistics.
-
-References
-----------
-[1] Yanzhi Chen, et al. "Neural Approximate Sufficient Statistics for
-  Implicit Models". ICLR, 2021
-[2] Yanzhi Chen, et al. "Is Learning Summary Statistics Necessary for
-  Likelihood-free Inference?". ICML, 2023
+Example using sequential neural approximate (slice) summary statistics on a
+bivariate Gaussian with repeated dimensions
 """
-
 
 import distrax
 import haiku as hk

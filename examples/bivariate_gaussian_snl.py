@@ -1,5 +1,5 @@
 """
-Example using SNL and masked autoregressive flows flows
+Example using sequential neural likelihood estimation  on a bivariate Gaussian
 """
 
 from functools import partial
@@ -13,12 +13,12 @@ import seaborn as sns
 from jax import numpy as jnp
 from jax import random as jr
 from surjectors import (
+    MADE,
     Chain,
     MaskedAutoregressive,
     Permutation,
     TransformedDistribution,
 )
-from surjectors.conditioners import MADE
 from surjectors.util import unstack
 
 from sbijax import SNL

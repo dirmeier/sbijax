@@ -18,8 +18,7 @@ from sbijax.nn.early_stopping import EarlyStopping
 
 # pylint: disable=too-many-arguments,unused-argument
 class SNL(SNE):
-    """
-    Sequential neural likelihood
+    """Sequential neural likelihood.
 
     From the Papamakarios paper
     """

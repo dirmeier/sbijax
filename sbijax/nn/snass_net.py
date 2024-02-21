@@ -5,7 +5,12 @@ import jax
 from jax import numpy as jnp
 
 
+# pylint: disable=missing-function-docstring,missing-class-docstring
 class SNASSNet(hk.Module):
+    """
+    A network for SNASS
+    """
+
     def __init__(
         self,
         summary_net_dimensions: List[int] = None,

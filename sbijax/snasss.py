@@ -18,6 +18,7 @@ def _sample_unit_sphere(rng_key, n, dim):
     return u / norm
 
 
+# pylint: disable=too-many-locals
 def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
     y, theta = batch["y"], batch["theta"]
     n, p = theta.shape
@@ -132,7 +133,7 @@ class SNASSS(SNL):
             snet_losses,
         )
 
-    def _as_summary(self, iter, params):
+    def _as_summary(self, iters, params):
         @jax.jit
         def as_batch(y, theta):
             return {
@@ -141,8 +142,8 @@ class SNASSS(SNL):
             }
 
         return DataLoader(
-            num_batches=iter.num_batches,
-            batches=[as_batch(**iter(i)) for i in range(iter.num_batches)],
+            num_batches=iters.num_batches,
+            batches=[as_batch(**iters(i)) for i in range(iters.num_batches)],
         )
 
     def _fit_summary_net(
