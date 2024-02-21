@@ -1,11 +1,12 @@
 """
-Example using sequential neural approximate summary statistics.
+Example using sequential neural approximate (slice) summary statistics.
 
 References
 ----------
-
-[1] Yanzhi Chen et al. "Neural Approximate Sufficient Statistics for
+[1] Yanzhi Chen, et al. "Neural Approximate Sufficient Statistics for
   Implicit Models". ICLR, 2021
+[2] Yanzhi Chen, et al. "Is Learning Summary Statistics Necessary for
+  Likelihood-free Inference?". ICML, 2023
 """
 
 
@@ -27,6 +28,7 @@ from surjectors.nn import MADE
 from surjectors.util import unstack
 
 from sbijax import SNASSS
+from sbijax.nn.snasss_net import SNASSSNet
 
 W = jr.normal(jr.PRNGKey(0), (2, 10))
 
@@ -79,24 +81,34 @@ def make_model(dim):
     return td
 
 
+def make_critic(dim):
+    @hk.without_apply_rng
+    @hk.transform
+    def _net(method, **kwargs):
+        net = SNASSSNet([64, 64, dim], [64, 64, 1], [64, 64, 1])
+        return net(method, **kwargs)
+
+    return _net
+
+
 def run():
     y_observed = jnp.array([[2.0, -2.0]]) @ W
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    snp = SNASSS(fns, make_model(2), 2, 1)
+    estim = SNASSS(fns, make_model(2), make_critic(2))
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
     for i in range(2):
-        data, _ = snp.simulate_data_and_possibly_append(
+        data, _ = estim.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(1), i),
             params=params,
             observable=y_observed,
             data=data,
         )
-        (params, sparams), _ = snp.fit(
+        params, _ = estim.fit(
             jr.fold_in(jr.PRNGKey(2), i),
             data=data,
             optimizer=optimizer,
@@ -104,7 +116,7 @@ def run():
         )
 
     rng_key = jr.PRNGKey(23)
-    snp_samples, _ = snp.sample_posterior(rng_key, params, y_observed)
+    snp_samples, _ = estim.sample_posterior(rng_key, params, y_observed)
     fig, axes = plt.subplots(2)
     for i, ax in enumerate(axes):
         sns.histplot(snp_samples[:, i], color="darkblue", ax=ax)

@@ -1,6 +1,5 @@
 from functools import partial
 
-import haiku as hk
 import jax
 import numpy as np
 import optax
@@ -30,38 +29,6 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
     return -mi
 
 
-class _SNASSNets:
-    def __init__(self, dim):
-        self.dim = dim
-        self._summary = hk.nets.MLP(
-            output_sizes=[64, dim], activation=jax.nn.tanh
-        )
-        self._critic = hk.nets.MLP(output_sizes=[64, 1], activation=jax.nn.tanh)
-
-    def __call__(self, method, **kwargs):
-        return getattr(self, method)(**kwargs)
-
-    def forward(self, y, theta):
-        s, c = self.summary(y), self.critic(y[:, : self.dim], theta)
-        return s, c
-
-    def summary(self, y):
-        return self._summary(y)
-
-    def critic(self, y, theta):
-        return self._critic(jnp.concatenate([y, theta], axis=-1))
-
-
-def _make_critic(dim):
-    @hk.without_apply_rng
-    @hk.transform
-    def _net(method, **kwargs):
-        net = _SNASSNets(dim)
-        return net(method, **kwargs)
-
-    return _net
-
-
 # pylint: disable=too-many-arguments,unused-argument
 class SNASS(SNL):
     """Sequential neural approximate summary statistics.
@@ -71,10 +38,9 @@ class SNASS(SNL):
            Implicit Models". ICLR, 2021
     """
 
-    def __init__(self, model_fns, density_estimator):
+    def __init__(self, model_fns, density_estimator, snass_net):
         super().__init__(model_fns, density_estimator)
-        self.sc_net = _make_critic(2)
-        self._s_params = {}
+        self.sc_net = snass_net
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -138,8 +104,10 @@ class SNASS(SNL):
             n_early_stopping_patience=n_early_stopping_patience,
         )
 
-        self._s_params = snet_params.copy()
-        return (nde_params, snet_params), (losses, snet_losses)
+        return {"params": nde_params, "s_params": snet_params}, (
+            losses,
+            snet_losses,
+        )
 
     def _as_summary(self, iter, params):
         @jax.jit
@@ -207,7 +175,7 @@ class SNASS(SNL):
                 best_loss = validation_loss
                 best_params = params.copy()
 
-        losses = jnp.vstack(losses)[:i, :]
+        losses = jnp.vstack(losses)[: (i + 1), :]
         return best_params, losses
 
     def _init_summary_net_params(self, rng_key, **init_data):
@@ -264,11 +232,11 @@ class SNASS(SNL):
 
         observable = jnp.atleast_2d(observable)
         summary = self.sc_net.apply(
-            self._s_params, method="summary", y=observable
+            params["s_params"], method="summary", y=observable
         )
         return super().sample_posterior(
             rng_key,
-            params,
+            params["params"],
             summary,
             n_chains=n_chains,
             n_samples=n_samples,

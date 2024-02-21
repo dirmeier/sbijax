@@ -1,6 +1,5 @@
 from functools import partial
 
-import haiku as hk
 import jax
 import numpy as np
 import optax
@@ -53,49 +52,6 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
     return -mi
 
 
-class _SNASSSNets:
-    def __init__(self, dim, second_dim):
-        self.dim = dim
-        self.secondary_dim = second_dim
-        self._summary = hk.nets.MLP(
-            output_sizes=[50, 50, dim], activation=jax.nn.tanh
-        )
-        self._secondary_summary = hk.nets.MLP(
-            output_sizes=[50, 50, self.secondary_dim], activation=jax.nn.tanh
-        )
-        self._critic = hk.nets.MLP(
-            output_sizes=[50, 50, 1], activation=jax.nn.tanh
-        )
-
-    def __call__(self, method, **kwargs):
-        return getattr(self, method)(**kwargs)
-
-    def forward(self, y, theta):
-        s = self.summary(y)
-        s2 = self.secondary_summary(s, theta)
-        c = self.critic(y[:, : self.secondary_dim], y[:, [0]])
-        return s, s2, c
-
-    def summary(self, y):
-        return self._summary(y)
-
-    def secondary_summary(self, y, theta):
-        return self._secondary_summary(jnp.concatenate([y, theta], axis=-1))
-
-    def critic(self, y, theta):
-        return self._critic(jnp.concatenate([y, theta], axis=-1))
-
-
-def _make_critic(dim, dim2):
-    @hk.without_apply_rng
-    @hk.transform
-    def _net(method, **kwargs):
-        net = _SNASSSNets(dim, dim2)
-        return net(method, **kwargs)
-
-    return _net
-
-
 # pylint: disable=too-many-arguments,unused-argument
 class SNASSS(SNL):
     """Sequential neural approximate slice sufficient statistics.
@@ -105,10 +61,9 @@ class SNASSS(SNL):
            Likelihood-free Inference". ICML, 2023
     """
 
-    def __init__(self, model_fns, density_estimator, dim, dim2):
+    def __init__(self, model_fns, density_estimator, summary_net):
         super().__init__(model_fns, density_estimator)
-        self.sc_net = _make_critic(dim, dim2)
-        self._s_params = {}
+        self.sc_net = summary_net
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -172,8 +127,10 @@ class SNASSS(SNL):
             n_early_stopping_patience=n_early_stopping_patience,
         )
 
-        self._s_params = snet_params.copy()
-        return (nde_params, snet_params), (losses, snet_losses)
+        return {"params": nde_params, "s_params": snet_params}, (
+            losses,
+            snet_losses,
+        )
 
     def _as_summary(self, iter, params):
         @jax.jit
@@ -201,7 +158,9 @@ class SNASSS(SNL):
         init_key, rng_key = jr.split(rng_key)
         params = self._init_summary_net_params(init_key, **train_iter(0))
         state = optimizer.init(params)
-        loss_fn = partial(_jsd_summary_loss, apply_fn=self.sc_net.apply)
+        loss_fn = jax.jit(
+            partial(_jsd_summary_loss, apply_fn=self.sc_net.apply)
+        )
 
         @jax.jit
         def step(rng, params, state, **batch):
@@ -240,7 +199,6 @@ class SNASSS(SNL):
                 best_params = params.copy()
 
         losses = jnp.vstack(losses)[: (i + 1), :]
-        print(losses)
         return best_params, losses
 
     def _init_summary_net_params(self, rng_key, **init_data):
@@ -297,11 +255,11 @@ class SNASSS(SNL):
 
         observable = jnp.atleast_2d(observable)
         summary = self.sc_net.apply(
-            self._s_params, method="summary", y=observable
+            params["s_params"], method="summary", y=observable
         )
         return super().sample_posterior(
             rng_key,
-            params,
+            params["params"],
             summary,
             n_chains=n_chains,
             n_samples=n_samples,
