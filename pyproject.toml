@@ -96,3 +96,7 @@ invalid-name,missing-module-docstring,R0801,E0633
 
 [tool.bandit]
 skips = ["B101"]
+
+[tool.pydocstyle]
+convention= 'google'
+match = '^sbijax/.*/((?!_test).)*\.py'

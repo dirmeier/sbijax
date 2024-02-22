@@ -1,13 +1,15 @@
 # pylint: skip-file
-
+import chex
 import distrax
 import haiku as hk
+import pytest
 from jax import numpy as jnp
+from jax import random as jr
 from surjectors import Chain, MaskedCoupling, TransformedDistribution
 from surjectors.nn import make_mlp
 from surjectors.util import make_alternating_binary_mask
 
-from sbijax import SNP
+from sbijax._src.snl import SNL
 
 
 def prior_model_fns():
@@ -55,20 +57,21 @@ def make_model(dim):
         return td(method, **kwargs)
 
     td = hk.transform(_flow)
+    td = hk.without_apply_rng(td)
     return td
 
 
-def test_snp():
+def test_snl():
     rng_seq = hk.PRNGSequence(0)
     y_observed = jnp.array([-1.0, 1.0])
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    snp = SNP(fns, make_model(2))
+    snl = SNL(fns, make_model(2))
     data, params = None, {}
     for i in range(2):
-        data, _ = snp.simulate_data_and_possibly_append(
+        data, _ = snl.simulate_data_and_possibly_append(
             next(rng_seq),
             params=params,
             observable=y_observed,
@@ -78,8 +81,8 @@ def test_snp():
             n_samples=200,
             n_warmup=100,
         )
-        params, info = snp.fit(next(rng_seq), data=data)
-    _ = snp.sample_posterior(
+        params, info = snl.fit(next(rng_seq), data=data)
+    _ = snl.sample_posterior(
         next(rng_seq),
         params,
         y_observed,
@@ -87,3 +90,47 @@ def test_snp():
         n_samples=200,
         n_warmup=100,
     )
+
+
+def test_stack_data():
+    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
+
+    snl = SNL(fns, make_model(2))
+    n = 100
+    data, _ = snl.simulate_data(jr.PRNGKey(1), n_simulations=n)
+    also_data, _ = snl.simulate_data(jr.PRNGKey(2), n_simulations=n)
+    stacked_data = snl.stack_data(data, also_data)
+
+    chex.assert_trees_all_equal(data[0], stacked_data[0][:n])
+    chex.assert_trees_all_equal(data[1], stacked_data[1][:n])
+    chex.assert_trees_all_equal(also_data[0], stacked_data[0][n:])
+    chex.assert_trees_all_equal(also_data[1], stacked_data[1][n:])
+
+
+def test_stack_data_with_none():
+    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
+
+    snl = SNL(fns, make_model(2))
+    n = 100
+    data, _ = snl.simulate_data(jr.PRNGKey(1), n_simulations=n)
+    stacked_data = snl.stack_data(None, data)
+
+    chex.assert_trees_all_equal(data[0], stacked_data[0])
+    chex.assert_trees_all_equal(data[1], stacked_data[1])
+
+
+def test_simulate_data_from_posterior_fail():
+    rng_seq = hk.PRNGSequence(0)
+
+    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
+
+    snl = SNL(fns, make_model(2))
+    n = 100
+
+    data, _ = snl.simulate_data(jr.PRNGKey(1), n_simulations=n)
+    params, _ = snl.fit(next(rng_seq), data=data, n_iter=10)
+    with pytest.raises(ValueError):
+        snl.simulate_data(jr.PRNGKey(2), n_simulations=n, params=params)

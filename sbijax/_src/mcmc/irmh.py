@@ -1,35 +1,24 @@
 import blackjax as bj
 import distrax
 import jax
-from jax import numpy as jnp
 from jax import random as jr
 
 
 # pylint: disable=too-many-arguments,unused-argument
-def sample_with_rmh(
+def sample_with_imh(
     rng_key, lp, prior, *, n_chains=4, n_samples=2_000, n_warmup=1_000, **kwargs
 ):
-    """
-    Sample from a distribution using the Rosenbluth-Metropolis-Hastings sampler.
+    r"""Draw sanokes using the indepdendent Metropolis-Hastings sampler.
 
-    Parameters
-    ----------
-    rng_seq: hk.PRNGSequence
-        a hk.PRNGSequence
-    lp: Callable
-        the logdensity you wish to sample from
-    prior: Callable
-        a function that returns a prior sample
-    n_chains: int
-        number of chains to sample
-    n_samples: int
-        number of samples per chain
-    n_warmup: int
-        number of samples to discard
+    Args:
+        rng_seq: a hk.PRNGSequence
+        lp: the logdensity you wish to sample from
+        prior: a function that returns a prior sample
+        n_chains: number of chains to sample
+        n_samples: number of samples per chain
+        n_warmup: number of samples to discard
 
-    Returns
-    -------
-    jnp.ndarrau
+    Returns:
         a JAX array of dimension n_samples \times n_chains \times len_theta
     """
 
@@ -54,15 +43,19 @@ def sample_with_rmh(
     return thetas
 
 
+def _irmh_proposal_distribution(shape):
+    def fn(rng_key):
+        return {"theta": jax.random.normal(rng_key, shape=(shape,))}
+
+    return fn
+
+
 # pylint: disable=missing-function-docstring,no-member
 def _mh_init(rng_key, n_chains, prior: distrax.Distribution, lp):
     init_key, rng_key = jr.split(rng_key)
     initial_positions = prior(seed=init_key, sample_shape=(n_chains,))
-    kernel = bj.rmh(
-        lp,
-        bj.mcmc.random_walk.normal(
-            jnp.full_like(initial_positions.shape[1], 0.25)
-        ),
+    kernel = bj.irmh(
+        lp, _irmh_proposal_distribution(initial_positions.shape[1])
     )
     initial_positions = {"theta": initial_positions}
     initial_state = jax.vmap(kernel.init)(initial_positions)

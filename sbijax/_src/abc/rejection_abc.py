@@ -1,19 +1,33 @@
+from typing import Callable, Tuple
+
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._sbi_base import SBI
+from sbijax._src._sbi_base import SBI
 
 
 # pylint: disable=too-many-instance-attributes,too-many-arguments
-# pylint: disable=too-many-locals,too-few-public-methods
+# pylint: disable=too-many-locals,too-few-public-methods,
 class RejectionABC(SBI):
-    """
-    Sisson et al. - Handbook of approximate Bayesian computation
+    """Rejection approximate Bayesian computation.
 
-    Algorithm 4.1, "ABC Rejection Sampling Algorithm"
+    Implements algorithm~4.1 from [1].
+
+    References:
+        .. [1] Sisson, Scott A, et al. "Handbook of approximate Bayesian
+           computation". 2019
     """
 
-    def __init__(self, model_fns, summary_fn, kernel_fn):
+    def __init__(
+        self, model_fns: Tuple, summary_fn: Callable, kernel_fn: Callable
+    ):
+        """Constructs a RejectionABC object.
+
+        Args:
+            model_fns: tuple
+            summary_fn: summary statistice function
+            kernel_fn: a kernel function to compute similarities
+        """
         super().__init__(model_fns)
         self.kernel_fn = kernel_fn
         self.summary_fn = summary_fn
@@ -29,31 +43,21 @@ class RejectionABC(SBI):
         h,
         **kwargs,
     ):
-        """
-        Sample from the approximate posterior
+        r"""Sample from the approximate posterior.
 
-        Parameters
-        ----------
-        rng_key: jax.PRNGKey
-            a random key
-        observable: jnp.Array
-            observation to condition on
-        n_samples: int
-            number of samples to draw for each parameter
-        n_simulations_per_theta: int
-            number of simulations for each paramter sample
-        K: double
-            normalisation parameter
-        h: double
-            kernel scale
+        Args:
+            rng_key: a random key
+            observable: observation to condition on
+            n_samples: number of samples to draw for each parameter
+            n_simulations_per_theta: number of simulations for each parameter
+                sample
+            K: normalisation parameter
+            h: kernel scale
 
-        Returns
-        -------
-        chex.Array
+        Returns:
             an array of samples from the posterior distribution of dimension
             (n_samples \times p)
         """
-
         observable = jnp.atleast_2d(observable)
 
         thetas = None

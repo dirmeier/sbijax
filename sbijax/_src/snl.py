@@ -8,12 +8,16 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._sne_base import SNE
-from sbijax.mcmc import mcmc_diagnostics, sample_with_nuts, sample_with_slice
-from sbijax.mcmc.irmh import sample_with_imh
-from sbijax.mcmc.mala import sample_with_mala
-from sbijax.mcmc.rmh import sample_with_rmh
-from sbijax.nn.early_stopping import EarlyStopping
+from sbijax._src._sne_base import SNE
+from sbijax._src.mcmc import (
+    mcmc_diagnostics,
+    sample_with_nuts,
+    sample_with_slice,
+)
+from sbijax._src.mcmc.irmh import sample_with_imh
+from sbijax._src.mcmc.mala import sample_with_mala
+from sbijax._src.mcmc.rmh import sample_with_rmh
+from sbijax._src.util.early_stopping import EarlyStopping
 
 
 # pylint: disable=too-many-arguments,unused-argument
@@ -35,41 +39,30 @@ class SNL(SNE):
         n_early_stopping_patience=10,
         **kwargs,
     ):
-        """
-        Fit a SNL model
+        """Fit a SNL model.
 
-        Parameters
-        ----------
-        rng_seq: hk.PRNGSequence
-            a hk.PRNGSequence
-        data: NamedTuple
-            data set obtained from calling `simulate_data_and_possibly_append`
-        optimizer: optax.Optimizer
-            an optax optimizer object
-        n_iter:
-            maximal number of training iterations per round
-        batch_size: int
-            batch size used for training the model
-        percentage_data_as_validation_set:
-            percentage of the simulated data that is used for valitation and
-            early stopping
-        n_early_stopping_patience: int
-            number of iterations of no improvement of training the flow
-            before stopping optimisation
-        kwargs: keyword arguments with sampler specific parameters. For slice
-            sampling the following arguments are possible:
-            - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-            - n_thin: number of thinning steps
-            - n_doubling: number of doubling steps of the interval
-            - step_size: step size of the initial interval
+        Args:
+            rng_key: a hk.PRNGSequence
+            data: data set obtained from calling
+                `simulate_data_and_possibly_append`
+            optimizer: an optax optimizer object
+            n_iter: maximal number of training iterations per round
+            batch_size: batch size used for training the model
+            percentage_data_as_validation_set: percentage of the simulated data
+                that is used for valitation and early stopping
+            n_early_stopping_patience: number of iterations of no improvement of
+                training the flow before stopping optimisation
+            kwargs: keyword arguments with sampler specific parameters.
+                For slice sampling the following arguments are possible:
+                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
+                - n_thin: number of thinning steps
+                - n_doubling: number of doubling steps of the interval
+                - step_size: step size of the initial interval
 
-        Returns
-        -------
-        Tuple[pytree, Tuple]
+        Returns:
             returns a tuple of parameters and a tuple of the training
             information
         """
-
         itr_key, rng_key = jr.split(rng_key)
         train_iter, val_iter = self.as_iterators(
             itr_key, data, batch_size, percentage_data_as_validation_set
@@ -174,39 +167,26 @@ class SNL(SNE):
         n_warmup=1_000,
         **kwargs,
     ):
-        """
-        Simulate data from the posterior and append it to an existing data set
-        (if provided)
+        """Simulate data from the prior or posterior.
 
-        Parameters
-        ----------
-        rng_key: jax.PRNGKey
-           a random key
-        params: pytree
-           a dictionary of neural network parameters
-        observable: jnp.ndarray
-           an observation
-        data: NamedTuple
-           existing data set
-        n_simulations: int
-           number of newly simulated data
-        n_chains: int
-            number of MCMC chains
-        n_samples: int
-            number of sa les to draw in total
-        n_warmup: int
-            number of draws to discared
-        kwargs: keyword arguments
-           dictionary of ey value pairs passed to `sample_posterior`.
-           The following arguments are possible:
-           - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-           - n_thin: number of thinning steps (int)
-           - n_doubling: number of doubling steps of the interval (int)
-           - step_size: step size of the initial interval (float)
+        Args:
+            rng_key: a random key
+            params: a dictionary of neural network parameters
+            observable: an observation
+            data: existing data set
+            n_simulations: number of newly simulated data
+            n_chains: number of MCMC chains
+            n_samples: number of sa les to draw in total
+            n_warmup: number of draws to discared
+            kwargs: keyword arguments
+               dictionary of ey value pairs passed to `sample_posterior`.
+               The following arguments are possible:
+               - sampler: either 'nuts', 'slice' or None (defaults to nuts)
+               - n_thin: number of thinning steps (int)
+               - n_doubling: number of doubling steps of the interval (int)
+               - step_size: step size of the initial interval (float)
 
-        Returns
-        -------
-        NamedTuple:
+        Returns:
            returns a NamedTuple of two axis, y and theta
         """
         return super().simulate_data_and_possibly_append(
@@ -232,37 +212,26 @@ class SNL(SNE):
         n_warmup=1_000,
         **kwargs,
     ):
-        """
-        Sample from the approximate posterior
+        r"""Sample from the approximate posterior.
 
-        Parameters
-        ----------
-        rng_key: jax.PRNGKey
-            a random key
-        params: pytree
-            a pytree of parameter for the model
-        observable: jnp.Array
-            observation to condition on
-        n_chains: int
-            number of MCMC chains
-        n_samples: int
-            number of samples per chain
-        n_warmup: int
-            number of samples to discard
-        kwargs: keyword arguments with sampler specific parameters. For slice
-            sampling the following arguments are possible:
-            - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-            - n_thin: number of thinning steps
-            - n_doubling: number of doubling steps of the interval
-            - step_size: step size of the initial interval
+        Args:
+            rng_key: a random key
+            params: a pytree of parameter for the model
+            observable: observation to condition on
+            n_chains: number of MCMC chains
+            n_samples: number of samples per chain
+            n_warmup:  number of samples to discard
+            kwargs: keyword arguments with sampler specific parameters. For
+                slice sampling the following arguments are possible:
+                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
+                - n_thin: number of thinning steps
+                - n_doubling: number of doubling steps of the interval
+                - step_size: step size of the initial interval
 
-        Returns
-        -------
-        chex.Array
+        Returns:
             an array of samples from the posterior distribution of dimension
             (n_samples \times p)
         """
-
         observable = jnp.atleast_2d(observable)
         return self._sample_posterior(
             rng_key,

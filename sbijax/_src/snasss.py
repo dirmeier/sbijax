@@ -7,9 +7,9 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax.generator import DataLoader
-from sbijax.nn.early_stopping import EarlyStopping
-from sbijax.snl import SNL
+from sbijax._src.generator import DataLoader
+from sbijax._src.snl import SNL
+from sbijax._src.util.early_stopping import EarlyStopping
 
 
 def _sample_unit_sphere(rng_key, n, dim):
@@ -63,6 +63,13 @@ class SNASSS(SNL):
     """
 
     def __init__(self, model_fns, density_estimator, summary_net):
+        """Construct a SNASSS object.
+
+        Args:
+            model_fns: tuple
+            density_estimator: maf
+            summary_net: snass network
+        """
         super().__init__(model_fns, density_estimator)
         self.sc_net = summary_net
 
@@ -81,14 +88,14 @@ class SNASSS(SNL):
         """Fit a SNASSS model.
 
         Args:
-            rng_seq: a hk.PRNGSequence
+            rng_key: a hk.PRNGSequence
             data: data set obtained from calling
               `simulate_data_and_possibly_append`
             optimizer: an optax optimizer object
             n_iter: maximal number of training iterations per round
             batch_size: batch size used for training the model
             percentage_data_as_validation_set: percentage of the simulated data
-              that is used for valitation and early stopping
+              that is used for validation and early stopping
             n_early_stopping_patience: number of iterations of no improvement
               of training the flow before stopping optimisation
             kwargs: keyword arguments with sampler specific parameters. For
@@ -101,7 +108,6 @@ class SNASSS(SNL):
         Returns:
             tuple of parameters and a tuple of the training information
         """
-
         itr_key, rng_key = jr.split(rng_key)
         train_iter, val_iter = self.as_iterators(
             itr_key, data, batch_size, percentage_data_as_validation_set
@@ -233,7 +239,7 @@ class SNASSS(SNL):
         n_warmup=1_000,
         **kwargs,
     ):
-        """Sample from the approximate posterior.
+        r"""Sample from the approximate posterior.
 
         Args:
             rng_key: a random key
@@ -253,7 +259,6 @@ class SNASSS(SNL):
             an array of samples from the posterior distribution of dimension
             (n_samples \times p)
         """
-
         observable = jnp.atleast_2d(observable)
         summary = self.sc_net.apply(
             params["s_params"], method="summary", y=observable

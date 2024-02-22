@@ -9,19 +9,29 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
 
-from sbijax._sbi_base import SBI
+from sbijax._src._sbi_base import SBI
 
 
 # pylint: disable=arguments-differ,too-many-function-args,too-many-locals
 # pylint: disable=too-few-public-methods
 class SMCABC(SBI):
-    """
-    Sisson et al. - Handbook of approximate Bayesian computation
+    """Sequential Monte Carlo approximate Bayesian computation.
 
-    Algorithm 4.8, "Algorithm 4.8: ABC Sequential Monte Carlo Algorithm"
+    Implements algorithm~4.8 from [1].
+
+    References:
+        .. [1] Sisson, Scott A, et al. "Handbook of approximate Bayesian
+           computation". 2019
     """
 
     def __init__(self, model_fns, summary_fn, distance_fn):
+        """Construct a SMCABC object.
+
+        Args:
+            model_fns: tuple
+            summary_fn: summary function
+            distance_fn: distance function
+        """
         super().__init__(model_fns)
         self.summary_fn = summary_fn
         self.distance_fn = distance_fn
@@ -40,27 +50,20 @@ class SMCABC(SBI):
         ess_min,
         cov_scale=1.0,
     ):
-        """
-        Sample from the approximate posterior
+        r"""Sample from the approximate posterior.
 
-        Parameters
-        ----------
-        n_rounds: int
-            max number of SMC rounds
-        n_particles: int
-            number of n_particles to draw for each parameter
-        n_simulations_per_theta: int
-            number of simulations for each paramter sample
-        eps_step:  float
-            decay of initial epsilon per simulation round
-        ess_min: float
-            minimal effective sample size
-        cov_scale: float
-            scaling of the transition kernel covariance
+        Args:
+            n_rounds: max number of SMC rounds
+            observable: the observation to condition on
+            n_round: number of rounds of SMC
+            n_particles: number of n_particles to draw for each parameter
+            n_simulations_per_theta: number of simulations for each paramrter
+                sample
+            eps_step:  decay of initial epsilon per simulation round
+            ess_min: minimal effective sample size
+            cov_scale: scaling of the transition kernel covariance
 
-        Returns
-        -------
-        chex.Array
+        Returns:
             an array of samples from the posterior distribution of dimension
             (n_samples \times p)
         """
