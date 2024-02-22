@@ -19,7 +19,7 @@ class SBI(abc.ABC):
         self._len_theta = len(self.prior_sampler_fn(seed=jr.PRNGKey(123)))
 
     @abc.abstractmethod
-    def sample_posterior(self, rng_key: jr.KeyArray, **kwargs):
+    def sample_posterior(self, rng_key, **kwargs):
         """Sample from the posterior distribution.
 
         Args:
