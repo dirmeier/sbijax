@@ -8,19 +8,25 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
 
-from sbijax._sne_base import SNE
-from sbijax.nn.early_stopping import EarlyStopping
+from sbijax._src._sne_base import SNE
+from sbijax._src.util.early_stopping import EarlyStopping
 
 
 # pylint: disable=too-many-arguments,unused-argument
 class SNP(SNE):
-    """
-    Sequential neural posterior estimation
+    """Sequential neural posterior estimation.
 
-    From the Greenberg paper
+    References:
+        .. [1]
     """
 
     def __init__(self, model_fns, density_estimator):
+        """Construct an SNP object.
+
+        Args:
+            model_fns: tuple
+            density_estimator: maf
+        """
         super().__init__(model_fns, density_estimator)
         self.n_round = 0
 
@@ -37,37 +43,24 @@ class SNP(SNE):
         n_atoms=10,
         **kwargs,
     ):
+        """Fit an SNPE model.
+
+        Args:
+            rng_key: a hk.PRNGSequence
+            data: data set obtained from calling
+                `simulate_data_and_possibly_append`
+            optimizer: an optax optimizer object
+            n_iter: maximal number of training iterations per round
+            batch_size:  batch size used for training the model
+            percentage_data_as_validation_set: percentage of the simulated
+                data that is used for valitation and early stopping
+            n_early_stopping_patience: number of iterations of no improvement
+                of training the flow before stopping optimisation
+            n_atoms: number of atoms to approximate the proposal posterior
+
+        Returns:
+            a tuple of parameters and a tuple of the training information
         """
-        Fit an SNPE model
-
-        Parameters
-        ----------
-        rng_seq: hk.PRNGSequence
-            a hk.PRNGSequence
-        data: NamedTuple
-            data set obtained from calling `simulate_data_and_possibly_append`
-        optimizer: optax.Optimizer
-            an optax optimizer object
-        n_iter:
-            maximal number of training iterations per round
-        batch_size: int
-            batch size used for training the model
-        percentage_data_as_validation_set:
-            percentage of the simulated data that is used for valitation and
-            early stopping
-        n_early_stopping_patience: int
-            number of iterations of no improvement of training the flow
-            before stopping optimisation
-        n_atoms : int
-            number of atoms to approximate the proposal posterior
-
-        Returns
-        -------
-        Tuple[pytree, Tuple]
-            returns a tuple of parameters and a tuple of the training
-            information
-        """
-
         itr_key, rng_key = jr.split(rng_key)
         train_iter, val_iter = self.as_iterators(
             itr_key, data, batch_size, percentage_data_as_validation_set
@@ -239,27 +232,18 @@ class SNP(SNE):
     def sample_posterior(
         self, rng_key, params, observable, *, n_samples=4_000, **kwargs
     ):
-        """
-        Sample from the approximate posterior
+        r"""Sample from the approximate posterior.
 
-        Parameters
-        ----------
-        rng_key: jax.PRNGKey
-            a random key
-        params: pytree
-            a pytree of parameter for the model
-        observable: jnp.Array
-            observation to condition on
-        n_samples: int
-            number of samples to draw
+        Args:
+            rng_key: a random key
+            params: a pytree of parameter for the model
+            observable: observation to condition on
+            n_samples: number of samples to draw
 
-        Returns
-        -------
-        chex.Array
+        Returns:
             an array of samples from the posterior distribution of dimension
             (n_samples \times p)
         """
-
         observable = jnp.atleast_2d(observable)
 
         thetas = None

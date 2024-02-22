@@ -8,27 +8,23 @@ from jax import random as jr
 def sample_with_nuts(
     rng_key, lp, prior, *, n_chains=4, n_samples=2_000, n_warmup=1_000, **kwargs
 ):
-    """
-    Sample from a distribution using the No-U-Turn sampler.
+    r"""Sample from a distribution using the No-U-Turn sampler.
 
-    Parameters
-    ----------
-    rng_seq: hk.PRNGSequence
-        a hk.PRNGSequence
-    lp: Callable
-        the logdensity you wish to sample from
-    prior: Callable
-        a function that returns a prior sample
-    n_chains: int
-        number of chains to sample
-    n_samples: int
-        number of samples per chain
-    n_warmup: int
-        number of samples to discard
+    Args:
+        rng_key: hk.PRNGSequence
+            a hk.PRNGSequence
+        lp: Callable
+            the logdensity you wish to sample from
+        prior: Callable
+            a function that returns a prior sample
+        n_chains: int
+            number of chains to sample
+        n_samples: int
+            number of samples per chain
+        n_warmup: int
+            number of samples to discard
 
-    Returns
-    -------
-    jnp.ndarrau
+    Returns:
         a JAX array of dimension n_samples \times n_chains \times len_theta
     """
 

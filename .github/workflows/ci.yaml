@@ -73,7 +73,11 @@ jobs:
           pip install hatch
       - name: Build package
         run: |
-          pip install jaxlib jax
+          pip install jaxlib==0.4.24 jax==0.4.24
       - name: Run tests
         run: |
           hatch run test:test
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

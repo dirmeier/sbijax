@@ -10,7 +10,10 @@ named_dataset = namedtuple("named_dataset", "y theta")
 
 # pylint: disable=missing-class-docstring,too-few-public-methods
 class DataLoader:
-    def __init__(self, num_batches, idxs=None, get_batch=None, batches=None):
+    # noqa: D101
+    def __init__(
+        self, num_batches, idxs=None, get_batch=None, batches=None
+    ):  # noqa: D107
         self.num_batches = num_batches
         self.idxs = idxs
         if idxs is not None:
@@ -20,7 +23,7 @@ class DataLoader:
         self.get_batch = get_batch
         self.batches = batches
 
-    def __call__(self, idx, idxs=None):
+    def __call__(self, idx, idxs=None):  # noqa: D102
         if self.batches is not None:
             return self.batches[idx]
 
@@ -33,6 +36,19 @@ class DataLoader:
 def as_batch_iterators(
     rng_key: chex.PRNGKey, data: named_dataset, batch_size, split, shuffle
 ):
+    """Create two data batch iterators from a data set.
+
+    Args:
+        rng_key: random key
+        data: a named tuple containing all dat
+        batch_size: batch size
+        split: fraction of data to use for training data set. Rest is used
+            for validation data set.
+        shuffle: shuffle the data set or no
+
+    Returns:
+        two iterators
+    """
     n = data.y.shape[0]
     n_train = int(n * split)
 
@@ -54,6 +70,17 @@ def as_batch_iterators(
 def as_batch_iterator(
     rng_key: chex.PRNGKey, data: named_dataset, batch_size, shuffle
 ):
+    """Create a data batch iterator from a data set.
+
+    Args:
+        rng_key: random key
+        data: a named tuple containing all dat
+        batch_size: batch size
+        shuffle: shuffle the data set or no
+
+    Returns:
+        an iterator
+    """
     n = data.y.shape[0]
     if n < batch_size:
         num_batches = 1

@@ -21,7 +21,7 @@ from surjectors.nn import MADE
 from surjectors.util import unstack
 
 from sbijax import SNASSS
-from sbijax.nn.snasss_net import SNASSSNet
+from sbijax.nn import make_snasss_net
 
 W = jr.normal(jr.PRNGKey(0), (2, 10))
 
@@ -74,23 +74,17 @@ def make_model(dim):
     return td
 
 
-def make_critic(dim):
-    @hk.without_apply_rng
-    @hk.transform
-    def _net(method, **kwargs):
-        net = SNASSSNet([64, 64, dim], [64, 64, 1], [64, 64, 1])
-        return net(method, **kwargs)
-
-    return _net
-
-
 def run():
     y_observed = jnp.array([[2.0, -2.0]]) @ W
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    estim = SNASSS(fns, make_model(2), make_critic(2))
+    estim = SNASSS(
+        fns,
+        make_model(2),
+        make_snasss_net([64, 64, 2], [64, 64, 1], [64, 64, 1]),
+    )
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}

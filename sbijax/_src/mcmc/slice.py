@@ -17,30 +17,19 @@ def sample_with_slice(
     step_size=1,
     **kwargs,
 ):
-    """
-    Sample from a distribution using the No-U-Turn sampler.
+    r"""Sample from a distribution using the No-U-Turn sampler.
 
-    Parameters
-    ----------
-    rng_seq: hk.PRNGSequence
-        a hk.PRNGSequence
-    lp: Callable
-        the logdensity you wish to sample from
-    prior: Callable
-        a function that returns a prior sample
-    n_chains: int
-        number of chains to sample
-    n_samples: int
-        number of samples per chain
-    n_warmup: int
-        number of samples to discard
+    Args:
+        rng_seq: a hk.PRNGSequence
+        lp: the logdensity you wish to sample from
+        prior: a function that returns a prior sample
+        n_chains: number of chains to sample
+        n_samples: number of samples per chain
+        n_warmup: number of samples to discard
 
-    Returns
-    -------
-    jnp.ndarrau
+    Returns:
         a JAX array of dimension n_samples \times n_chains \times len_theta
     """
-
     init_key, rng_key = jr.split(rng_key)
     initial_states = _slice_init(init_key, n_chains, prior)
 

@@ -5,9 +5,7 @@ import math
 # pylint: disable=missing-function-docstring
 @dataclasses.dataclass
 class EarlyStopping:
-    """
-    Early stopping of neural network training
-    """
+    """Early stopping of neural network training."""
 
     min_delta: float = 0
     patience: int = 0
@@ -16,12 +14,25 @@ class EarlyStopping:
     should_stop: bool = False
 
     def reset(self):
+        """Reset the object.
+
+        Returns:
+          self
+        """
         self.best_metric = float("inf")
         self.patience_count = 0
         self.should_stop = False
         return self
 
     def update(self, metric):
+        """Update the stopping criterion.
+
+        Args:
+            metric: the tracjed metric as float
+
+        Returns:
+            tuple
+        """
         if (
             math.isinf(self.best_metric)
             or self.best_metric - metric > self.min_delta
