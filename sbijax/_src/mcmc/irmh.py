@@ -8,7 +8,7 @@ from jax import random as jr
 def sample_with_imh(
     rng_key, lp, prior, *, n_chains=4, n_samples=2_000, n_warmup=1_000, **kwargs
 ):
-    r"""Draw sanokes using the indepdendent Metropolis-Hastings sampler.
+    r"""Draw samples using the indepdendent Metropolis-Hastings sampler.
 
     Args:
         rng_seq: a hk.PRNGSequence
