@@ -1,5 +1,5 @@
 """
-Example using sequential neural ratio estimation  on a bivariate Gaussian
+Example using sequential neural ratio estimation on a bivariate Gaussian
 """
 
 import distrax

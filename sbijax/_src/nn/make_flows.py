@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, List
+from typing import Callable, Iterable
 
 import distrax
 import haiku as hk
@@ -44,10 +44,15 @@ def make_affine_maf(
 ):
     """Create an affine masked autoregressive flow.
 
+    The MAFs use `n_layers` layers and are parameterized using MADE networks
+    with `hidden_sizes` neurons per layer.
+
     Args:
         n_dimension: dimensionality of data
         n_layers: number of normalizing flow layers
-        hidden_sizes: sizes of hidden layers for each normalizing flow
+        hidden_sizes: sizes of hidden layers for each normalizing flow. E.g.,
+            when the hidden sizes are a tuple (64, 64), then each maf layer
+            uses a MADE with two layers of size 64 each
         activation: a jax activation function
 
     Returns:
@@ -88,24 +93,34 @@ def make_affine_maf(
 
 def make_surjective_affine_maf(
     n_dimension: int,
-    n_layer_dimensions: List[int],
-    n_layers: int = 5,
+    n_layer_dimensions: Iterable[int],
     hidden_sizes: Iterable[int] = (64, 64),
     activation: Callable = jax.nn.tanh,
 ):
     """Create a surjective affine masked autoregressive flow.
+
+    The MAFs use `n_layers` layers and are parameterized using MADE networks
+    with `hidden_sizes` neurons per layer. For each dimensionality reducing
+    layer, a conditional Gaussian density is used that uses the same number of
+    layer and nodes per layers as `hidden_sizes`. The argument
+    `n_layer_dimensions` determines which layer is dimensionality-preserving
+    or -reducing. For example, for `n_layer_dimensions=(5, 5, 3, 3)` and
+    `n_dimension=5`, the third layer would reduce the dimensionality by two
+    and use a surjection layer. THe other layers are dimensionality-preserving.
 
     Args:
         n_dimension: a list of integers that determine the dimensionality
             of each flow layer
         n_layer_dimensions: list of integers that determine if a layer is
             dimensionality-preserving or -reducing
-        n_layers: number of normalizing flow layers
         hidden_sizes: sizes of hidden layers for each normalizing flow
         activation: a jax activation function
 
+    Examples:
+        >>> make_surjective_affine_maf(10, (10, 10, 5, 5, 5))
+
     Returns:
-        a normalizing flow model
+        a surjective normalizing flow model
     """
 
     @hk.without_apply_rng
@@ -114,9 +129,7 @@ def make_surjective_affine_maf(
         layers = []
         order = jnp.arange(n_dimension)
         curr_dim = n_dimension
-        for i, n_dim_curr_layer in zip(
-            range(n_layers[:-1]), n_layer_dimensions[:-1]
-        ):
+        for i, n_dim_curr_layer in enumerate(n_layer_dimensions):
             # layer is dimensionality preserving
             if n_dim_curr_layer == curr_dim:
                 layer = MaskedAutoregressive(
@@ -135,10 +148,10 @@ def make_surjective_affine_maf(
                 n_latent = n_dim_curr_layer
                 layer = AffineMaskedAutoregressiveInferenceFunnel(
                     n_latent,
-                    _decoder_fn(curr_dim - n_latent, hidden_sizes),
+                    _decoder_fn(curr_dim - n_latent, list(hidden_sizes)),
                     conditioner=MADE(
                         n_latent,
-                        hidden_sizes + [n_dim_curr_layer * 2],
+                        list(hidden_sizes) + [n_dim_curr_layer * 2],
                         2,
                         w_init=hk.initializers.TruncatedNormal(0.001),
                         b_init=jnp.zeros,

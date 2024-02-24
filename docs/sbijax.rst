@@ -53,3 +53,10 @@ SNASSS
 
 ..  autoclass:: SNASSS
     :members:
+
+
+References
+----------
+
+.. bibliography:: references.bib
+   :style: unsrt

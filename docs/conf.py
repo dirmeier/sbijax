@@ -42,6 +42,8 @@ exclude_patterns = [
     "examples/*py"
 ]
 
+autodoc_typehints = "both"
+
 html_theme = "sphinx_book_theme"
 
 html_theme_options = {
@@ -52,3 +54,16 @@ html_theme_options = {
 }
 
 html_title = "sbijax 🚀"
+
+
+def skip(app, what, name, obj, would_skip, options):
+    if name == "__init__":
+        return True
+    return would_skip
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)
+
+
+bibtex_bibfiles = ['references.bib']

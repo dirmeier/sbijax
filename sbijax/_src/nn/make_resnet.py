@@ -81,9 +81,9 @@ def make_resnet(
     n_layers: int = 2,
     hidden_size: int = 64,
     activation: Callable = jax.nn.tanh,
-    dropout_rate=0.2,
-    do_batch_norm=False,
-    batch_norm_decay=0.2,
+    dropout_rate: float = 0.2,
+    do_batch_norm: bool = False,
+    batch_norm_decay: float = 0.2,
 ):
     """Create a resnet.
 
