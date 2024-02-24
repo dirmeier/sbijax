@@ -1,6 +1,5 @@
 """
-Example using sequential neural approximate (slice) summary statistics on a
-bivariate Gaussian with repeated dimensions
+Example SNASS on the SLCP experiment
 """
 
 import distrax
@@ -11,6 +10,7 @@ import optax
 import seaborn as sns
 from jax import numpy as jnp
 from jax import random as jr
+from jax import scipy as jsp
 from surjectors import (
     Chain,
     MaskedAutoregressive,
@@ -23,18 +23,62 @@ from surjectors.util import unstack
 from sbijax import SNASSS
 from sbijax.nn import make_snasss_net
 
-W = jr.normal(jr.PRNGKey(0), (2, 10))
-
 
 def prior_model_fns():
-    p = distrax.Independent(distrax.Normal(jnp.zeros(2), jnp.ones(2)), 1)
+    p = distrax.Independent(
+        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
+    )
     return p.sample, p.log_prob
 
 
 def simulator_fn(seed, theta):
-    y = theta @ W
-    y = y + distrax.Normal(jnp.zeros_like(y), 0.1).sample(seed=seed)
+    orig_shape = theta.shape
+    if theta.ndim == 2:
+        theta = theta[:, None, :]
+    us_key, noise_key = jr.split(seed)
+
+    def _unpack_params(ps):
+        m0 = ps[..., [0]]
+        m1 = ps[..., [1]]
+        s0 = ps[..., [2]] ** 2
+        s1 = ps[..., [3]] ** 2
+        r = jnp.tanh(ps[..., [4]])
+        return m0, m1, s0, s1, r
+
+    m0, m1, s0, s1, r = _unpack_params(theta)
+    us = distrax.Normal(0.0, 1.0).sample(
+        seed=us_key, sample_shape=(theta.shape[0], theta.shape[1], 4, 2)
+    )
+    xs = jnp.empty_like(us)
+    xs = xs.at[:, :, :, 0].set(s0 * us[:, :, :, 0] + m0)
+    y = xs.at[:, :, :, 1].set(
+        s1 * (r * us[:, :, :, 0] + jnp.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
+    )
+    if len(orig_shape) == 2:
+        y = y.reshape((*theta.shape[:1], 8))
+    else:
+        y = y.reshape((*theta.shape[:2], 8))
     return y
+
+
+def likelihood_fn(theta, y):
+    mu = jnp.tile(theta[:2], 4)
+    s1, s2 = theta[2] ** 2, theta[3] ** 2
+    corr = s1 * s2 * jnp.tanh(theta[4])
+    cov = jnp.array([[s1**2, corr], [corr, s2**2]])
+    cov = jsp.linalg.block_diag(*[cov for _ in range(4)])
+    p = distrax.MultivariateNormalFullCovariance(mu, cov)
+    return p.log_prob(y)
+
+
+def log_density_fn(theta, y):
+    prior_lp = distrax.Independent(
+        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
+    ).log_prob(theta)
+    likelihood_lp = likelihood_fn(theta, y)
+
+    lp = jnp.sum(prior_lp) + jnp.sum(likelihood_lp)
+    return lp
 
 
 def make_model(dim):
@@ -50,7 +94,7 @@ def make_model(dim):
                 bijector_fn=_bijector_fn,
                 conditioner=MADE(
                     dim,
-                    [50, 50, dim * 2],
+                    [64, 64, dim * 2],
                     2,
                     w_init=hk.initializers.TruncatedNormal(0.001),
                     b_init=jnp.zeros,
@@ -75,38 +119,39 @@ def make_model(dim):
 
 
 def run():
-    y_observed = jnp.array([[2.0, -2.0]]) @ W
+    thetas = jnp.linspace(-2.0, 2.0, 5)
+    y_0 = simulator_fn(jr.PRNGKey(0), thetas.reshape(-1, 5)).reshape(-1, 8)
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
     estim = SNASSS(
         fns,
-        make_model(2),
-        make_snasss_net([64, 64, 2], [64, 64, 1], [64, 64, 1]),
+        make_model(5),
+        make_snasss_net([64, 64, 5], [64, 64, 1], [64, 64, 1]),
     )
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
-    for i in range(2):
+    for i in range(5):
         data, _ = estim.simulate_data_and_possibly_append(
-            jr.fold_in(jr.PRNGKey(1), i),
+            jr.fold_in(jr.PRNGKey(12), i),
             params=params,
-            observable=y_observed,
+            observable=y_0,
             data=data,
         )
         params, _ = estim.fit(
-            jr.fold_in(jr.PRNGKey(2), i),
+            jr.fold_in(jr.PRNGKey(23), i),
             data=data,
             optimizer=optimizer,
             batch_size=100,
         )
 
     rng_key = jr.PRNGKey(23)
-    snp_samples, _ = estim.sample_posterior(rng_key, params, y_observed)
-    fig, axes = plt.subplots(2)
+    snasss_samples, _ = estim.sample_posterior(rng_key, params, y_0)
+    fig, axes = plt.subplots(5)
     for i, ax in enumerate(axes):
-        sns.histplot(snp_samples[:, i], color="darkblue", ax=ax)
+        sns.histplot(snasss_samples[:, i], color="darkblue", ax=ax)
         ax.set_xlim([-3.0, 3.0])
     sns.despine()
     plt.tight_layout()

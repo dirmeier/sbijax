@@ -8,22 +8,25 @@
 
 ## About
 
-SbiJAX implements several algorithms for simulation-based inference using
-[JAX](https://github.com/google/jax), [Haiku](https://github.com/deepmind/dm-haiku) and [BlackJAX](https://github.com/blackjax-devs/blackjax).
+`sbijax` implements several algorithms for simulation-based inference using
+[JAX](https://github.com/google/jax), [Haiku](https://github.com/deepmind/dm-haiku),
+[Distrax](https://github.com/deepmind/distrax) and [BlackJAX](https://github.com/blackjax-devs/blackjax).
 
-SbiJAX so far implements
+`sbijax` so far implements
 
-- Rejection ABC (`RejectionABC`),
-- Sequential Monte Carlo ABC (`SMCABC`),
-- Sequential Neural Likelihood Estimation (`SNL`)
-- Surjective Sequential Neural Likelihood Estimation (`SSNL`)
-- Sequential Neural Posterior Estimation C (short `SNP`)
+- [Sequential Monte Carlo ABC](https://www.routledge.com/Handbook-of-Approximate-Bayesian-Computation/Sisson-Fan-Beaumont/p/book/9780367733728) (`SMCABC`),
+- [Neural Likelihood Estimation](https://arxiv.org/abs/1805.07226) (`SNL`)
+- [Surjective Neural Likelihood Estimation](https://arxiv.org/abs/2308.01054) (`SSNL`)
+- [Neural Posterior Estimation C](https://arxiv.org/abs/1905.07488) (short `SNP`)
+- [Contrastive Neural Ratio Estimation](https://arxiv.org/abs/2210.06170) (short `SNR`)
+- [Neural Approximate Sufficient Statistics](https://arxiv.org/abs/2010.10079) (`SNASS`)
+- [Neural Approximate Slice Sufficient Statistics](https://openreview.net/forum?id=jjzJ768iV1) (`SNASSS`)
+
+where the acronyms in parentheses denote the names of the methods in `sbijax`.
 
 ## Examples
 
 You can find several self-contained examples on how to use the algorithms in `examples`.
-
-## Usage
 
 ## Installation
 

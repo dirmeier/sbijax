@@ -17,7 +17,9 @@ class SNP(SNE):
     """Sequential neural posterior estimation.
 
     References:
-        .. [1]
+        .. [1] Greenberg, David, et al. "Automatic posterior transformation for
+           likelihood-free inference." International Conference on Machine
+           Learning, 2019.
     """
 
     def __init__(self, model_fns, density_estimator):

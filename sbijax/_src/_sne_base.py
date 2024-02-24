@@ -13,15 +13,15 @@ from sbijax._src.generator import as_batch_iterators, named_dataset
 class SNE(SBI, ABC):
     """Sequential neural estimation base class."""
 
-    def __init__(self, model_fns, density_estimator):
+    def __init__(self, model_fns, network):
         """Construct an SNE object.
 
         Args:
             model_fns: tuple
-            density_estimator: maf
+            network: maf
         """
         super().__init__(model_fns)
-        self.model = density_estimator
+        self.model = network
         self.n_total_simulations = 0
 
     def simulate_data_and_possibly_append(

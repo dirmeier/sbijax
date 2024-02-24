@@ -34,7 +34,7 @@ class SNASS(SNL):
     """Sequential neural approximate summary statistics.
 
     References:
-        .. [1] Yanzhi Chen et al. "Neural Approximate Sufficient Statistics for
+        .. [1] Chen, Yanzhi et al. "Neural Approximate Sufficient Statistics for
            Implicit Models". ICLR, 2021
     """
 

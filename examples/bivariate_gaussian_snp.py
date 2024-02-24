@@ -1,5 +1,5 @@
 """
-Example using sequential posterior estimation  on a bivariate Gaussian
+Example using sequential neural posterior estimation  on a bivariate Gaussian
 """
 
 import distrax
