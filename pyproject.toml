@@ -47,6 +47,12 @@ exclude = [
     "/.pre-commit-config.yaml"
 ]
 
+[tool.hatch.envs.examples]
+dependencies = [
+    "matplotlib>=3.6.1",
+    "seaborn>=0.12.2"
+]
+
 [tool.hatch.envs.test]
 dependencies = [
     "pylint>=2.15.10",
@@ -57,7 +63,6 @@ dependencies = [
 [tool.hatch.envs.test.scripts]
 lint = 'pylint sbijax'
 test = 'pytest -v --doctest-modules --cov=./sbijax --cov-report=xml sbijax'
-
 
 [tool.black]
 line-length = 80
