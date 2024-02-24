@@ -4,6 +4,7 @@ import haiku as hk
 import jax
 
 
+# pylint: disable=too-many-arguments
 class _ResnetBlock(hk.Module):
     """A block for a 1d residual network."""
 
@@ -38,6 +39,7 @@ class _ResnetBlock(hk.Module):
         return outputs + inputs
 
 
+# pylint: disable=too-many-arguments
 class _Resnet(hk.Module):
     """A simplified 1-d residual network."""
 

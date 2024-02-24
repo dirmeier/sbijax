@@ -24,6 +24,7 @@ def _get_prior_probs_marginal_and_joint(K, gamma):
     return p_marginal, p_joint
 
 
+# pylint: disable=too-many-arguments
 def _as_logits(params, rng_key, model, K, theta, y):
     n = theta.shape[0]
     y = jnp.repeat(y, K + 1, axis=0)
@@ -42,18 +43,10 @@ def _as_logits(params, rng_key, model, K, theta, y):
     return model.apply(params, inputs, is_training=False)
 
 
-def _loss(params, rng_key, model, gamma, num_classes, **batch):
-    n, _ = batch["y"].shape
-
-    rng_key1, rng_key2, rng_key = jr.split(rng_key, 3)
-    log_marg = _as_logits(params, rng_key1, model, num_classes, **batch)
-    log_joint = _as_logits(params, rng_key2, model, num_classes, **batch)
-
-    log_marg = log_marg.reshape(n, num_classes + 1)[:, 1:]
-    log_joint = log_joint.reshape(n, num_classes + 1)[:, :-1]
-
+def _marginal_joint_loss(gamma, num_classes, log_marg, log_joint):
     loggamma = jnp.log(gamma)
-    logK = jnp.full((n, 1), jnp.log(num_classes))
+    logK = jnp.full((log_marg.shape[0], 1), jnp.log(num_classes))
+
     denominator_marginal = jnp.concatenate(
         [loggamma + log_marg, logK],
         axis=-1,
@@ -72,12 +65,22 @@ def _loss(params, rng_key, model, gamma, num_classes, **batch):
         - jsp.special.logsumexp(denomintator_joint, axis=-1)
     )
 
-    p_marginal, p_joint = _get_prior_probs_marginal_and_joint(
-        num_classes, gamma
-    )
-    loss = (
-        p_marginal * log_prob_marginal + p_joint * num_classes * log_prob_joint
-    )
+    p_marg, p_joint = _get_prior_probs_marginal_and_joint(num_classes, gamma)
+    loss = p_marg * log_prob_marginal + p_joint * num_classes * log_prob_joint
+    return loss
+
+
+def _loss(params, rng_key, model, gamma, num_classes, **batch):
+    n, _ = batch["y"].shape
+
+    rng_key1, rng_key2, rng_key = jr.split(rng_key, 3)
+    log_marg = _as_logits(params, rng_key1, model, num_classes, **batch)
+    log_joint = _as_logits(params, rng_key2, model, num_classes, **batch)
+
+    log_marg = log_marg.reshape(n, num_classes + 1)[:, 1:]
+    log_joint = log_joint.reshape(n, num_classes + 1)[:, :-1]
+
+    loss = _marginal_joint_loss(gamma, num_classes, log_marg, log_joint)
     return -jnp.mean(loss)
 
 
@@ -149,6 +152,7 @@ class SNR(SNE):
 
         return params, losses
 
+    # pylint: disable=undefined-loop-variable
     def _fit_model_single_round(
         self,
         seed,

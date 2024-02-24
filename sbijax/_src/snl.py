@@ -137,7 +137,7 @@ class SNL(SNE):
                 best_loss = validation_loss
                 best_params = params.copy()
 
-        losses = jnp.vstack(losses)[:i, :]
+        losses = jnp.vstack(losses)[: (i + 1), :]
         return best_params, losses
 
     def _validation_loss(self, params, val_iter):

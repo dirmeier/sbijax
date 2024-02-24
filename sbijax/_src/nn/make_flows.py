@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, Iterable, List
 
 import distrax
 import haiku as hk
@@ -35,10 +35,11 @@ def _decoder_fn(n_dim, hidden_size):
     return _fn
 
 
+# pylint: disable=too-many-arguments
 def make_affine_maf(
     n_dimension: int,
     n_layers: int = 5,
-    hidden_sizes: List[int] = [64, 64],
+    hidden_sizes: Iterable[int] = (64, 64),
     activation: Callable = jax.nn.tanh,
 ):
     """Create an affine masked autoregressive flow.
@@ -58,12 +59,12 @@ def make_affine_maf(
     def _flow(method, **kwargs):
         layers = []
         order = jnp.arange(n_dimension)
-        for i in range(n_layers):
+        for _ in range(n_layers):
             layer = MaskedAutoregressive(
                 bijector_fn=_bijector_fn,
                 conditioner=MADE(
                     n_dimension,
-                    hidden_sizes + [n_dimension * 2],
+                    list(hidden_sizes) + [n_dimension * 2],
                     2,
                     w_init=hk.initializers.TruncatedNormal(0.001),
                     b_init=jnp.zeros,
@@ -89,7 +90,7 @@ def make_surjective_affine_maf(
     n_dimension: int,
     n_layer_dimensions: List[int],
     n_layers: int = 5,
-    hidden_sizes: List[int] = [64, 64],
+    hidden_sizes: Iterable[int] = (64, 64),
     activation: Callable = jax.nn.tanh,
 ):
     """Create a surjective affine masked autoregressive flow.
@@ -97,6 +98,8 @@ def make_surjective_affine_maf(
     Args:
         n_dimension: a list of integers that determine the dimensionality
             of each flow layer
+        n_layer_dimensions: list of integers that determine if a layer is
+            dimensionality-preserving or -reducing
         n_layers: number of normalizing flow layers
         hidden_sizes: sizes of hidden layers for each normalizing flow
         activation: a jax activation function
@@ -120,7 +123,7 @@ def make_surjective_affine_maf(
                     bijector_fn=_bijector_fn,
                     conditioner=MADE(
                         n_dim_curr_layer,
-                        hidden_sizes + [n_dim_curr_layer * 2],
+                        list(hidden_sizes) + [n_dim_curr_layer * 2],
                         2,
                         w_init=hk.initializers.TruncatedNormal(0.001),
                         b_init=jnp.zeros,

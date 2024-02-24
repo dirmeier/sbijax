@@ -26,7 +26,8 @@ dependencies = [
     "dm-haiku>=0.0.9",
     "optax>=0.1.3",
     "surjectors>=0.3.0",
-    "tfp-nightly>=0.20.0.dev20230404"
+    "tfp-nightly>=0.20.0.dev20230404",
+    "tqdm>=4.64.1"
 ]
 dynamic = ["version"]
 
