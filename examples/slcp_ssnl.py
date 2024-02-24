@@ -4,13 +4,11 @@ Example using SSNL on the SLCP experiment
 
 import argparse
 from functools import partial
-from timeit import default_timer as timer
 
 import distrax
 import haiku as hk
 import jax
 import matplotlib.pyplot as plt
-import numpy as np
 import optax
 import pandas as pd
 import seaborn as sns
@@ -25,11 +23,11 @@ from surjectors import (
     Permutation,
     TransformedDistribution,
 )
-from surjectors.conditioners import MADE, mlp_conditioner
+from surjectors.nn import MADE, make_mlp
 from surjectors.util import unstack
 
 from sbijax import SNL
-from sbijax.mcmc.slice import sample_with_slice
+from sbijax.mcmc import sample_with_slice
 
 
 def prior_model_fns():
@@ -50,7 +48,7 @@ def simulator_fn(seed, theta):
         m1 = ps[..., [1]]
         s0 = ps[..., [2]] ** 2
         s1 = ps[..., [3]] ** 2
-        r = np.tanh(ps[..., [4]])
+        r = jnp.tanh(ps[..., [4]])
         return m0, m1, s0, s1, r
 
     m0, m1, s0, s1, r = _unpack_params(theta)
@@ -60,7 +58,7 @@ def simulator_fn(seed, theta):
     xs = jnp.empty_like(us)
     xs = xs.at[:, :, :, 0].set(s0 * us[:, :, :, 0] + m0)
     y = xs.at[:, :, :, 1].set(
-        s1 * (r * us[:, :, :, 0] + np.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
+        s1 * (r * us[:, :, :, 0] + jnp.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
     )
     if len(orig_shape) == 2:
         y = y.reshape((*theta.shape[:1], 8))
@@ -95,7 +93,7 @@ def make_model(dim, use_surjectors):
         return distrax.ScalarAffine(means, jnp.exp(log_scales))
 
     def _decoder_fn(n_dim):
-        decoder_net = mlp_conditioner(
+        decoder_net = make_mlp(
             [50, n_dim * 2],
             w_init=hk.initializers.TruncatedNormal(stddev=0.001),
         )
@@ -189,7 +187,6 @@ def run(use_surjectors):
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
-    start = timer()
     for i in range(5):
         data, _ = snl.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(12), i),
@@ -201,8 +198,6 @@ def run(use_surjectors):
         params, info = snl.fit(
             jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer
         )
-    end = timer()
-    print(end - start)
 
     sample_key, rng_key = jr.split(jr.PRNGKey(123))
     snl_samples, _ = snl.sample_posterior(sample_key, params, y_observed)

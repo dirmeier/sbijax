@@ -13,12 +13,12 @@ import seaborn as sns
 from jax import numpy as jnp
 from jax import random as jr
 from surjectors import (
-    MADE,
     Chain,
     MaskedAutoregressive,
     Permutation,
     TransformedDistribution,
 )
+from surjectors.nn import MADE
 from surjectors.util import unstack
 
 from sbijax import SNL

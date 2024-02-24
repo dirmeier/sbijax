@@ -26,7 +26,8 @@ dependencies = [
     "dm-haiku>=0.0.9",
     "optax>=0.1.3",
     "surjectors>=0.3.0",
-    "tfp-nightly>=0.20.0.dev20230404"
+    "tfp-nightly>=0.20.0.dev20230404",
+    "tqdm>=4.64.1"
 ]
 dynamic = ["version"]
 
@@ -46,6 +47,12 @@ exclude = [
     "/.pre-commit-config.yaml"
 ]
 
+[tool.hatch.envs.examples]
+dependencies = [
+    "matplotlib>=3.6.1",
+    "seaborn>=0.12.2"
+]
+
 [tool.hatch.envs.test]
 dependencies = [
     "pylint>=2.15.10",
@@ -56,7 +63,6 @@ dependencies = [
 [tool.hatch.envs.test.scripts]
 lint = 'pylint sbijax'
 test = 'pytest -v --doctest-modules --cov=./sbijax --cov-report=xml sbijax'
-
 
 [tool.black]
 line-length = 80
