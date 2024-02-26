@@ -16,20 +16,47 @@ from sbijax._src.util.early_stopping import EarlyStopping
 class SNP(SNE):
     """Sequential neural posterior estimation.
 
+    Args:
+        model_fns: a tuple of tuples. The first element is a tuple that
+                consists of functions to sample and evaluate the
+                log-probability of a data point. The second element is a
+                simulator function.
+        density_estimator: a (neural) conditional density estimator
+            to model the posterior distribution
+        num_atoms: number of atomic atoms
+
+    Examples:
+        >>> import distrax
+        >>> from sbijax import SNP
+        >>> from sbijax.nn import make_affine_maf
+        >>>
+        >>> prior = distrax.Normal(0.0, 1.0)
+        >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
+        >>> fns = (prior.sample, prior.log_prob), s
+        >>> flow = make_affine_maf()
+        >>>
+        >>> snr = SNP(fns, flow)
+
     References:
         .. [1] Greenberg, David, et al. "Automatic posterior transformation for
            likelihood-free inference." International Conference on Machine
            Learning, 2019.
     """
 
-    def __init__(self, model_fns, density_estimator):
+    def __init__(self, model_fns, density_estimator, num_atoms=10):
         """Construct an SNP object.
 
         Args:
-            model_fns: tuple
-            density_estimator: maf
+            model_fns: a tuple of tuples. The first element is a tuple that
+                    consists of functions to sample and evaluate the
+                    log-probability of a data point. The second element is a
+                    simulator function.
+            density_estimator: a (neural) conditional density estimator
+                to model the posterior distribution
+            num_atoms: number of atomic atoms
         """
         super().__init__(model_fns, density_estimator)
+        self.num_atoms = num_atoms
         self.n_round = 0
 
     # pylint: disable=arguments-differ,too-many-locals
@@ -37,28 +64,27 @@ class SNP(SNE):
         self,
         rng_key,
         data,
+        *,
         optimizer=optax.adam(0.0003),
         n_iter=1000,
         batch_size=128,
         percentage_data_as_validation_set=0.1,
         n_early_stopping_patience=10,
-        n_atoms=10,
         **kwargs,
     ):
-        """Fit an SNPE model.
+        """Fit an SNP model.
 
         Args:
-            rng_key: a hk.PRNGSequence
+            rng_key: a jax random key
             data: data set obtained from calling
                 `simulate_data_and_possibly_append`
             optimizer: an optax optimizer object
             n_iter: maximal number of training iterations per round
             batch_size:  batch size used for training the model
             percentage_data_as_validation_set: percentage of the simulated
-                data that is used for valitation and early stopping
+                data that is used for validation and early stopping
             n_early_stopping_patience: number of iterations of no improvement
-                of training the flow before stopping optimisation
-            n_atoms: number of atoms to approximate the proposal posterior
+                of training the flow before stopping optimisation\
 
         Returns:
             a tuple of parameters and a tuple of the training information
@@ -74,7 +100,7 @@ class SNP(SNE):
             optimizer=optimizer,
             n_iter=n_iter,
             n_early_stopping_patience=n_early_stopping_patience,
-            n_atoms=n_atoms,
+            n_atoms=self.num_atoms,
         )
 
         return params, losses
@@ -237,14 +263,14 @@ class SNP(SNE):
         r"""Sample from the approximate posterior.
 
         Args:
-            rng_key: a random key
-            params: a pytree of parameter for the model
+            rng_key: a jax random key
+            params: a pytree of neural network parameters
             observable: observation to condition on
             n_samples: number of samples to draw
 
         Returns:
-            an array of samples from the posterior distribution of dimension
-            (n_samples \times p)
+            returns an array of samples from the posterior distribution of
+            dimension (n_samples \times p)
         """
         observable = jnp.atleast_2d(observable)
 

@@ -22,41 +22,34 @@ SMCABC
 ~~~~~~
 
 ..  autoclass:: SMCABC
-    :members:
+    :members: fit, simulate_data_and_possibly_append, sample_posterior
 
 SNL+SSNL
 ~~~~~~~~
 
 ..  autoclass:: SNL
-    :members:
+    :members: fit, simulate_data_and_possibly_append, sample_posterior
 
 SNP
 ~~~
 
 ..  autoclass:: SNP
-    :members:
+    :members: fit, simulate_data_and_possibly_append, sample_posterior
 
 SNR
 ~~~
 
 ..  autoclass:: SNR
-    :members:
+    :members: fit, simulate_data_and_possibly_append, sample_posterior
 
 SNASS
 ~~~~~
 
 ..  autoclass:: SNASS
-    :members:
+    :members: fit, simulate_data_and_possibly_append, sample_posterior
 
 SNASSS
 ~~~~~~
 
 ..  autoclass:: SNASSS
-    :members:
-
-
-References
-----------
-
-.. bibliography:: references.bib
-   :style: unsrt
+    :members: fit, simulate_data_and_possibly_append, sample_posterior

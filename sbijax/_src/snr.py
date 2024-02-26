@@ -280,21 +280,23 @@ class SNR(SNE):
         the new samples to the data set and return the old+new data.
 
         Args:
-            rng_key: a random key
+            rng_key: a jax random key
             params: a dictionary of neural network parameters
             observable: an observation
             data: existing data set or None
             n_simulations: number of newly simulated data
             n_chains: number of MCMC chains
             n_samples: number of sa les to draw in total
-            n_warmup: number of draws to discared
-            kwargs: keyword arguments
-               dictionary of ey value pairs passed to `sample_posterior`.
-               The following arguments are possible:
-               - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-               - n_thin: number of thinning steps (int)
-               - n_doubling: number of doubling steps of the interval (int)
-               - step_size: step size of the initial interval (float)
+            n_warmup: number of draws to discarded
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
            returns a NamedTuple of two axis, y and theta
@@ -326,17 +328,20 @@ class SNR(SNE):
 
         Args:
             rng_key: a jax random key
-            params: a pytree of neural network parameters for the model
+            params: a pytree of neural network parameters
             observable: observation to condition on
             n_chains: number of MCMC chains
             n_samples: number of samples per chain
             n_warmup:  number of samples to discard
-            kwargs: keyword arguments with sampler specific parameters. For
-                slice sampling the following arguments are possible:
-                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-                - n_thin: number of thinning steps
-                - n_doubling: number of doubling steps of the interval
-                - step_size: step size of the initial interval
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
             returns an array of samples from the posterior distribution of

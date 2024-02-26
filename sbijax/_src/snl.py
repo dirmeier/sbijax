@@ -8,15 +8,9 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 
+from sbijax._src import mcmc
 from sbijax._src._sne_base import SNE
-from sbijax._src.mcmc import (
-    mcmc_diagnostics,
-    sample_with_nuts,
-    sample_with_slice,
-)
-from sbijax._src.mcmc.irmh import sample_with_imh
-from sbijax._src.mcmc.mala import sample_with_mala
-from sbijax._src.mcmc.rmh import sample_with_rmh
+from sbijax._src.mcmc import mcmc_diagnostics
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
@@ -24,7 +18,15 @@ from sbijax._src.util.early_stopping import EarlyStopping
 class SNL(SNE):
     """Sequential neural likelihood.
 
-    Implements SNL and SSNL estimation methods.
+    Implements both SNL and SSNL estimation methods.
+
+    Args:
+        model_fns: a tuple of tuples. The first element is a tuple that
+                consists of functions to sample and evaluate the
+                log-probability of a data point. The second element is a
+                simulator function.
+        density_estimator: a (neural) conditional density estimator
+            to model the likelihood function
 
     References:
         .. [1] Papamakarios, George, et al. "Sequential neural likelihood:
@@ -35,6 +37,19 @@ class SNL(SNE):
            surjective sequential neural likelihood estimation."
            arXiv preprint arXiv:2308.01054, 2023.
     """
+
+    def __init__(self, model_fns, density_estimator):
+        """Construct a SNL object.
+
+        Args:
+            model_fns: a tuple of tuples. The first element is a tuple that
+                    consists of functions to sample and evaluate the
+                    log-probability of a data point. The second element is a
+                    simulator function.
+            density_estimator: a (neural) conditional density estimator
+                        to model the likelihood function
+        """
+        super().__init__(model_fns, density_estimator)
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -48,10 +63,10 @@ class SNL(SNE):
         n_early_stopping_patience=10,
         **kwargs,
     ):
-        """Fit a SNL model.
+        """Fit a SNL or SSNL model.
 
         Args:
-            rng_key: a hk.PRNGSequence
+            rng_key: a jax random key
             data: data set obtained from calling
                 `simulate_data_and_possibly_append`
             optimizer: an optax optimizer object
@@ -61,15 +76,9 @@ class SNL(SNE):
                 that is used for valitation and early stopping
             n_early_stopping_patience: number of iterations of no improvement of
                 training the flow before stopping optimisation
-            kwargs: keyword arguments with sampler specific parameters.
-                For slice sampling the following arguments are possible:
-                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-                - n_thin: number of thinning steps
-                - n_doubling: number of doubling steps of the interval
-                - step_size: step size of the initial interval
 
         Returns:
-            returns a tuple of parameters and a tuple of the training
+            a tuple of parameters and a tuple of the training
             information
         """
         itr_key, rng_key = jr.split(rng_key)
@@ -186,17 +195,19 @@ class SNL(SNE):
             n_simulations: number of newly simulated data
             n_chains: number of MCMC chains
             n_samples: number of sa les to draw in total
-            n_warmup: number of draws to discared
-            kwargs: keyword arguments
-               dictionary of ey value pairs passed to `sample_posterior`.
-               The following arguments are possible:
-               - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-               - n_thin: number of thinning steps (int)
-               - n_doubling: number of doubling steps of the interval (int)
-               - step_size: step size of the initial interval (float)
+            n_warmup: number of draws to discarded
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
-           returns a NamedTuple of two axis, y and theta
+            returns a NamedTuple with two elements, y and theta
         """
         return super().simulate_data_and_possibly_append(
             rng_key=rng_key,
@@ -224,22 +235,25 @@ class SNL(SNE):
         r"""Sample from the approximate posterior.
 
         Args:
-            rng_key: a random key
-            params: a pytree of parameter for the model
+            rng_key: a jax random key
+            params: a pytree of neural network parameters
             observable: observation to condition on
             n_chains: number of MCMC chains
             n_samples: number of samples per chain
             n_warmup:  number of samples to discard
-            kwargs: keyword arguments with sampler specific parameters. For
-                slice sampling the following arguments are possible:
-                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-                - n_thin: number of thinning steps
-                - n_doubling: number of doubling steps of the interval
-                - step_size: step size of the initial interval
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
             an array of samples from the posterior distribution of dimension
-            (n_samples \times p)
+            (n_samples \times p) and posterior diagnostics
         """
         observable = jnp.atleast_2d(observable)
         return self._sample_posterior(
@@ -278,40 +292,20 @@ class SNL(SNE):
             return jnp.sum(lp) + jnp.sum(lp_prior)
 
         if "sampler" in kwargs and kwargs["sampler"] == "slice":
-            kwargs.pop("sampler", None)
 
             def lp__(theta):
                 return jax.vmap(_joint_logdensity_fn)(theta)
 
-            sampling_fn = sample_with_slice
-        elif "sampler" in kwargs and kwargs["sampler"] == "rmh":
-            kwargs.pop("sampler", None)
-
-            def lp__(theta):
-                return _joint_logdensity_fn(**theta)
-
-            sampling_fn = sample_with_rmh
-        elif "sampler" in kwargs and kwargs["sampler"] == "imh":
-            kwargs.pop("sampler", None)
-
-            def lp__(theta):
-                return _joint_logdensity_fn(**theta)
-
-            sampling_fn = sample_with_imh
-        elif "sampler" in kwargs and kwargs["sampler"] == "mala":
-            kwargs.pop("sampler", None)
-
-            def lp__(theta):
-                return _joint_logdensity_fn(**theta)
-
-            sampling_fn = sample_with_mala
+            sampler = kwargs.pop("sampler", None)
         else:
 
             def lp__(theta):
                 return _joint_logdensity_fn(**theta)
 
-            sampling_fn = sample_with_nuts
+            # take whatever sampler is or per default nuts
+            sampler = kwargs.pop("sampler", "nuts")
 
+        sampling_fn = getattr(mcmc, "sample_with_" + sampler)
         samples = sampling_fn(
             rng_key=rng_key,
             lp=lp__,

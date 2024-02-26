@@ -59,7 +59,7 @@ Acknowledgements
 
 .. note::
 
-    📝 The package draws significant inspiration from the excellent Pytorch-based `sbi <https://github.com/sbi-dev/sbi>`_ package which is
+    📝 The API of the package is heavily inspired by the excellent Pytorch-based `sbi <https://github.com/sbi-dev/sbi>`_ package which is
     substantially more feature-complete and user-friendly.
 
 License
@@ -82,7 +82,7 @@ License
 
 ..  toctree::
     :caption: 🧱 API
-    :maxdepth: 1
+    :maxdepth: 2
     :hidden:
 
     sbijax

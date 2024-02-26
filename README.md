@@ -49,7 +49,7 @@ pip install git+https://github.com/dirmeier/sbijax@<RELEASE>
 
 ## Acknowledgements
 
-> 📝 The package draws significant inspiration from the excellent Pytorch-based [`sbi`](https://github.com/sbi-dev/sbi) package which is substantially more
+> 📝 The API of the package is heavily inspired by the excellent Pytorch-based [`sbi`](https://github.com/sbi-dev/sbi) package which is substantially more
 feature-complete and user-friendly, and better documented.
 
 ## Author
