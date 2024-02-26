@@ -38,6 +38,7 @@ class SNL(SNE):
            arXiv preprint arXiv:2308.01054, 2023.
     """
 
+    # pylint: disable=useless-parent-delegation
     def __init__(self, model_fns, density_estimator):
         """Construct a SNL object.
 

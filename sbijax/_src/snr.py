@@ -315,9 +315,9 @@ class SNR(SNE):
 
     def sample_posterior(
         self,
-        rng_key: Array,
-        params: Optional[Params],
-        observable: Optional[Array],
+        rng_key,
+        params,
+        observable,
         *,
         n_chains=4,
         n_samples=2_000,

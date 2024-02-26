@@ -1,3 +1,4 @@
+import abc
 from abc import ABC
 
 import chex
@@ -62,6 +63,18 @@ class SNE(SBI, ABC):
         else:
             d_new = self.stack_data(data, new_data)
         return d_new, diagnostics
+
+    @abc.abstractmethod
+    def sample_posterior(self, rng_key, params, observable, *args, **kwargs):
+        """Sample from the approximate posterior.
+
+        Args:
+            rng_key: a jax random key
+            params: a pytree of neural network parameters
+            observable: a data point
+            *args: argument list
+            **kwargs: keyword arguments
+        """
 
     def simulate_data(
         self,
