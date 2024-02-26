@@ -141,6 +141,7 @@ class SNASS(SNL):
                 "theta": theta,
             }
 
+        # TODO(simon): fix me
         return DataLoader(
             num_batches=iters.num_batches,
             batches=[as_batch(**iters(i)) for i in range(iters.num_batches)],
@@ -157,7 +158,9 @@ class SNASS(SNL):
     ):
 
         init_key, rng_key = jr.split(rng_key)
-        params = self._init_summary_net_params(init_key, **train_iter(0))
+        params = self._init_summary_net_params(
+            init_key, **next(iter(train_iter))
+        )
         state = optimizer.init(params)
         loss_fn = jax.jit(
             partial(_jsd_summary_loss, apply_fn=self.sc_net.apply)
@@ -177,8 +180,7 @@ class SNASS(SNL):
         for i in range(n_iter):
             train_loss = 0.0
             epoch_key, rng_key = jr.split(rng_key)
-            for j in range(train_iter.num_batches):
-                batch = train_iter(j)
+            for j, batch in enumerate(train_iter):
                 batch_loss, params, state = step(
                     jr.fold_in(epoch_key, j), params, state, **batch
                 )
@@ -211,15 +213,14 @@ class SNASS(SNL):
             partial(_jsd_summary_loss, apply_fn=self.sc_net.apply)
         )
 
-        def body_fn(i, batch_key):
-            batch = val_iter(i)
+        def body_fn(batch_key, **batch):
             loss = loss_fn(params, batch_key, **batch)
             return loss * (batch["y"].shape[0] / val_iter.num_samples)
 
         losses = 0.0
-        for i in range(val_iter.num_batches):
+        for batch in val_iter:
             batch_key, rng_key = jr.split(rng_key)
-            losses += body_fn(i, batch_key)
+            losses += body_fn(batch_key, **batch)
         return losses
 
     def sample_posterior(

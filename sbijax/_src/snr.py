@@ -194,7 +194,7 @@ class SNR(SNE):
         n_early_stopping_patience,
     ):
         init_key, rng_key = jr.split(rng_key)
-        params = self._init_params(init_key, **train_iter(0))
+        params = self._init_params(init_key, **next(iter(train_iter)))
         state = optimizer.init(params)
 
         loss_fn = partial(_loss, gamma=self.gamma, num_classes=self.num_classes)
@@ -256,9 +256,9 @@ class SNR(SNE):
             return loss * (batch["y"].shape[0] / val_iter.num_samples)
 
         loss = 0.0
-        for i in range(val_iter.num_batches):
+        for batch in val_iter:
             val_key, rng_key = jr.split(rng_key)
-            loss += body_fn(val_key, **val_iter(i))
+            loss += body_fn(val_key, **batch)
         return loss
 
     def simulate_data_and_possibly_append(

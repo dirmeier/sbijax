@@ -11,25 +11,13 @@ named_dataset = namedtuple("named_dataset", "y theta")
 # pylint: disable=missing-class-docstring,too-few-public-methods
 class DataLoader:
     # noqa: D101
-    def __init__(
-        self, num_batches, idxs=None, get_batch=None, batches=None
-    ):  # noqa: D107
-        self.num_batches = num_batches
-        self.idxs = idxs
-        if idxs is not None:
-            self.num_samples = len(idxs)
-        else:
-            self.num_samples = self.num_batches * batches[0]["y"].shape[0]
-        self.get_batch = get_batch
-        self.batches = batches
+    def __init__(self, itr, num_samples):  # noqa: D107
+        self._itr = itr
+        self.num_samples = num_samples
 
-    def __call__(self, idx, idxs=None):  # noqa: D102
-        if self.batches is not None:
-            return self.batches[idx]
-
-        if idxs is None:
-            idxs = self.idxs
-        return self.get_batch(idx, idxs)
+    def __iter__(self):
+        """Iterate over the data set."""
+        yield from self._itr.as_numpy_iterator()
 
 
 # pylint: disable=missing-function-docstring
@@ -82,7 +70,9 @@ def as_batch_iterator(rng_key: Array, data: named_dataset, batch_size, shuffle):
     # hack, cause the tf stuff doesn't support jax keys :)
     max_int32 = jnp.iinfo(jnp.int32).max
     seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
-    itr = tf.data.Dataset.from_tensor_slices(data)
+    itr = tf.data.Dataset.from_tensor_slices(
+        {key: value for key, value in zip(data._fields, data)}
+    )
     itr = (
         itr.shuffle(
             10 * batch_size,
@@ -91,6 +81,5 @@ def as_batch_iterator(rng_key: Array, data: named_dataset, batch_size, shuffle):
         )
         .batch(batch_size)
         .prefetch(buffer_size=batch_size)
-        .as_numpy_iterator()
     )
-    return itr
+    return DataLoader(itr, data[0].shape[0])

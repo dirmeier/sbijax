@@ -22,7 +22,7 @@ from surjectors.nn import MADE
 from surjectors.util import unstack
 
 from sbijax import SNL
-from sbijax.mcmc import sample_with_slice
+from sbijax._src.mcmc import sample_with_nuts
 
 
 def prior_model_fns():
@@ -84,9 +84,6 @@ def make_model(dim):
 def run():
     y_observed = jnp.array([-2.0, 1.0])
 
-    log_density_partial = partial(log_density_fn, y=y_observed)
-    log_density = lambda x: jax.vmap(log_density_partial)(x)
-
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
@@ -107,7 +104,9 @@ def run():
         )
 
     sample_key, rng_key = jr.split(jr.PRNGKey(123))
-    slice_samples = sample_with_slice(
+    log_density_partial = partial(log_density_fn, y=y_observed)
+    log_density = lambda x: log_density_partial(**x)
+    slice_samples = sample_with_nuts(
         sample_key, log_density, prior_simulator_fn
     )
     slice_samples = slice_samples.reshape(-1, 2)

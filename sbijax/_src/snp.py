@@ -116,7 +116,7 @@ class SNP(SNE):
         n_atoms,
     ):
         init_key, seed = jr.split(seed)
-        params = self._init_params(init_key, **train_iter(0))
+        params = self._init_params(init_key, **next(iter(train_iter)))
         state = optimizer.init(params)
 
         n_round = self.n_round
@@ -158,9 +158,8 @@ class SNP(SNE):
         for i in range(n_iter):
             train_loss = 0.0
             rng_key = jr.fold_in(seed, i)
-            for j in range(train_iter.num_batches):
+            for batch in train_iter:
                 train_key, rng_key = jr.split(rng_key)
-                batch = train_iter(j)
                 batch_loss, params, state = step(
                     params, train_key, state, **batch
                 )
@@ -182,7 +181,7 @@ class SNP(SNE):
                 best_params = params.copy()
 
         self.n_round += 1
-        losses = jnp.vstack(losses)[:i, :]
+        losses = jnp.vstack(losses)[: (i + 1), :]
         return best_params, losses
 
     def _init_params(self, rng_key, **init_data):
@@ -246,15 +245,14 @@ class SNP(SNE):
                 )
                 return -jnp.mean(lp)
 
-        def body_fn(i, rng_key):
-            batch = val_iter(i)
+        def body_fn(batch, rng_key):
             loss = jax.jit(loss_fn)(rng_key, **batch)
             return loss * (batch["y"].shape[0] / val_iter.num_samples)
 
         loss = 0.0
-        for i in range(val_iter.num_batches):
+        for batch in val_iter:
             val_key, rng_key = jr.split(rng_key)
-            loss += body_fn(i, val_key)
+            loss += body_fn(batch, val_key)
         return loss
 
     def sample_posterior(
