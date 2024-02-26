@@ -71,6 +71,7 @@ class SNASSS(SNASS):
            Likelihood-free Inference". ICML, 2023
     """
 
+    # pylint: disable=useless-parent-delegation
     def __init__(self, model_fns, density_estimator, summary_net):
         """Construct a SNASSS object.
 
