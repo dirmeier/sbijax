@@ -6,9 +6,10 @@ import optax
 from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
+from tqdm import tqdm
 
-from sbijax._src.generator import DataLoader
 from sbijax._src.snl import SNL
+from sbijax._src.util.dataloader import as_batch_iterator, named_dataset
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
@@ -116,8 +117,13 @@ class SNASS(SNL):
             n_early_stopping_patience=n_early_stopping_patience,
         )
 
-        train_iter = self._as_summary(train_iter, snet_params)
-        val_iter = self._as_summary(val_iter, snet_params)
+        train_key, val_key, rng_key = jr.split(rng_key, 3)
+        train_iter = self._as_itr_over_summaries(
+            train_key, train_iter, snet_params, batch_size
+        )
+        val_iter = self._as_itr_over_summaries(
+            val_key, val_iter, snet_params, batch_size
+        )
 
         nde_params, losses = self._fit_model_single_round(
             seed=rng_key,
@@ -133,18 +139,16 @@ class SNASS(SNL):
             snet_losses,
         )
 
-    def _as_summary(self, iters, params):
-        @jax.jit
-        def as_batch(y, theta):
-            return {
-                "y": self.sc_net.apply(params, method="summary", y=y),
-                "theta": theta,
-            }
-
-        # TODO(simon): fix me
-        return DataLoader(
-            num_batches=iters.num_batches,
-            batches=[as_batch(**iters(i)) for i in range(iters.num_batches)],
+    def _as_itr_over_summaries(self, rng_key, iters, params, batch_size):
+        ys = []
+        thetas = []
+        for batch in iters:
+            ys.append(self.sc_net.apply(params, method="summary", y=batch["y"]))
+            thetas.append(batch["theta"])
+        ys = jnp.vstack(ys)
+        thetas = jnp.vstack(thetas)
+        return as_batch_iterator(
+            rng_key, named_dataset(ys, thetas), batch_size, True
         )
 
     def _fit_summary_net(
@@ -177,7 +181,7 @@ class SNASS(SNL):
         early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
         best_params, best_loss = None, np.inf
         logging.info("training summary net")
-        for i in range(n_iter):
+        for i in tqdm(range(n_iter)):
             train_loss = 0.0
             epoch_key, rng_key = jr.split(rng_key)
             for j, batch in enumerate(train_iter):

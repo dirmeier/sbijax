@@ -7,8 +7,8 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._src.generator import DataLoader
 from sbijax._src.snl import SNL
+from sbijax._src.util.dataloader import DataLoader
 from sbijax._src.util.early_stopping import EarlyStopping
 
 

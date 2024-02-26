@@ -215,9 +215,8 @@ class SNR(SNE):
         for i in tqdm(range(n_iter)):
             train_loss = 0.0
             rng_key = jr.fold_in(rng_key, i)
-            for j in range(train_iter.num_batches):
+            for batch in train_iter:
                 train_key, rng_key = jr.split(rng_key)
-                batch = train_iter(j)
                 batch_loss, params, state = step(
                     params, train_key, state, **batch
                 )

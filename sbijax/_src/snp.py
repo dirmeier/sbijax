@@ -7,6 +7,7 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
+from tqdm import tqdm
 
 from sbijax._src._sne_base import SNE
 from sbijax._src.util.early_stopping import EarlyStopping
@@ -155,7 +156,7 @@ class SNP(SNE):
         early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
         best_params, best_loss = None, np.inf
         logging.info("training model")
-        for i in range(n_iter):
+        for i in tqdm(range(n_iter)):
             train_loss = 0.0
             rng_key = jr.fold_in(seed, i)
             for batch in train_iter:

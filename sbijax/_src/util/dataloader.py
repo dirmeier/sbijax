@@ -54,6 +54,36 @@ def as_batch_iterators(
     return train_itr, val_itr
 
 
+def as_batched_numpy_iterator_from_tf(
+    rng_key: Array, data: tf.data.Dataset, iter_size, batch_size, shuffle
+):
+    """Create a data batch iterator from a tensorflow data set.
+
+    Args:
+        rng_key: a jax random key
+        data: a named tuple with elements 'y' and 'theta' all data
+        iter_size: total number of elements in the data set
+        batch_size: size of each batch
+        shuffle: shuffle the data set or no
+
+    Returns:
+        a tensorflow iterator
+    """
+    # hack, cause the tf stuff doesn't support jax keys :)
+    max_int32 = jnp.iinfo(jnp.int32).max
+    seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
+    data = (
+        data.shuffle(
+            10 * batch_size,
+            seed=int(seed),
+            reshuffle_each_iteration=shuffle,
+        )
+        .batch(batch_size)
+        .prefetch(buffer_size=batch_size)
+    )
+    return DataLoader(data, iter_size)
+
+
 # pylint: disable=missing-function-docstring
 def as_batch_iterator(rng_key: Array, data: named_dataset, batch_size, shuffle):
     """Create a data batch iterator from a data set.
@@ -67,19 +97,9 @@ def as_batch_iterator(rng_key: Array, data: named_dataset, batch_size, shuffle):
     Returns:
         a tensorflow iterator
     """
-    # hack, cause the tf stuff doesn't support jax keys :)
-    max_int32 = jnp.iinfo(jnp.int32).max
-    seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
     itr = tf.data.Dataset.from_tensor_slices(
         {key: value for key, value in zip(data._fields, data)}
     )
-    itr = (
-        itr.shuffle(
-            10 * batch_size,
-            seed=int(seed),
-            reshuffle_each_iteration=shuffle,
-        )
-        .batch(batch_size)
-        .prefetch(buffer_size=batch_size)
+    return as_batched_numpy_iterator_from_tf(
+        rng_key, itr, data[0].shape[0], batch_size, shuffle
     )
-    return DataLoader(itr, data[0].shape[0])

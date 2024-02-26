@@ -7,6 +7,7 @@ import optax
 from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
+from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._sne_base import SNE
@@ -59,7 +60,7 @@ class SNL(SNE):
         data,
         optimizer=optax.adam(0.0003),
         n_iter=1000,
-        batch_size=128,
+        batch_size=100,
         percentage_data_as_validation_set=0.1,
         n_early_stopping_patience=10,
         **kwargs,
@@ -128,7 +129,7 @@ class SNL(SNE):
         early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
         best_params, best_loss = None, np.inf
         logging.info("training model")
-        for i in range(n_iter):
+        for i in tqdm(range(n_iter)):
             train_loss = 0.0
             for batch in train_iter:
                 batch_loss, params, state = step(params, state, **batch)

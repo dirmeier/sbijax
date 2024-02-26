@@ -22,7 +22,7 @@ from surjectors.nn import MADE
 from surjectors.util import unstack
 
 from sbijax import SNL
-from sbijax._src.mcmc import sample_with_nuts
+from sbijax.mcmc import sample_with_nuts
 
 
 def prior_model_fns():

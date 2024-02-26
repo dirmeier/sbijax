@@ -6,7 +6,8 @@ from jax import numpy as jnp
 from jax import random as jr
 
 from sbijax._src._sbi_base import SBI
-from sbijax._src.generator import as_batch_iterators, named_dataset
+from sbijax._src.util.data import stack_data
+from sbijax._src.util.dataloader import as_batch_iterators, named_dataset
 
 
 # pylint: disable=too-many-arguments,unused-argument
@@ -61,7 +62,7 @@ class SNE(SBI, ABC):
         if data is None:
             d_new = new_data
         else:
-            d_new = self.stack_data(data, new_data)
+            d_new = stack_data(data, new_data)
         return d_new, diagnostics
 
     @abc.abstractmethod
@@ -134,25 +135,6 @@ class SNE(SBI, ABC):
         new_data = named_dataset(new_obs, new_thetas)
 
         return new_data, diagnostics
-
-    @staticmethod
-    def stack_data(data, also_data):
-        """Stack two data sets.
-
-        Args:
-            data: one data set
-            also_data: another data set
-
-        Returns:
-            returns the stack of the two data sets
-        """
-        if data is None:
-            return also_data
-        if also_data is None:
-            return data
-        return named_dataset(
-            *[jnp.vstack([a, b]) for a, b in zip(data, also_data)]
-        )
 
     @staticmethod
     def as_iterators(
