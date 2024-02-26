@@ -7,8 +7,7 @@ from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._src.snl import SNL
-from sbijax._src.util.dataloader import DataLoader
+from sbijax._src.snass import SNASS
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
@@ -54,7 +53,7 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
 
 
 # pylint: disable=too-many-arguments,unused-argument
-class SNASSS(SNL):
+class SNASSS(SNASS):
     """Sequential neural approximate slice sufficient statistics.
 
     Args:
@@ -72,7 +71,6 @@ class SNASSS(SNL):
            Likelihood-free Inference". ICML, 2023
     """
 
-    # TODO(simon): extend from SNASS
     def __init__(self, model_fns, density_estimator, summary_net):
         """Construct a SNASSS object.
 
@@ -86,82 +84,9 @@ class SNASSS(SNL):
                 the modelled dimensionality is that of the summaries
             summary_net: a SNASSSNet object
         """
-        super().__init__(model_fns, density_estimator)
-        self.sc_net = summary_net
+        super().__init__(model_fns, density_estimator, summary_net)
 
-    # pylint: disable=arguments-differ,too-many-locals
-    def fit(
-        self,
-        rng_key,
-        data,
-        optimizer=optax.adam(0.0003),
-        n_iter=1000,
-        batch_size=128,
-        percentage_data_as_validation_set=0.1,
-        n_early_stopping_patience=10,
-        **kwargs,
-    ):
-        """Fit a SNASSS model.
-
-        Args:
-            rng_key: a jax random key
-            data: data set obtained from calling
-              `simulate_data_and_possibly_append`
-            optimizer: an optax optimizer object
-            n_iter: maximal number of training iterations per round
-            batch_size: batch size used for training the model
-            percentage_data_as_validation_set: percentage of the simulated data
-              that is used for validation and early stopping
-            n_early_stopping_patience: number of iterations of no improvement
-              of training the flow before stopping optimisation
-
-        Returns:
-            tuple of parameters and a tuple of the training information
-        """
-        itr_key, rng_key = jr.split(rng_key)
-        train_iter, val_iter = self.as_iterators(
-            itr_key, data, batch_size, percentage_data_as_validation_set
-        )
-
-        snet_params, snet_losses = self._fit_summary_net(
-            rng_key=rng_key,
-            train_iter=train_iter,
-            val_iter=val_iter,
-            optimizer=optimizer,
-            n_iter=n_iter,
-            n_early_stopping_patience=n_early_stopping_patience,
-        )
-
-        train_iter = self._as_summary(train_iter, snet_params)
-        val_iter = self._as_summary(val_iter, snet_params)
-
-        nde_params, losses = self._fit_model_single_round(
-            seed=rng_key,
-            train_iter=train_iter,
-            val_iter=val_iter,
-            optimizer=optimizer,
-            n_iter=n_iter,
-            n_early_stopping_patience=n_early_stopping_patience,
-        )
-
-        return {"params": nde_params, "s_params": snet_params}, (
-            losses,
-            snet_losses,
-        )
-
-    def _as_summary(self, iters, params):
-        @jax.jit
-        def as_batch(y, theta):
-            return {
-                "y": self.sc_net.apply(params, method="summary", y=y),
-                "theta": theta,
-            }
-
-        return DataLoader(
-            num_batches=iters.num_batches,
-            batches=[as_batch(**iters(i)) for i in range(iters.num_batches)],
-        )
-
+    # pylint: disable=undefined-loop-variable
     def _fit_summary_net(
         self,
         rng_key,
@@ -219,10 +144,6 @@ class SNASSS(SNL):
         losses = jnp.vstack(losses)[: (i + 1), :]
         return best_params, losses
 
-    def _init_summary_net_params(self, rng_key, **init_data):
-        params = self.sc_net.init(rng_key, method="forward", **init_data)
-        return params
-
     def _summary_validation_loss(self, params, rng_key, val_iter):
         loss_fn = jax.jit(
             partial(_jsd_summary_loss, apply_fn=self.sc_net.apply)
@@ -237,51 +158,3 @@ class SNASSS(SNL):
             batch_key, rng_key = jr.split(rng_key)
             losses += body_fn(batch_key, **batch)
         return losses
-
-    def sample_posterior(
-        self,
-        rng_key,
-        params,
-        observable,
-        *,
-        n_chains=4,
-        n_samples=2_000,
-        n_warmup=1_000,
-        **kwargs,
-    ):
-        r"""Sample from the approximate posterior.
-
-        Args:
-            rng_key: a jax random key
-            params: a pytree of neural network parameters
-            observable: observation to condition on
-            n_chains: number of MCMC chains
-            n_samples: number of samples per chain
-            n_warmup: number of samples to discard
-
-        Keyword Args:
-            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
-            n_thin (int): number of thinning steps
-                (only used if sampler='slice')
-            n_doubling (int): number of doubling steps of the interval
-                 (only used if sampler='slice')
-            step_size (float): step size of the initial interval
-                 (only used if sampler='slice')
-
-        Returns:
-            an array of samples from the posterior distribution of dimension
-            (n_samples \times p) and posterior diagnostics
-        """
-        observable = jnp.atleast_2d(observable)
-        summary = self.sc_net.apply(
-            params["s_params"], method="summary", y=observable
-        )
-        return super().sample_posterior(
-            rng_key,
-            params["params"],
-            summary,
-            n_chains=n_chains,
-            n_samples=n_samples,
-            n_warmup=n_warmup,
-            **kwargs,
-        )

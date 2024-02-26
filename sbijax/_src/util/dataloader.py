@@ -97,9 +97,7 @@ def as_batch_iterator(rng_key: Array, data: named_dataset, batch_size, shuffle):
     Returns:
         a tensorflow iterator
     """
-    itr = tf.data.Dataset.from_tensor_slices(
-        {key: value for key, value in zip(data._fields, data)}
-    )
+    itr = tf.data.Dataset.from_tensor_slices(dict(zip(data._fields, data)))
     return as_batched_numpy_iterator_from_tf(
         rng_key, itr, data[0].shape[0], batch_size, shuffle
     )

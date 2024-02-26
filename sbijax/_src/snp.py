@@ -106,6 +106,7 @@ class SNP(SNE):
 
         return params, losses
 
+    # pylint: disable=undefined-loop-variable
     def _fit_model_single_round(
         self,
         seed,

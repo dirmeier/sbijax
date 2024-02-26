@@ -98,7 +98,7 @@ class SNL(SNE):
 
         return params, losses
 
-    # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ,undefined-loop-variable
     def _fit_model_single_round(
         self,
         seed,

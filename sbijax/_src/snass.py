@@ -77,7 +77,7 @@ class SNASS(SNL):
         n_early_stopping_patience=10,
         **kwargs,
     ):
-        """Fit a SNASS model.
+        """Fit the model to data.
 
         Args:
             rng_key: a jax random key
@@ -151,6 +151,7 @@ class SNASS(SNL):
             rng_key, named_dataset(ys, thetas), batch_size, True
         )
 
+    # pylint: disable=undefined-loop-variable
     def _fit_summary_net(
         self,
         rng_key,
