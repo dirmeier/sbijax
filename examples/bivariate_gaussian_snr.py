@@ -43,7 +43,7 @@ def run():
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
-    for i in range(5):
+    for i in range(2):
         data, _ = snr.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(1), i),
             params=params,
@@ -54,7 +54,6 @@ def run():
             jr.fold_in(jr.PRNGKey(2), i),
             data=data,
             optimizer=optimizer,
-            batch_size=100,
         )
 
     rng_key = jr.PRNGKey(23)

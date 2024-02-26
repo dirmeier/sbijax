@@ -20,8 +20,8 @@ from surjectors import (
 from surjectors.nn import MADE
 from surjectors.util import unstack
 
-from sbijax import SNASSS
-from sbijax.nn import make_snasss_net
+from sbijax import SNASS
+from sbijax._src.nn.make_snass_networks import make_snass_net
 
 
 def prior_model_fns():
@@ -125,15 +125,15 @@ def run():
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    estim = SNASSS(
+    estim = SNASS(
         fns,
         make_model(5),
-        make_snasss_net([64, 64, 5], [64, 64, 1], [64, 64, 1]),
+        make_snass_net([64, 64, 5], [64, 64, 1]),
     )
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
-    for i in range(5):
+    for i in range(2):
         data, _ = estim.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(12), i),
             params=params,
@@ -144,7 +144,6 @@ def run():
             jr.fold_in(jr.PRNGKey(23), i),
             data=data,
             optimizer=optimizer,
-            batch_size=100,
         )
 
     rng_key = jr.PRNGKey(23)

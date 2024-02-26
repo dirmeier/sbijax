@@ -7,6 +7,7 @@ import optax
 from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
+from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._sne_base import SNE
@@ -59,7 +60,7 @@ class SNL(SNE):
         data,
         optimizer=optax.adam(0.0003),
         n_iter=1000,
-        batch_size=128,
+        batch_size=100,
         percentage_data_as_validation_set=0.1,
         n_early_stopping_patience=10,
         **kwargs,
@@ -97,7 +98,7 @@ class SNL(SNE):
 
         return params, losses
 
-    # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ,undefined-loop-variable
     def _fit_model_single_round(
         self,
         seed,
@@ -108,7 +109,7 @@ class SNL(SNE):
         n_early_stopping_patience,
     ):
         init_key, seed = jr.split(seed)
-        params = self._init_params(init_key, **train_iter(0))
+        params = self._init_params(init_key, **next(iter(train_iter)))
         state = optimizer.init(params)
 
         @jax.jit
@@ -128,10 +129,9 @@ class SNL(SNE):
         early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
         best_params, best_loss = None, np.inf
         logging.info("training model")
-        for i in range(n_iter):
+        for i in tqdm(range(n_iter)):
             train_loss = 0.0
-            for j in range(train_iter.num_batches):
-                batch = train_iter(j)
+            for batch in train_iter:
                 batch_loss, params, state = step(params, state, **batch)
                 train_loss += batch_loss * (
                     batch["y"].shape[0] / train_iter.num_samples
@@ -158,14 +158,13 @@ class SNL(SNE):
             )
             return -jnp.mean(lp)
 
-        def body_fn(i):
-            batch = val_iter(i)
+        def body_fn(batch):
             loss = loss_fn(**batch)
             return loss * (batch["y"].shape[0] / val_iter.num_samples)
 
         losses = 0.0
-        for i in range(val_iter.num_batches):
-            losses += body_fn(i)
+        for batch in val_iter:
+            losses += body_fn(batch)
         return losses
 
     def _init_params(self, rng_key, **init_data):

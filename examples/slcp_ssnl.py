@@ -15,7 +15,6 @@ import seaborn as sns
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
-from jax import vmap
 from surjectors import (
     AffineMaskedAutoregressiveInferenceFunnel,
     Chain,
@@ -27,7 +26,7 @@ from surjectors.nn import MADE, make_mlp
 from surjectors.util import unstack
 
 from sbijax import SNL
-from sbijax.mcmc import sample_with_slice
+from sbijax.mcmc import sample_with_nuts
 
 
 def prior_model_fns():
@@ -160,30 +159,15 @@ def make_model(dim, use_surjectors):
 
 def run(use_surjectors):
     len_theta = 5
-    # this is the thetas used in SNL
-    # thetas = jnp.array([-0.7, -2.9, -1.0, -0.9, 0.6])
-    y_observed = jnp.array(
-        [
-            [
-                -0.9707123,
-                -2.9461224,
-                -0.4494722,
-                -3.4231849,
-                -0.13285634,
-                -3.364017,
-                -0.85367596,
-                -2.4271638,
-            ]
-        ]
+    thetas = jnp.linspace(-2.0, 2.0, len_theta)
+    y_0 = simulator_fn(jr.PRNGKey(0), thetas.reshape(-1, len_theta)).reshape(
+        -1, 8
     )
-
-    log_density_partial = partial(log_density_fn, y=y_observed)
-    log_density = lambda x: vmap(log_density_partial)(x)
 
     prior_simulator_fn, prior_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_fn), simulator_fn
 
-    snl = SNL(fns, make_model(y_observed.shape[1], use_surjectors))
+    snl = SNL(fns, make_model(y_0.shape[1], use_surjectors))
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
@@ -191,19 +175,20 @@ def run(use_surjectors):
         data, _ = snl.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(12), i),
             params=params,
-            observable=y_observed,
+            observable=y_0,
             data=data,
-            sampler="slice",
         )
         params, info = snl.fit(
             jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer
         )
 
     sample_key, rng_key = jr.split(jr.PRNGKey(123))
-    snl_samples, _ = snl.sample_posterior(sample_key, params, y_observed)
+    snl_samples, _ = snl.sample_posterior(sample_key, params, y_0)
 
     sample_key, rng_key = jr.split(rng_key)
-    slice_samples = sample_with_slice(
+    log_density_partial = partial(log_density_fn, y=y_0)
+    log_density = lambda x: log_density_partial(**x)
+    slice_samples = sample_with_nuts(
         sample_key,
         log_density,
         prior_simulator_fn,
