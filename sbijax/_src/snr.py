@@ -1,12 +1,14 @@
 # Parts of this codebase have been adopted from https://github.com/bkmi/cnre
-
 from functools import partial
+from typing import Callable, NamedTuple, Optional, Tuple
 
 import chex
 import jax
 import numpy as np
 import optax
 from absl import logging
+from haiku import Params
+from jax import Array
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
@@ -86,21 +88,51 @@ def _loss(params, rng_key, model, gamma, num_classes, **batch):
 
 # pylint: disable=too-many-arguments,unused-argument
 class SNR(SNE):
-    """Sequential (contrastive) neural ratio estimation.
+    r"""Sequential (contrastive) neural ratio estimation.
+
+    Args:
+        model_fns: a tuple of tuples. The first element is a tuple that
+                consists of functions to sample and evaluate the
+                log-probability of a data point. The second element is a
+                simulator function.
+        classifier: a neural network for classification
+        num_classes: number of classes to classify against
+        gamma: relative weight of classes
+
+    Examples:
+        >>> import distrax
+        >>> from sbijax import SNR
+        >>> from sbijax.nn import make_resnet
+        >>>
+        >>> prior = distrax.Normal(0.0, 1.0)
+        >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
+        >>> fns = (prior.sample, prior.log_prob), s
+        >>> resnet = make_resnet()
+        >>>
+        >>> snr = SNR(fns, resnet)
 
     References:
         .. [1] Miller, Benjamin K., et al. "Contrastive neural ratio
            estimation." Advances in Neural Information Processing Systems, 2022.
     """
 
-    def __init__(self, model_fns, classifier, num_classes=10, gamma=1.0):
-        """Construct an SNP object.
+    def __init__(
+        self,
+        model_fns: Tuple[Tuple[Callable, Callable], Callable],
+        classifier: Callable,
+        num_classes: int = 10,
+        gamma: float = 1.0,
+    ):
+        """Construct an SNR object.
 
         Args:
-            model_fns: tuple
+            model_fns: a tuple of tuples. The first element is a tuple that
+                consists of functions to sample and evaluate the
+                log-probability of a data point. The second element is a
+                simulator function.
             classifier: a neural network for classification
-            num_classes: int
-            gamma: float
+            num_classes: number of classes to classify against
+            gamma: relative weight of classes
         """
         super().__init__(model_fns, classifier)
         self.gamma = gamma
@@ -109,30 +141,29 @@ class SNR(SNE):
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
         self,
-        rng_key,
-        data,
+        rng_key: Array,
+        data: NamedTuple,
         *,
-        optimizer=optax.adam(0.003),
-        n_iter=1000,
-        batch_size=100,
-        percentage_data_as_validation_set=0.1,
-        n_early_stopping_patience=10,
+        optimizer: optax.GradientTransformation = optax.adam(0.003),
+        n_iter: int = 1000,
+        batch_size: int = 100,
+        percentage_data_as_validation_set: float = 0.1,
+        n_early_stopping_patience: float = 10,
         **kwargs,
     ):
-        """Fit an SNPE model.
+        """Fit an SNR model.
 
         Args:
-            rng_key: a hk.PRNGSequence
+            rng_key: a jax random key
             data: data set obtained from calling
                 `simulate_data_and_possibly_append`
             optimizer: an optax optimizer object
             n_iter: maximal number of training iterations per round
             batch_size:  batch size used for training the model
             percentage_data_as_validation_set: percentage of the simulated
-                data that is used for valitation and early stopping
+                data that is used for validation and early stopping
             n_early_stopping_patience: number of iterations of no improvement
                 of training the flow before stopping optimisation
-            n_atoms: number of atoms to approximate the proposal posterior
 
         Returns:
             a tuple of parameters and a tuple of the training information
@@ -142,7 +173,7 @@ class SNR(SNE):
             itr_key, data, batch_size, percentage_data_as_validation_set
         )
         params, losses = self._fit_model_single_round(
-            seed=rng_key,
+            rng_key=rng_key,
             train_iter=train_iter,
             val_iter=val_iter,
             optimizer=optimizer,
@@ -155,14 +186,14 @@ class SNR(SNE):
     # pylint: disable=undefined-loop-variable
     def _fit_model_single_round(
         self,
-        seed,
+        rng_key,
         train_iter,
         val_iter,
         optimizer,
         n_iter,
         n_early_stopping_patience,
     ):
-        init_key, seed = jr.split(seed)
+        init_key, rng_key = jr.split(rng_key)
         params = self._init_params(init_key, **train_iter(0))
         state = optimizer.init(params)
 
@@ -183,7 +214,7 @@ class SNR(SNE):
         logging.info("training model")
         for i in tqdm(range(n_iter)):
             train_loss = 0.0
-            rng_key = jr.fold_in(seed, i)
+            rng_key = jr.fold_in(rng_key, i)
             for j in range(train_iter.num_batches):
                 train_key, rng_key = jr.split(rng_key)
                 batch = train_iter(j)
@@ -232,34 +263,40 @@ class SNR(SNE):
 
     def simulate_data_and_possibly_append(
         self,
-        rng_key,
-        params=None,
-        observable=None,
-        data=None,
-        n_simulations=1_000,
-        n_chains=4,
-        n_samples=2_000,
-        n_warmup=1_000,
+        rng_key: Array,
+        params: Optional[Params] = None,
+        observable: Array = None,
+        data: NamedTuple = None,
+        n_simulations: int = 1_000,
+        n_chains: int = 4,
+        n_samples: int = 2_000,
+        n_warmup: int = 1_000,
         **kwargs,
     ):
         """Simulate data from the prior or posterior.
 
+        Simulate new parameters and observables from the prior or posterior
+        (when params and data given). If a data argument is provided, append
+        the new samples to the data set and return the old+new data.
+
         Args:
-            rng_key: a random key
+            rng_key: a jax random key
             params: a dictionary of neural network parameters
             observable: an observation
-            data: existing data set
+            data: existing data set or None
             n_simulations: number of newly simulated data
             n_chains: number of MCMC chains
             n_samples: number of sa les to draw in total
-            n_warmup: number of draws to discared
-            kwargs: keyword arguments
-               dictionary of ey value pairs passed to `sample_posterior`.
-               The following arguments are possible:
-               - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-               - n_thin: number of thinning steps (int)
-               - n_doubling: number of doubling steps of the interval (int)
-               - step_size: step size of the initial interval (float)
+            n_warmup: number of draws to discarded
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
            returns a NamedTuple of two axis, y and theta
@@ -290,22 +327,25 @@ class SNR(SNE):
         r"""Sample from the approximate posterior.
 
         Args:
-            rng_key: a random key
-            params: a pytree of parameter for the model
+            rng_key: a jax random key
+            params: a pytree of neural network parameters
             observable: observation to condition on
             n_chains: number of MCMC chains
             n_samples: number of samples per chain
             n_warmup:  number of samples to discard
-            kwargs: keyword arguments with sampler specific parameters. For
-                slice sampling the following arguments are possible:
-                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-                - n_thin: number of thinning steps
-                - n_doubling: number of doubling steps of the interval
-                - step_size: step size of the initial interval
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
-            an array of samples from the posterior distribution of dimension
-            (n_samples \times p)
+            returns an array of samples from the posterior distribution of
+            dimension (n_samples \times p) and posterior diagnostics
         """
         observable = jnp.atleast_2d(observable)
         return self._sample_posterior(

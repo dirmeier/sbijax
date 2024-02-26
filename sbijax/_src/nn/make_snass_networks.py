@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, Iterable
 
 import haiku as hk
 import jax
@@ -8,8 +8,8 @@ from sbijax._src.nn.snasss_net import SNASSSNet
 
 
 def make_snass_net(
-    summary_net_dimensions: List[int],
-    critic_net_dimensions: List[int],
+    summary_net_dimensions: Iterable[int],
+    critic_net_dimensions: Iterable[int],
     activation: Callable[[jax.Array], jax.Array] = jax.nn.relu,
 ):
     """Create a critic network for SNASS.
@@ -43,9 +43,9 @@ def make_snass_net(
 
 
 def make_snasss_net(
-    summary_net_dimensions: List[int],
-    sec_summary_net_dimensions: List[int],
-    critic_net_dimensions: List[int],
+    summary_net_dimensions: Iterable[int],
+    sec_summary_net_dimensions: Iterable[int],
+    critic_net_dimensions: Iterable[int],
     activation: Callable[[jax.Array], jax.Array] = jax.nn.relu,
 ):
     """Create a critic network for SNASSS.

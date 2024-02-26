@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import Callable, Iterable
 
 import haiku as hk
 import jax
@@ -14,9 +14,9 @@ class SNASSSNet(SNASSNet):
 
     def __init__(
         self,
-        summary_net_dimensions: List[int] = None,
-        sec_summary_net_dimensions: List[int] = None,
-        critic_net_dimensions: List[int] = None,
+        summary_net_dimensions: Iterable[int] = None,
+        sec_summary_net_dimensions: Iterable[int] = None,
+        critic_net_dimensions: Iterable[int] = None,
         summary_net: Callable = None,
         sec_summary_net: Callable = None,
         critic_net: Callable = None,

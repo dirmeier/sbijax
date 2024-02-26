@@ -1,0 +1,6 @@
+source/examples/
+source/examples/*
+build/
+build/*
+_autosummary/
+_autosummary/*

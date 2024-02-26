@@ -33,21 +33,36 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
 class SNASS(SNL):
     """Sequential neural approximate summary statistics.
 
+    Args:
+        model_fns: a tuple of tuples. The first element is a tuple that
+                consists of functions to sample and evaluate the
+                log-probability of a data point. The second element is a
+                simulator function.
+        density_estimator: a (neural) conditional density estimator
+            to model the likelihood function of summary statistics, i.e.,
+            the modelled dimensionality is that of the summaries
+        snass_net: a SNASSNet object
+
     References:
         .. [1] Chen, Yanzhi et al. "Neural Approximate Sufficient Statistics for
            Implicit Models". ICLR, 2021
     """
 
-    def __init__(self, model_fns, density_estimator, snass_net):
+    def __init__(self, model_fns, density_estimator, summary_net):
         """Construct a SNASS object.
 
         Args:
-            model_fns: tuple
-            density_estimator: maf
-            snass_net: mlp
+            model_fns: a tuple of tuples. The first element is a tuple that
+                    consists of functions to sample and evaluate the
+                    log-probability of a data point. The second element is a
+                    simulator function.
+            density_estimator: a (neural) conditional density estimator
+                to model the likelihood function of summary statistics, i.e.,
+                the modelled dimensionality is that of the summaries
+            summary_net: a SNASSNet object
         """
         super().__init__(model_fns, density_estimator)
-        self.sc_net = snass_net
+        self.sc_net = summary_net
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -64,7 +79,7 @@ class SNASS(SNL):
         """Fit a SNASS model.
 
         Args:
-            rng_seq: a hk.PRNGSequence
+            rng_key: a jax random key
             data: data set obtained from calling
               `simulate_data_and_possibly_append`
             optimizer: an optax optimizer object
@@ -74,12 +89,15 @@ class SNASS(SNL):
               that is used for validation and early stopping
             n_early_stopping_patience: number of iterations of no improvement
               of training the flow before stopping optimisation
-            kwargs: keyword arguments with sampler specific parameters. For
-                sampling the following arguments are possible:
-                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-                - n_thin: number of thinning steps
-                - n_doubling: number of doubling steps of the interval
-                - step_size: step size of the initial interval
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
             tuple of parameters and a tuple of the training information
@@ -218,22 +236,25 @@ class SNASS(SNL):
         r"""Sample from the approximate posterior.
 
         Args:
-            rng_key: a random key
-            params: a pytree of parameter for the model
+            rng_key: a jax random key
+            params: a pytree of neural network parameters
             observable: observation to condition on
             n_chains: number of MCMC chains
             n_samples: number of samples per chain
             n_warmup: number of samples to discard
-            kwargs: keyword arguments with sampler specific parameters. For
-                sampling the following arguments are possible:
-                - sampler: either 'nuts', 'slice' or None (defaults to nuts)
-                - n_thin: number of thinning steps
-                - n_doubling: number of doubling steps of the interval
-                - step_size: step size of the initial interval
+
+        Keyword Args:
+            sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
+            n_thin (int): number of thinning steps
+                (only used if sampler='slice')
+            n_doubling (int): number of doubling steps of the interval
+                 (only used if sampler='slice')
+            step_size (float): step size of the initial interval
+                 (only used if sampler='slice')
 
         Returns:
             an array of samples from the posterior distribution of dimension
-            (n_samples \times p)
+            (n_samples \times p) and posterior diagnostics
         """
         observable = jnp.atleast_2d(observable)
         summary = self.sc_net.apply(

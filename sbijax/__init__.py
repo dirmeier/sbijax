@@ -2,7 +2,7 @@
 sbijax: Simulation-based inference in JAX
 """
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 
 from sbijax._src.abc.smc_abc import SMCABC

@@ -1,5 +1,5 @@
 """
-Example using sequential neural likelihood estimation  on a bivariate Gaussian
+Example using sequential neural likelihood estimation on a bivariate Gaussian
 """
 
 from functools import partial

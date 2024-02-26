@@ -1,3 +1,4 @@
+import abc
 from abc import ABC
 
 import chex
@@ -17,8 +18,11 @@ class SNE(SBI, ABC):
         """Construct an SNE object.
 
         Args:
-            model_fns: tuple
-            network: maf
+            model_fns: a tuple of tuples. The first element is a tuple that
+                    consists of functions to sample and evaluate the
+                    log-probability of a data point. The second element is a
+                    simulator function.
+            network: a neural network
         """
         super().__init__(model_fns)
         self.model = network
@@ -59,6 +63,18 @@ class SNE(SBI, ABC):
         else:
             d_new = self.stack_data(data, new_data)
         return d_new, diagnostics
+
+    @abc.abstractmethod
+    def sample_posterior(self, rng_key, params, observable, *args, **kwargs):
+        """Sample from the approximate posterior.
+
+        Args:
+            rng_key: a jax random key
+            params: a pytree of neural network parameters
+            observable: a data point
+            *args: argument list
+            **kwargs: keyword arguments
+        """
 
     def simulate_data(
         self,
@@ -138,19 +154,20 @@ class SNE(SBI, ABC):
             *[jnp.vstack([a, b]) for a, b in zip(data, also_data)]
         )
 
+    @staticmethod
     def as_iterators(
-        self, rng_key, data, batch_size, percentage_data_as_validation_set
+        rng_key, data, batch_size, percentage_data_as_validation_set
     ):
         """Convert the data set to an iterable for training.
 
         Args:
-            rng_key: random key
-            data: tuple
-            batch_size: integer
+            rng_key: a jax random key
+            data: a tuple with 'y' and 'theta' elements
+            batch_size: the size of each batch
             percentage_data_as_validation_set: fraction
 
         Returns:
-            a batch iterator
+            two batch iterators
         """
         return as_batch_iterators(
             rng_key,
