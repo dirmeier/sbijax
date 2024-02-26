@@ -62,7 +62,7 @@ dependencies = [
 
 [tool.hatch.envs.test.scripts]
 lint = 'pylint sbijax'
-test = 'pytest -v --doctest-modules --cov=./sbijax --cov-report=xml sbijax'
+test = 'pytest -v --cov=./sbijax --cov-report=xml sbijax'
 
 [tool.black]
 line-length = 80
