@@ -7,7 +7,7 @@ import jax
 import numpy as np
 import optax
 from absl import logging
-from haiku import Params
+from haiku import Params, Transformed
 from jax import Array
 from jax import numpy as jnp
 from jax import random as jr
@@ -119,7 +119,7 @@ class SNR(SNE):
     def __init__(
         self,
         model_fns: Tuple[Tuple[Callable, Callable], Callable],
-        classifier: Callable,
+        classifier: Transformed,
         num_classes: int = 10,
         gamma: float = 1.0,
     ):

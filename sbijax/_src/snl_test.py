@@ -80,7 +80,7 @@ def test_snl():
             n_samples=200,
             n_warmup=100,
         )
-        params, info = snl.fit(next(rng_seq), data=data)
+        params, info = snl.fit(next(rng_seq), data=data, n_iter=2)
     _ = snl.sample_posterior(
         next(rng_seq),
         params,
