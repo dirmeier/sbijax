@@ -29,13 +29,14 @@ def _ut(theta_t, theta, times, sigma_min):
     return num / denom
 
 
+# pylint: disable=too-many-locals
 def _cfm_loss(
     params, rng_key, apply_fn, sigma_min=0.001, is_training=True, **batch
 ):
     theta = batch["theta"]
-    n, p = theta.shape
+    n, _ = theta.shape
 
-    t_key, rng_keyt = jr.split(rng_key)
+    t_key, rng_key = jr.split(rng_key)
     times = jr.uniform(t_key, shape=(n, 1))
 
     theta_key, rng_key = jr.split(rng_key)
