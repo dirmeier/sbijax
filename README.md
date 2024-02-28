@@ -12,15 +12,19 @@
 [JAX](https://github.com/google/jax) using [Haiku](https://github.com/deepmind/dm-haiku),
 [Distrax](https://github.com/deepmind/distrax) and [BlackJAX](https://github.com/blackjax-devs/blackjax). Specifically, `sbijax` implements
 
-- [Sequential Monte Carlo ABC](https://www.routledge.com/Handbook-of-Approximate-Bayesian-Computation/Sisson-Fan-Beaumont/p/book/9780367733728) (`SMCABC`),
+- [Sequential Monte Carlo ABC](https://www.routledge.com/Handbook-of-Approximate-Bayesian-Computation/Sisson-Fan-Beaumont/p/book/9780367733728) (`SMCABC`)
 - [Neural Likelihood Estimation](https://arxiv.org/abs/1805.07226) (`SNL`)
 - [Surjective Neural Likelihood Estimation](https://arxiv.org/abs/2308.01054) (`SSNL`)
 - [Neural Posterior Estimation C](https://arxiv.org/abs/1905.07488) (short `SNP`)
 - [Contrastive Neural Ratio Estimation](https://arxiv.org/abs/2210.06170) (short `SNR`)
 - [Neural Approximate Sufficient Statistics](https://arxiv.org/abs/2010.10079) (`SNASS`)
 - [Neural Approximate Slice Sufficient Statistics](https://openreview.net/forum?id=jjzJ768iV1) (`SNASSS`)
+- [Flow matching posterior estimation](https://openreview.net/forum?id=jjzJ768iV1) (`SFMPE`)
 
 where the acronyms in parentheses denote the names of the methods in `sbijax`.
+
+> [!CAUTION]
+> ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
 ## Examples
 

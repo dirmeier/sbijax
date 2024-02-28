@@ -9,7 +9,6 @@ from jax import random as jr
 from tqdm import tqdm
 
 from sbijax._src._sne_base import SNE
-from sbijax._src.nn.continuous_normalizing_flow import CCNF
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
@@ -59,8 +58,14 @@ def _cfm_loss(
 
 
 # pylint: disable=too-many-arguments,unused-argument,useless-parent-delegation
-class FMPE(SNE):
-    """Flow matching posterior estimation.
+class SFMPE(SNE):
+    r"""Sequential flow matching posterior estimation.
+
+    Implements a sequential version of the FMPE algorithm introduced in [1]_.
+    For all rounds $r > 1$ parameter samples
+    :math:`\theta \sim \hat{p}^r(\theta)` are drawn from
+    the approximate posterior instead of the prior when computing the flow
+    matching loss.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -71,15 +76,15 @@ class FMPE(SNE):
 
     Examples:
         >>> import distrax
-        >>> from sbijax import SNP
-        >>> from sbijax.nn import make_affine_maf
+        >>> from sbijax import SFMPE
+        >>> from sbijax.nn import make_ccnf
         >>>
         >>> prior = distrax.Normal(0.0, 1.0)
         >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
         >>> fns = (prior.sample, prior.log_prob), s
-        >>> flow = make_affine_maf()
+        >>> flow = make_ccnf(1)
         >>>
-        >>> snr = SNP(fns, flow)
+        >>> estim = SFMPE(fns, flow)
 
     References:
         .. [1] Wildberger, Jonas, et al. "Flow Matching for Scalable
@@ -87,7 +92,7 @@ class FMPE(SNE):
            Processing Systems, 2024.
     """
 
-    def __init__(self, model_fns, density_estimator: CCNF):
+    def __init__(self, model_fns, density_estimator):
         """Construct a FMPE object.
 
         Args:

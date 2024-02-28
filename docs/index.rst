@@ -13,13 +13,18 @@
 `JAX <https://github.com/google/jax>`_ using `Haiku <https://github.com/deepmind/dm-haiku>`_,
 `Distrax <https://github.com/deepmind/distrax>`_ and `BlackJAX <https://github.com/blackjax-devs/blackjax>`_. Specifically, :code:`sbijax` implements
 
-- `Sequential Monte Carlo ABC <https://www.routledge.com/Handbook-of-Approximate-Bayesian-Computation/Sisson-Fan-Beaumont/p/book/9780367733728>`_ (:code:`SMCABC`),
+- `Sequential Monte Carlo ABC <https://www.routledge.com/Handbook-of-Approximate-Bayesian-Computation/Sisson-Fan-Beaumont/p/book/9780367733728>`_ (:code:`SMCABC`)
 - `Neural Likelihood Estimation <https://arxiv.org/abs/1805.07226>`_  (:code:`SNL`)
 - `Surjective Neural Likelihood Estimation <https://arxiv.org/abs/2308.01054>`_ (:code:`SSNL`)
 - `Neural Posterior Estimation C <https://arxiv.org/abs/1905.07488>`_ (short :code:`SNP`)
 - `Contrastive Neural Ratio Estimation <https://arxiv.org/abs/2210.06170>`_ (short :code:`SNR`)
 - `Neural Approximate Sufficient Statistics <https://arxiv.org/abs/2010.10079>`_ (:code:`SNASS`)
 - `Neural Approximate Slice Sufficient Statistics <https://openreview.net/forum?id=jjzJ768iV1>`_ (:code:`SNASSS`)
+- `Flow matching posterior estimation <https://arxiv.org/abs/2305.17161>`_ (:code:`SFMPE`)
+
+.. caution::
+
+    ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
 Installation
 ------------
