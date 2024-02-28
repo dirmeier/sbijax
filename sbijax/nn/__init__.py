@@ -1,5 +1,6 @@
 """Neural network module."""
 
+from sbijax._src.nn.continuous_normalizing_flow import CCNF, make_ccnf
 from sbijax._src.nn.make_flows import (
     make_affine_maf,
     make_surjective_affine_maf,

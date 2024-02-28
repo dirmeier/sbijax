@@ -6,10 +6,10 @@ import optax
 from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
-from jax import scipy as jsp
 from tqdm import tqdm
 
 from sbijax._src._sne_base import SNE
+from sbijax._src.nn.continuous_normalizing_flow import CCNF
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
@@ -29,7 +29,9 @@ def _ut(theta_t, theta, times, sigma_min):
     return num / denom
 
 
-def _cfm_loss(params, rng_key, apply_fn, sigma_min=0.001, **batch):
+def _cfm_loss(
+    params, rng_key, apply_fn, sigma_min=0.001, is_training=True, **batch
+):
     theta = batch["theta"]
     n, p = theta.shape
 
@@ -39,14 +41,23 @@ def _cfm_loss(params, rng_key, apply_fn, sigma_min=0.001, **batch):
     theta_key, rng_key = jr.split(rng_key)
     theta_t = _sample_theta_t(theta_key, times, theta, sigma_min)
 
-    vs = apply_fn(params, theta=theta_t, time=times, context=batch["y"])
+    train_rng, rng_key = jr.split(rng_key)
+    vs = apply_fn(
+        params,
+        train_rng,
+        method="vector_field",
+        theta=theta_t,
+        time=times,
+        context=batch["y"],
+        is_training=is_training,
+    )
     uts = _ut(theta_t, theta, times, sigma_min)
 
     loss = jnp.mean(jnp.square(vs - uts))
     return loss
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# pylint: disable=too-many-arguments,unused-argument,useless-parent-delegation
 class FMPE(SNE):
     """Flow matching posterior estimation.
 
@@ -55,9 +66,7 @@ class FMPE(SNE):
                 consists of functions to sample and evaluate the
                 log-probability of a data point. The second element is a
                 simulator function.
-        density_estimator: a (neural) conditional density estimator
-            to model the posterior distribution
-        num_atoms: number of atomic atoms
+        density_estimator: a continuous normalizing flow model
 
     Examples:
         >>> import distrax
@@ -72,12 +81,12 @@ class FMPE(SNE):
         >>> snr = SNP(fns, flow)
 
     References:
-        .. [1] Greenberg, David, et al. "Automatic posterior transformation for
-           likelihood-free inference." International Conference on Machine
-           Learning, 2019.
+        .. [1] Wildberger, Jonas, et al. "Flow Matching for Scalable
+           Simulation-Based Inference." Advances in Neural Information
+           Processing Systems, 2024.
     """
 
-    def __init__(self, model_fns, density_estimator):
+    def __init__(self, model_fns, density_estimator: CCNF):
         """Construct a FMPE object.
 
         Args:
@@ -98,12 +107,12 @@ class FMPE(SNE):
         *,
         optimizer=optax.adam(0.0003),
         n_iter=1000,
-        batch_size=128,
+        batch_size=100,
         percentage_data_as_validation_set=0.1,
         n_early_stopping_patience=10,
         **kwargs,
     ):
-        """Fit an SNP model.
+        """Fit the model.
 
         Args:
             rng_key: a jax random key
@@ -144,13 +153,14 @@ class FMPE(SNE):
         optimizer,
         n_iter,
         n_early_stopping_patience,
-        n_atoms,
     ):
         init_key, seed = jr.split(seed)
         params = self._init_params(init_key, **next(iter(train_iter)))
         state = optimizer.init(params)
 
-        loss_fn = jax.jit(partial(_cfm_loss, apply_fn=self.model.apply))
+        loss_fn = jax.jit(
+            partial(_cfm_loss, apply_fn=self.model.apply, is_training=True)
+        )
 
         @jax.jit
         def step(params, rng, state, **batch):
@@ -175,9 +185,7 @@ class FMPE(SNE):
                     batch["y"].shape[0] / train_iter.num_samples
                 )
             val_key, rng_key = jr.split(rng_key)
-            validation_loss = self._validation_loss(
-                val_key, params, val_iter, n_atoms
-            )
+            validation_loss = self._validation_loss(val_key, params, val_iter)
             losses[i] = jnp.array([train_loss, validation_loss])
 
             _, early_stop = early_stop.update(validation_loss)
@@ -192,15 +200,23 @@ class FMPE(SNE):
         return best_params, losses
 
     def _init_params(self, rng_key, **init_data):
+        times = jr.uniform(jr.PRNGKey(0), shape=(init_data["y"].shape[0], 1))
         params = self.model.init(
-            rng_key, y=init_data["theta"], x=init_data["y"]
+            rng_key,
+            method="vector_field",
+            theta=init_data["theta"],
+            time=times,
+            context=init_data["y"],
+            is_training=False,
         )
         return params
 
     def _validation_loss(self, rng_key, params, val_iter):
-        loss_fn = jax.jit(partial(_cfm_loss, apply_fn=self.model.apply))
+        loss_fn = jax.jit(
+            partial(_cfm_loss, apply_fn=self.model.apply, is_training=False)
+        )
 
-        def body_fn(batch_key, batch):
+        def body_fn(batch_key, **batch):
             loss = loss_fn(params, batch_key, **batch)
             return loss * (batch["y"].shape[0] / val_iter.num_samples)
 
@@ -238,8 +254,7 @@ class FMPE(SNE):
                 params,
                 sample_key,
                 method="sample",
-                sample_shape=(n_sim,),
-                x=jnp.tile(observable, [n_sim, 1]),
+                context=jnp.tile(observable, [n_sim, 1]),
             )
             proposal_probs = self.prior_log_density_fn(proposal)
             proposal_accepted = proposal[jnp.isfinite(proposal_probs)]

@@ -4,55 +4,92 @@ import distrax
 import haiku as hk
 import jax
 from jax import numpy as jnp
-from jax.experimental.ode import odeint
 from jax.nn import glu
 from scipy import integrate
 
+__all__ = ["CCNF", "make_ccnf"]
+
 
 class CCNF(hk.Module):
-    def __init__(self, n_dimension, transform):
+    """Conditional continuous normalizing flow.
+
+    Args:
+        n_dimension: the dimensionality of the modelled space
+        transform: a haiku module. The transform is a callable that has to
+            take as input arguments named 'theta', 'time', 'context' and
+            **kwargs. Theta, time and context are two-dimensional arrays
+            with the same batch dimensions.
+    """
+
+    def __init__(self, n_dimension: int, transform: Callable):
+        """Conditional continuous normalizing flow.
+
+        Args:
+            n_dimension: the dimensionality of the modelled space
+            transform: a haiku module. The transform is a callable that has to
+                take as input arguments named 'theta', 'time', 'context' and
+                **kwargs. Theta, time and context are two-dimensional arrays
+                with the same batch dimensions.
+        """
         super().__init__()
         self._n_dimension = n_dimension
         self._network = transform
         self._base_distribution = distrax.Normal(jnp.zeros(n_dimension), 1.0)
 
     def __call__(self, method, **kwargs):
+        """Aplpy the flow.
+
+        Args:
+            method (str): method to call
+
+        Keyword Args:
+            keyword arguments for the called method:
+        """
         return getattr(self, method)(**kwargs)
 
     def sample(self, context):
+        """Sample from the pushforward.
+
+        Args:
+            context: array of conditioning variables
+        """
         theta_0 = self._base_distribution.sample(
             seed=hk.next_rng_key(), sample_shape=(context.shape[0],)
         )
-        _, theta_1 = odeint(
-            lambda t, theta_t: self.vector_field(t, theta_t, context),
-            theta_0,
-            jnp.array([0.0, 1.0]),
-            atol=1e-7,
-            rtol=1e-7,
-        )
 
-        def ode_func(t, theta_t):
+        def ode_func(time, theta_t):
             theta_t = theta_t.reshape(-1, self._n_dimension)
-            times = jnp.full((theta_t.shape[0],), t)
+            time = jnp.full((theta_t.shape[0], 1), time)
             ret = self.vector_field(
-                theta_t=theta_t, times=times, context=context
+                theta=theta_t, time=time, context=context, is_training=False
             )
             return ret.reshape(-1)
 
         res = integrate.solve_ivp(
             ode_func,
-            (1, 0.00001),
+            (0.0, 1.0),
             theta_0.reshape(-1),
             rtol=1e-5,
             atol=1e-5,
             method="RK45",
         )
 
-        return res
+        ret = res.y[:, -1].reshape(-1, self._n_dimension)
+        return ret
 
-    def vector_field(self, theta_t, times, context):
-        times = jnp.full((theta_t.shape[0], 1), times)
-        return self._network(theta=theta_t, times=times, context=context)
+    def vector_field(self, theta, time, context, **kwargs):
+        """Compute the vector field.
+
+        Args:
+            theta: array of parameters
+            time: time variables
+            context: array of conditioning variables
+
+        Keyword Args:
+            keyword arguments that aer passed tothe neural network
+        """
+        time = jnp.full((theta.shape[0], 1), time)
+        return self._network(theta=theta, time=time, context=context, **kwargs)
 
 
 # pylint: disable=too-many-arguments
@@ -87,13 +124,13 @@ class _ResnetBlock(hk.Module):
                 rng=hk.next_rng_key(), rate=self.dropout_rate, x=outputs
             )
         outputs = hk.Linear(self.hidden_size)(outputs)
-        context_proj = hk.Linear(inputs.dimension[-1])(context)
+        context_proj = hk.Linear(inputs.shape[-1])(context)
         outputs = glu(jnp.concatenate([outputs, context_proj], axis=-1))
         return outputs + inputs
 
 
 # pylint: disable=too-many-arguments
-class _CCNF_Resnet(hk.Module):
+class _CCNFResnet(hk.Module):
     """A simplified 1-d residual network."""
 
     def __init__(
@@ -115,12 +152,16 @@ class _CCNF_Resnet(hk.Module):
         self.dropout_rate = dropout_rate
         self.batch_norm_decay = batch_norm_decay
 
-    def __call__(self, theta, times, y, is_training=False, **kwargs):
-        outputs = y
+    def __call__(self, theta, time, context, is_training=False, **kwargs):
+        outputs = context
+        # this is a bit weird, but what the paper suggests:
+        # instead of using times and context (i.e., y) as conditioning variables
+        # it suggests using times and theta and use y in the resnet blocks,
+        # since theta is typically low-dim and y is typically high-dime
         t_theta_embedding = jnp.concatenate(
             [
                 hk.Linear(self.n_dimension)(theta),
-                hk.Linear(self.n_dimension)(times),
+                hk.Linear(self.n_dimension)(time),
             ],
             axis=-1,
         )
@@ -150,22 +191,24 @@ def make_ccnf(
 ):
     """Create a conditional continuous normalizing flow.
 
+    The CCNF uses a residual network as transformer which is created
+    automatically.
+
     Args:
-        n_dimension: dimensionality of theta
-        n_layers: number of normalizing flow layers
-        hidden_size: sizes of hidden layers for each normalizing flow
+        n_dimension: dimensionality of modelled space
+        n_layers: number of resnet blocks
+        hidden_size: sizes of hidden layers for each resnet block
         activation: a jax activation function
         dropout_rate: dropout rate to use in resnet blocks
         do_batch_norm: use batch normalization or not
         batch_norm_decay: decay rate of EMA in batch norm layer
     Returns:
-        a neural network model
+        returns a conditional continuous normalizing flow
     """
 
-    @hk.without_apply_rng
     @hk.transform
     def _flow(method, **kwargs):
-        nn = _CCNF_Resnet(
+        nn = _CCNFResnet(
             n_layers=n_layers,
             n_dimension=n_dimension,
             hidden_size=hidden_size,
