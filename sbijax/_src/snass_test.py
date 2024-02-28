@@ -3,11 +3,9 @@
 import distrax
 import haiku as hk
 from jax import numpy as jnp
-from surjectors import Chain, MaskedCoupling, TransformedDistribution
-from surjectors.nn import make_mlp
-from surjectors.util import make_alternating_binary_mask
 
-from sbijax._src.snp import SNP
+from sbijax import SNASS
+from sbijax.nn import make_affine_maf, make_snass_net
 
 
 def prior_model_fns():
@@ -31,44 +29,19 @@ def log_density_fn(theta, y):
     return lp
 
 
-def make_model(dim):
-    def _bijector_fn(params):
-        means, log_scales = jnp.split(params, 2, -1)
-        return distrax.ScalarAffine(means, jnp.exp(log_scales))
-
-    def _flow(method, **kwargs):
-        layers = []
-        for i in range(2):
-            mask = make_alternating_binary_mask(dim, i % 2 == 0)
-            layer = MaskedCoupling(
-                mask=mask,
-                bijector_fn=_bijector_fn,
-                conditioner=make_mlp([8, 8, dim * 2]),
-            )
-            layers.append(layer)
-        chain = Chain(layers)
-        base_distribution = distrax.Independent(
-            distrax.Normal(jnp.zeros(dim), jnp.ones(dim)),
-            1,
-        )
-        td = TransformedDistribution(base_distribution, chain)
-        return td(method, **kwargs)
-
-    td = hk.transform(_flow)
-    return td
-
-
-def test_snp():
+def test_snass():
     rng_seq = hk.PRNGSequence(0)
     y_observed = jnp.array([-1.0, 1.0])
 
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    snp = SNP(fns, make_model(2))
+    estim = SNASS(
+        fns, make_affine_maf(1, 2, (32, 32)), make_snass_net((32, 1), (32, 1))
+    )
     data, params = None, {}
     for i in range(2):
-        data, _ = snp.simulate_data_and_possibly_append(
+        data, _ = estim.simulate_data_and_possibly_append(
             next(rng_seq),
             params=params,
             observable=y_observed,
@@ -78,8 +51,8 @@ def test_snp():
             n_samples=200,
             n_warmup=100,
         )
-        params, info = snp.fit(next(rng_seq), data=data, n_iter=2)
-    _ = snp.sample_posterior(
+        params, info = estim.fit(next(rng_seq), data=data, n_iter=2)
+    _ = estim.sample_posterior(
         next(rng_seq),
         params,
         y_observed,
