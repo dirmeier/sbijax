@@ -1,5 +1,9 @@
 """Neural network module."""
 
+from sbijax._src.nn.consistency_model import (
+    ConsistencyModel,
+    make_consistency_model,
+)
 from sbijax._src.nn.continuous_normalizing_flow import CCNF, make_ccnf
 from sbijax._src.nn.make_flows import (
     make_affine_maf,
