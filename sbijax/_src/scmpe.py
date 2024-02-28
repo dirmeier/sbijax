@@ -176,7 +176,7 @@ class SCMPE(SNE):
 
         @jax.jit
         def ema_update(params, avg_params):
-            return optax.incremental_update(params, avg_params, step_size=0.001)
+            return optax.incremental_update(avg_params, params , step_size=0.01)
 
         @jax.jit
         def step(params, ema_params, rng, state, **batch):
@@ -189,7 +189,7 @@ class SCMPE(SNE):
             return loss, new_params, new_ema_params, new_state
 
         losses = np.zeros([n_iter, 2])
-        early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
+        early_stop = EarlyStopping(1e-3, n_early_stopping_patience*2)
         best_params, best_loss = None, np.inf
         logging.info("training model")
         for i in tqdm(range(n_iter)):
