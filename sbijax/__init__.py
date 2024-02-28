@@ -2,11 +2,11 @@
 sbijax: Simulation-based inference in JAX
 """
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 
 
 from sbijax._src.abc.smc_abc import SMCABC
-from sbijax._src.fmpe import FMPE
+from sbijax._src.fmpe import SFMPE
 from sbijax._src.snass import SNASS
 from sbijax._src.snasss import SNASSS
 from sbijax._src.snl import SNL

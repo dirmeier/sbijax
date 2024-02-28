@@ -34,9 +34,9 @@ class SNP(SNE):
         >>> prior = distrax.Normal(0.0, 1.0)
         >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
         >>> fns = (prior.sample, prior.log_prob), s
-        >>> flow = make_affine_maf()
+        >>> flow = make_affine_maf(1)
         >>>
-        >>> snr = SNP(fns, flow)
+        >>> estim = SNP(fns, flow)
 
     References:
         .. [1] Greenberg, David, et al. "Automatic posterior transformation for

@@ -10,7 +10,7 @@ import seaborn as sns
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax import FMPE
+from sbijax import SFMPE
 from sbijax.nn import CCNF
 
 
@@ -45,7 +45,7 @@ def run():
     prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
     fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
 
-    estim = FMPE(fns, make_model(2))
+    estim = SFMPE(fns, make_model(2))
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
