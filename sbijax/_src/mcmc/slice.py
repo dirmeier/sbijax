@@ -20,7 +20,7 @@ def sample_with_slice(
     r"""Sample from a distribution using the No-U-Turn sampler.
 
     Args:
-        rng_seq: a hk.PRNGSequence
+        rng_key: a jax random key
         lp: the logdensity you wish to sample from
         prior: a function that returns a prior sample
         n_chains: number of chains to sample

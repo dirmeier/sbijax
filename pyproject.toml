@@ -63,8 +63,8 @@ dependencies = [
 ]
 
 [tool.hatch.envs.test.scripts]
-lint = 'ruff check surjectors'
-test = 'pytest -v --cov=./surjectors --cov-report=xml surjectors'
+lint = 'ruff check sbijax'
+test = 'pytest -v --cov=./sbijax --cov-report=xml sbijax'
 
 [tool.bandit]
 skips = ["B101"]
