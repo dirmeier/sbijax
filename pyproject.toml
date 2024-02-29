@@ -11,7 +11,7 @@ license = "Apache-2.0"
 homepage = "https://github.com/dirmeier/sbijax"
 keywords = ["abc", "simulation-based inference", "approximate Bayesian computation", "normalizing flows", "smc-abc"]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
@@ -57,54 +57,27 @@ dependencies = [
 
 [tool.hatch.envs.test]
 dependencies = [
-    "pylint>=2.15.10",
+    "ruff>=0.3.0",
     "pytest>=7.2.0",
     "pytest-cov>=4.0.0"
 ]
 
 [tool.hatch.envs.test.scripts]
-lint = 'pylint sbijax'
-test = 'pytest -v --cov=./sbijax --cov-report=xml sbijax'
-
-[tool.black]
-line-length = 80
-target-version = ['py311']
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
-
-
-[tool.isort]
-profile = "black"
-line_length = 80
-include_trailing_comma = true
-
-[tool.flake8]
-max-line-length = 80
-extend-ignore = ["E203", "W503", "E731", "E231"]
-per-file-ignores = [
-    '__init__.py:F401',
-]
-
-[tool.pylint.messages_control]
-disable = """
-invalid-name,missing-module-docstring,R0801,E0633
-"""
+lint = 'ruff check surjectors'
+test = 'pytest -v --cov=./surjectors --cov-report=xml surjectors'
 
 [tool.bandit]
 skips = ["B101"]
 
-[tool.pydocstyle]
+[tool.ruff]
+line-length = 80
+exclude = ["*_test.py", "docs/**", "examples/**"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+extend-select = [
+  "UP", "D", "I", "PL", "S"
+]
+
+[tool.ruff.lint.pydocstyle]
 convention= 'google'
-match = '^sbijax/.*/((?!_test).)*\.py'
