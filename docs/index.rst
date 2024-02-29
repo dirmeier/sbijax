@@ -21,6 +21,7 @@
 - `Neural Approximate Sufficient Statistics <https://arxiv.org/abs/2010.10079>`_ (:code:`SNASS`)
 - `Neural Approximate Slice Sufficient Statistics <https://openreview.net/forum?id=jjzJ768iV1>`_ (:code:`SNASSS`)
 - `Flow matching posterior estimation <https://arxiv.org/abs/2305.17161>`_ (:code:`SFMPE`)
+- `Consistency model posterior estimation <https://arxiv.org/abs/2312.05440>`_ (:code:`SCMPE`)
 
 .. caution::
 

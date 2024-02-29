@@ -16,6 +16,7 @@ Methods
     SNP
     SNR
     SFMPE
+    SCMPE
     SNASS
     SNASSS
 
@@ -47,6 +48,12 @@ SFMPE
 ~~~~~
 
 ..  autoclass:: SFMPE
+    :members: fit, simulate_data_and_possibly_append, sample_posterior
+
+SCMPE
+~~~~~
+
+..  autoclass:: SCMPE
     :members: fit, simulate_data_and_possibly_append, sample_posterior
 
 SNASS

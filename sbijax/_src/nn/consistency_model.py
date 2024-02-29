@@ -4,14 +4,14 @@ import distrax
 import haiku as hk
 import jax
 from jax import numpy as jnp
-from jax.nn import glu
-from scipy import integrate
 
-__all__ = ["CCNF", "make_ccnf"]
+from sbijax._src.nn.continuous_normalizing_flow import _ResnetBlock
+
+__all__ = ["ConsistencyModel", "make_consistency_model"]
 
 
-class CCNF(hk.Module):
-    """Conditional continuous normalizing flow.
+class ConsistencyModel(hk.Module):
+    """A consistency model.
 
     Args:
         n_dimension: the dimensionality of the modelled space
@@ -19,10 +19,18 @@ class CCNF(hk.Module):
             take as input arguments named 'theta', 'time', 'context' and
             **kwargs. Theta, time and context are two-dimensional arrays
             with the same batch dimensions.
+        t_min: minimal time point for ODE integration
+        t_max: maximal time point for ODE integration
     """
 
-    def __init__(self, n_dimension: int, transform: Callable):
-        """Conditional continuous normalizing flow.
+    def __init__(
+        self,
+        n_dimension: int,
+        transform: Callable,
+        t_min: float = 0.001,
+        t_max: float = 50.0,
+    ):
+        """Construct a consistency model.
 
         Args:
             n_dimension: the dimensionality of the modelled space
@@ -30,10 +38,14 @@ class CCNF(hk.Module):
                 take as input arguments named 'theta', 'time', 'context' and
                 **kwargs. Theta, time and context are two-dimensional arrays
                 with the same batch dimensions.
+            t_min: minimal time point for ODE integration
+            t_max: maximal time point for ODE integration
         """
         super().__init__()
         self._n_dimension = n_dimension
         self._network = transform
+        self._t_max = t_max
+        self._t_min = t_min
         self._base_distribution = distrax.Normal(jnp.zeros(n_dimension), 1.0)
 
     def __call__(self, method, **kwargs):
@@ -48,34 +60,26 @@ class CCNF(hk.Module):
         return getattr(self, method)(**kwargs)
 
     def sample(self, context, **kwargs):
-        """Sample from the pushforward.
+        """Sample from the consistency model.
 
         Args:
             context: array of conditioning variables
+            kwargs: keyword argumente like 'is_training'
         """
-        theta_0 = self._base_distribution.sample(
+        noise = self._base_distribution.sample(
             seed=hk.next_rng_key(), sample_shape=(context.shape[0],)
         )
+        y_hat = self.vector_field(noise, self._t_max, context, **kwargs)
 
-        def ode_func(time, theta_t):
-            theta_t = theta_t.reshape(-1, self._n_dimension)
-            time = jnp.full((theta_t.shape[0], 1), time)
-            ret = self.vector_field(
-                theta=theta_t, time=time, context=context, **kwargs
-            )
-            return ret.reshape(-1)
-
-        res = integrate.solve_ivp(
-            ode_func,
-            (0.0, 1.0),
-            theta_0.reshape(-1),
-            rtol=1e-5,
-            atol=1e-5,
-            method="RK45",
+        noise = self._base_distribution.sample(
+            seed=hk.next_rng_key(), sample_shape=(y_hat.shape[0],)
         )
+        tme = self._t_min + (self._t_max - self._t_min) / 2
+        noise = jnp.sqrt(jnp.square(tme) - jnp.square(self._t_min)) * noise
+        y_tme = y_hat + noise
+        y_hat = self.vector_field(y_tme, tme, context, **kwargs)
 
-        ret = res.y[:, -1].reshape(-1, self._n_dimension)
-        return ret
+        return y_hat
 
     def vector_field(self, theta, time, context, **kwargs):
         """Compute the vector field.
@@ -92,45 +96,8 @@ class CCNF(hk.Module):
         return self._network(theta=theta, time=time, context=context, **kwargs)
 
 
-# pylint: disable=too-many-arguments
-class _ResnetBlock(hk.Module):
-    """A block for a 1d residual network."""
-
-    def __init__(
-        self,
-        hidden_size: int,
-        activation: Callable = jax.nn.relu,
-        dropout_rate: float = 0.2,
-        do_batch_norm: bool = False,
-        batch_norm_decay: float = 0.1,
-    ):
-        super().__init__()
-        self.hidden_size = hidden_size
-        self.activation = activation
-        self.do_batch_norm = do_batch_norm
-        self.dropout_rate = dropout_rate
-        self.batch_norm_decay = batch_norm_decay
-
-    def __call__(self, inputs, context, is_training=False):
-        outputs = inputs
-        if self.do_batch_norm:
-            outputs = hk.BatchNorm(True, True, self.batch_norm_decay)(
-                outputs, is_training=is_training
-            )
-        outputs = hk.Linear(self.hidden_size)(outputs)
-        outputs = self.activation(outputs)
-        if is_training:
-            outputs = hk.dropout(
-                rng=hk.next_rng_key(), rate=self.dropout_rate, x=outputs
-            )
-        outputs = hk.Linear(self.hidden_size)(outputs)
-        context_proj = hk.Linear(inputs.shape[-1])(context)
-        outputs = glu(jnp.concatenate([outputs, context_proj], axis=-1))
-        return outputs + inputs
-
-
-# pylint: disable=too-many-arguments
-class _CCNFResnet(hk.Module):
+# pylint: disable=too-many-arguments,too-many-instance-attributes
+class _CMResnet(hk.Module):
     """A simplified 1-d residual network."""
 
     def __init__(
@@ -139,9 +106,11 @@ class _CCNFResnet(hk.Module):
         n_dimension: int,
         hidden_size: int,
         activation: Callable = jax.nn.relu,
-        dropout_rate: float = 0.2,
-        do_batch_norm: bool = True,
+        dropout_rate: float = 0.0,
+        do_batch_norm: bool = False,
         batch_norm_decay: float = 0.1,
+        t_min: float = 0.001,
+        sigma_data: float = 1.0,
     ):
         super().__init__()
         self.n_layers = n_layers
@@ -151,13 +120,12 @@ class _CCNFResnet(hk.Module):
         self.do_batch_norm = do_batch_norm
         self.dropout_rate = dropout_rate
         self.batch_norm_decay = batch_norm_decay
+        self.sigma_data = sigma_data
+        self.var_data = self.sigma_data**2
+        self.t_min = t_min
 
-    def __call__(self, theta, time, context, is_training=False, **kwargs):
+    def __call__(self, theta, time, context, is_training, **kwargs):
         outputs = context
-        # this is a bit weird, but what the paper suggests:
-        # instead of using times and context (i.e., y) as conditioning variables
-        # it suggests using times and theta and use y in the resnet blocks,
-        # since theta is typically low-dim and y is typically high-dime
         t_theta_embedding = jnp.concatenate(
             [
                 hk.Linear(self.n_dimension)(theta),
@@ -177,10 +145,23 @@ class _CCNFResnet(hk.Module):
             )(outputs, context=t_theta_embedding, is_training=is_training)
         outputs = self.activation(outputs)
         outputs = hk.Linear(self.n_dimension)(outputs)
-        return outputs
+
+        # TODO(simon): dan we choose sigma automatically?
+        out_skip = self._c_skip(time) * theta + self._c_out(time) * outputs
+        return out_skip
+
+    def _c_skip(self, time):
+        return self.var_data / ((time - self.t_min) ** 2 + self.var_data)
+
+    def _c_out(self, time):
+        return (
+            self.sigma_data
+            * (time - self.t_min)
+            / jnp.sqrt(self.var_data + time**2)
+        )
 
 
-def make_ccnf(
+def make_consistency_model(
     n_dimension: int,
     n_layers: int = 2,
     hidden_size: int = 64,
@@ -188,11 +169,13 @@ def make_ccnf(
     dropout_rate: float = 0.2,
     do_batch_norm: bool = False,
     batch_norm_decay: float = 0.2,
+    t_min: float = 0.001,
+    t_max: float = 50.0,
+    sigma_data: float = 1.0,
 ):
-    """Create a conditional continuous normalizing flow.
+    """Create a consistency model.
 
-    The CCNF uses a residual network as transformer which is created
-    automatically.
+    The consistency model uses a residual network as score network.
 
     Args:
         n_dimension: dimensionality of modelled space
@@ -202,13 +185,17 @@ def make_ccnf(
         dropout_rate: dropout rate to use in resnet blocks
         do_batch_norm: use batch normalization or not
         batch_norm_decay: decay rate of EMA in batch norm layer
+        t_min: minimal time point for ODE integration
+        t_max: maximal time point for ODE integration
+        sigma_data: the standard deviation of the data :)
+
     Returns:
-        returns a conditional continuous normalizing flow
+        returns a consistency model
     """
 
     @hk.transform
-    def _flow(method, **kwargs):
-        nn = _CCNFResnet(
+    def _cm(method, **kwargs):
+        nn = _CMResnet(
             n_layers=n_layers,
             n_dimension=n_dimension,
             hidden_size=hidden_size,
@@ -216,8 +203,10 @@ def make_ccnf(
             do_batch_norm=do_batch_norm,
             dropout_rate=dropout_rate,
             batch_norm_decay=batch_norm_decay,
+            t_min=t_min,
+            sigma_data=sigma_data,
         )
-        ccnf = CCNF(n_dimension, nn)
-        return ccnf(method, **kwargs)
+        cm = ConsistencyModel(n_dimension, nn, t_min=t_min, t_max=t_max)
+        return cm(method, **kwargs)
 
-    return _flow
+    return _cm
