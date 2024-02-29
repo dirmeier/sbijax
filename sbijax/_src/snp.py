@@ -13,7 +13,7 @@ from sbijax._src._sne_base import SNE
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# ruff: noqa: PLR0913
 class SNP(SNE):
     """Sequential neural posterior estimation.
 
@@ -60,7 +60,7 @@ class SNP(SNE):
         self.num_atoms = num_atoms
         self.n_round = 0
 
-    # pylint: disable=arguments-differ,too-many-locals
+    # ruff: noqa: D417
     def fit(
         self,
         rng_key,
@@ -85,7 +85,7 @@ class SNP(SNE):
             percentage_data_as_validation_set: percentage of the simulated
                 data that is used for validation and early stopping
             n_early_stopping_patience: number of iterations of no improvement
-                of training the flow before stopping optimisation\
+                of training the flow before stopping optimisation
 
         Returns:
             a tuple of parameters and a tuple of the training information

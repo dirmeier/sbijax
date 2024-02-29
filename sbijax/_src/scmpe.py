@@ -87,7 +87,7 @@ def _consistency_loss(
     return jnp.mean(loss)
 
 
-# pylint: disable=too-many-arguments,unused-argument,useless-parent-delegation
+# ruff: noqa: PLR0913
 class SCMPE(SFMPE):
     r"""Sequential consistency model posterior estimation.
 

@@ -13,26 +13,6 @@ repos:
     - id: requirements-txt-fixer
     - id: trailing-whitespace
 
-- repo: https://github.com/asottile/pyupgrade
-  rev: v2.29.1
-  hooks:
-  - id: pyupgrade
-    args: [--py38-plus]
-
-- repo: https://github.com/psf/black
-  rev: 24.2.0
-  hooks:
-  - id: black
-    args: ["--config=pyproject.toml"]
-    files: "(sbijax|examples)"
-
-- repo: https://github.com/pycqa/isort
-  rev: 5.12.0
-  hooks:
-  - id: isort
-    args: ["--settings-path=pyproject.toml"]
-    files: "(sbijax|examples)"
-
 - repo: https://github.com/pycqa/bandit
   rev: 1.7.1
   hooks:
@@ -44,15 +24,6 @@ repos:
     additional_dependencies: ["toml"]
     files: "(sbijax|examples)"
 
-- repo: https://github.com/PyCQA/flake8
-  rev: 5.0.1
-  hooks:
-   - id: flake8
-     additional_dependencies: [
-       flake8-typing-imports==1.14.0,
-       flake8-pyproject==1.1.0.post0
-     ]
-
 - repo: https://github.com/pre-commit/mirrors-mypy
   rev: v0.910-1
   hooks:
@@ -60,8 +31,9 @@ repos:
     args: ["--ignore-missing-imports"]
     files: "(sbijax|examples)"
 
-- repo: https://github.com/pycqa/pydocstyle
-  rev: 6.1.1
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.3.0
   hooks:
-  - id: pydocstyle
-    additional_dependencies: ["toml"]
+    - id: ruff
+      args: [ --fix ]
+    - id: ruff-format

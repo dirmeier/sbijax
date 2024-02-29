@@ -12,8 +12,7 @@ from jax import scipy as jsp
 from sbijax._src._sbi_base import SBI
 
 
-# pylint: disable=arguments-differ,too-many-function-args,too-many-locals
-# pylint: disable=too-few-public-methods
+# ruff: noqa: PLR0913
 class SMCABC(SBI):
     """Sequential Monte Carlo approximate Bayesian computation.
 
@@ -38,7 +37,6 @@ class SMCABC(SBI):
         self.summarized_observed: chex.Array
         self.n_total_simulations = 0
 
-    # pylint: disable=too-many-arguments,arguments-differ
     def sample_posterior(
         self,
         rng_key,
@@ -53,9 +51,10 @@ class SMCABC(SBI):
         r"""Sample from the approximate posterior.
 
         Args:
+            rng_key: a jax random
             n_rounds: max number of SMC rounds
             observable: the observation to condition on
-            n_round: number of rounds of SMC
+            n_rounds: number of rounds of SMC
             n_particles: number of n_particles to draw for each parameter
             n_simulations_per_theta: number of simulations for each paramrter
                 sample

@@ -30,7 +30,7 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
     return -mi
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# ruff: noqa: PLR0913
 class SNASS(SNL):
     """Sequential neural approximate summary statistics.
 
@@ -161,7 +161,6 @@ class SNASS(SNL):
         n_iter,
         n_early_stopping_patience,
     ):
-
         init_key, rng_key = jr.split(rng_key)
         params = self._init_summary_net_params(
             init_key, **next(iter(train_iter))
@@ -228,6 +227,7 @@ class SNASS(SNL):
             losses += body_fn(batch_key, **batch)
         return losses
 
+    # ruff: noqa: D417
     def sample_posterior(
         self,
         rng_key,

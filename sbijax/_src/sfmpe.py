@@ -57,7 +57,7 @@ def _cfm_loss(
     return loss
 
 
-# pylint: disable=too-many-arguments,unused-argument,useless-parent-delegation
+# ruff: noqa: PLR0913
 class SFMPE(SNE):
     r"""Sequential flow matching posterior estimation.
 
@@ -106,7 +106,7 @@ class SFMPE(SNE):
         """
         super().__init__(model_fns, density_estimator)
 
-    # pylint: disable=arguments-differ,too-many-locals
+    # ruff: noqa: D417
     def fit(
         self,
         rng_key,
@@ -233,6 +233,7 @@ class SFMPE(SNE):
             loss += body_fn(val_key, **batch)
         return loss
 
+    # ruff: noqa: D417
     def sample_posterior(
         self, rng_key, params, observable, *, n_samples=4_000, **kwargs
     ):

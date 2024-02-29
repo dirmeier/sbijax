@@ -1,4 +1,5 @@
-from typing import Callable, Iterable
+from collections.abc import Iterable
+from typing import Callable
 
 import haiku as hk
 import jax
@@ -7,8 +8,7 @@ from jax import numpy as jnp
 from sbijax._src.nn.snass_net import SNASSNet
 
 
-# pylint: disable=missing-function-docstring,missing-class-docstring
-# pylint: disable=too-many-arguments
+# ruff: noqa: PLR0913,S101
 class SNASSSNet(SNASSNet):
     """A network for SNASSS."""
 

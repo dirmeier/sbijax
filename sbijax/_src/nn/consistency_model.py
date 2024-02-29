@@ -10,6 +10,7 @@ from sbijax._src.nn.continuous_normalizing_flow import _ResnetBlock
 __all__ = ["ConsistencyModel", "make_consistency_model"]
 
 
+# ruff: noqa: PLR0913,D417
 class ConsistencyModel(hk.Module):
     """A consistency model.
 
@@ -161,6 +162,7 @@ class _CMResnet(hk.Module):
         )
 
 
+# ruff: noqa: PLR0913
 def make_consistency_model(
     n_dimension: int,
     n_layers: int = 2,

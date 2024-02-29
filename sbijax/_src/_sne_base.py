@@ -10,8 +10,7 @@ from sbijax._src.util.data import stack_data
 from sbijax._src.util.dataloader import as_batch_iterators, named_dataset
 
 
-# pylint: disable=too-many-arguments,unused-argument
-# pylint: disable=too-many-function-args,arguments-differ
+# ruff: noqa: PLR0913
 class SNE(SBI, ABC):
     """Sequential neural estimation base class."""
 

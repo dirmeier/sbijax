@@ -1,4 +1,5 @@
-from typing import Callable, Iterable
+from collections.abc import Iterable
+from typing import Callable
 
 import distrax
 import haiku as hk
@@ -11,8 +12,7 @@ from surjectors import (
     Permutation,
     TransformedDistribution,
 )
-from surjectors._src.conditioners.mlp import make_mlp
-from surjectors._src.conditioners.nn.made import MADE
+from surjectors.nn import MADE, make_mlp
 from surjectors.util import unstack
 
 

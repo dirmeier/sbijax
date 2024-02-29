@@ -4,14 +4,14 @@ import jax
 from jax import random as jr
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# ruff: noqa: PLR0913,D417
 def sample_with_imh(
     rng_key, lp, prior, *, n_chains=4, n_samples=2_000, n_warmup=1_000, **kwargs
 ):
     r"""Draw samples using the indepdendent Metropolis-Hastings sampler.
 
     Args:
-        rng_seq: a hk.PRNGSequence
+        rng_key: a jax random key
         lp: the logdensity you wish to sample from
         prior: a function that returns a prior sample
         n_chains: number of chains to sample

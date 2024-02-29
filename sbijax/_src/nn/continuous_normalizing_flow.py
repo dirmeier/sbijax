@@ -10,6 +10,7 @@ from scipy import integrate
 __all__ = ["CCNF", "make_ccnf"]
 
 
+# ruff: noqa: PLR0913,D417
 class CCNF(hk.Module):
     """Conditional continuous normalizing flow.
 
@@ -180,6 +181,7 @@ class _CCNFResnet(hk.Module):
         return outputs
 
 
+# ruff: noqa: PLR0913
 def make_ccnf(
     n_dimension: int,
     n_layers: int = 2,

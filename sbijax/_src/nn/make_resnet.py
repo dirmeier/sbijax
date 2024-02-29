@@ -39,7 +39,7 @@ class _ResnetBlock(hk.Module):
         return outputs + inputs
 
 
-# pylint: disable=too-many-arguments
+# ruff: noqa: PLR0913
 class _Resnet(hk.Module):
     """A simplified 1-d residual network."""
 
