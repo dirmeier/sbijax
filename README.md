@@ -19,7 +19,7 @@
 - [Contrastive Neural Ratio Estimation](https://arxiv.org/abs/2210.06170) (short `SNR`)
 - [Neural Approximate Sufficient Statistics](https://arxiv.org/abs/2010.10079) (`SNASS`)
 - [Neural Approximate Slice Sufficient Statistics](https://openreview.net/forum?id=jjzJ768iV1) (`SNASSS`)
-- [Flow matching posterior estimation](https://openreview.net/forum?id=jjzJ768iV1) (`SFMPE`)
+- [Flow matching posterior estimation](https://arxiv.org/abs/2305.17161) (`SFMPE`)
 - [Consistency model posterior estimation](https://arxiv.org/abs/2312.05440) (`SCMPE`)
 
 where the acronyms in parentheses denote the names of the methods in `sbijax`.
