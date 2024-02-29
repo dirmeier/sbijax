@@ -96,7 +96,7 @@ class ConsistencyModel(hk.Module):
         return self._network(theta=theta, time=time, context=context, **kwargs)
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,too-many-instance-attributes
 class _CMResnet(hk.Module):
     """A simplified 1-d residual network."""
 

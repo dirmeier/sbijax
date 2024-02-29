@@ -47,7 +47,7 @@ class CCNF(hk.Module):
         """
         return getattr(self, method)(**kwargs)
 
-    def sample(self, context):
+    def sample(self, context, **kwargs):
         """Sample from the pushforward.
 
         Args:
@@ -61,7 +61,7 @@ class CCNF(hk.Module):
             theta_t = theta_t.reshape(-1, self._n_dimension)
             time = jnp.full((theta_t.shape[0], 1), time)
             ret = self.vector_field(
-                theta=theta_t, time=time, context=context, is_training=False
+                theta=theta_t, time=time, context=context, **kwargs
             )
             return ret.reshape(-1)
 
