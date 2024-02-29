@@ -32,7 +32,8 @@ def make_model(dim):
             return 1 / ((time - 0.001) ** 2 + 1)
 
         def _c_out(time):
-            return 1.0 * (time - 0.001) / jnp.sqrt(1 + time ** 2)
+            return 1.0 * (time - 0.001) / jnp.sqrt(1 + time**2)
+
         def _nn(theta, time, context, **kwargs):
             ins = jnp.concatenate([theta, time, context], axis=-1)
             outs = hk.nets.MLP([64, 64, dim])(ins)
@@ -67,7 +68,6 @@ def run():
             data=data,
             optimizer=optimizer,
         )
-
 
     rng_key = jr.PRNGKey(23)
     post_samples, _ = estim.sample_posterior(rng_key, params, y_observed)

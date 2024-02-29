@@ -65,7 +65,8 @@ class SFMPE(SNE):
     For all rounds $r > 1$ parameter samples
     :math:`\theta \sim \hat{p}^r(\theta)` are drawn from
     the approximate posterior instead of the prior when computing the flow
-    matching loss.
+    matching loss. Note that the implementation does not strictly follow the
+    paper.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -93,7 +94,7 @@ class SFMPE(SNE):
     """
 
     def __init__(self, model_fns, density_estimator):
-        """Construct a FMPE object.
+        """Construct a SFMPE object.
 
         Args:
             model_fns: a tuple of tuples. The first element is a tuple that
@@ -261,6 +262,7 @@ class SFMPE(SNE):
                 sample_key,
                 method="sample",
                 context=jnp.tile(observable, [n_sim, 1]),
+                is_training=False,
             )
             proposal_probs = self.prior_log_density_fn(proposal)
             proposal_accepted = proposal[jnp.isfinite(proposal_probs)]

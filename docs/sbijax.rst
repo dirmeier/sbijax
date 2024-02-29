@@ -53,7 +53,7 @@ SFMPE
 SCMPE
 ~~~~~
 
-..  autoclass:: SFMPE
+..  autoclass:: SCMPE
     :members: fit, simulate_data_and_possibly_append, sample_posterior
 
 SNASS

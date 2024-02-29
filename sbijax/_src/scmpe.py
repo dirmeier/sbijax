@@ -8,31 +8,57 @@ from jax import numpy as jnp
 from jax import random as jr
 from tqdm import tqdm
 
-from sbijax._src._sne_base import SNE
+from sbijax._src.sfmpe import SFMPE
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
 def _alpha_t(time):
-    return 1 / (_time_schedule(time + 1) - _time_schedule(time))
+    return 1.0 / (_time_schedule(time + 1) - _time_schedule(time))
 
 
-def _time_schedule(n, rho=7, eps=0.001, T_max=50, N=1000):
-    left = eps ** (1 / rho)
-    right = T_max ** (1 / rho) - eps ** (1 / rho)
-    right = (n - 1) / (N - 1) * right
+def _time_schedule(n, rho=7, t_min=0.001, t_max=50, n_inters=1000):
+    left = t_min ** (1 / rho)
+    right = t_max ** (1 / rho) - t_min ** (1 / rho)
+    right = (n - 1) / (n_inters - 1) * right
     return (left + right) ** rho
+
+
+def _discretization_schedule(n_iter, max_iter=1000):
+    s0, s1 = 10, 50
+    nk = (
+        (n_iter / max_iter) * (jnp.square(s1 + 1) - jnp.square(s0))
+        + jnp.square(s0)
+        - 1
+    )
+    nk = jnp.ceil(jnp.sqrt(nk)) + 1
+    return nk
 
 
 # pylint: disable=too-many-locals
 def _consistency_loss(
-    params, ema_params, rng_key, apply_fn, is_training=False, **batch
+    params,
+    ema_params,
+    rng_key,
+    apply_fn,
+    n_iter,
+    t_min,
+    t_max,
+    is_training=False,
+    **batch,
 ):
     theta = batch["theta"]
+    nk = _discretization_schedule(n_iter)
 
     t_key, rng_key = jr.split(rng_key)
-    time_idx = jr.randint(t_key, shape=(theta.shape[0],), minval=1, maxval=1000 - 1)
-    tn = _time_schedule(time_idx).reshape(-1, 1)
-    tnp1 = _time_schedule(time_idx + 1).reshape(-1, 1)
+    time_idx = jr.randint(
+        t_key, shape=(theta.shape[0],), minval=1, maxval=nk - 1
+    )
+    tn = _time_schedule(
+        time_idx, t_min=t_min, t_max=t_max, n_inters=nk
+    ).reshape(-1, 1)
+    tnp1 = _time_schedule(
+        time_idx + 1, t_min=t_min, t_max=t_max, n_inters=nk
+    ).reshape(-1, 1)
 
     noise_key, rng_key = jr.split(rng_key)
     noise = jr.normal(noise_key, shape=(*theta.shape,))
@@ -56,20 +82,20 @@ def _consistency_loss(
         context=batch["y"],
         is_training=is_training,
     )
-    mse = jnp.mean(jnp.square(fnp1 - fn), axis=1)
+    mse = jnp.sqrt(jnp.mean(jnp.square(fnp1 - fn), axis=1))
     loss = _alpha_t(time_idx) * mse
     return jnp.mean(loss)
 
 
 # pylint: disable=too-many-arguments,unused-argument,useless-parent-delegation
-class SCMPE(SNE):
+class SCMPE(SFMPE):
     r"""Sequential consistency model posterior estimation.
 
     Implements a sequential version of the CMPE algorithm introduced in [1]_.
     For all rounds $r > 1$ parameter samples
     :math:`\theta \sim \hat{p}^r(\theta)` are drawn from
     the approximate posterior instead of the prior when computing consistency
-    loss
+    loss. Note that the implementation does not strictly follow the paper.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -77,6 +103,8 @@ class SCMPE(SNE):
                 log-probability of a data point. The second element is a
                 simulator function.
         network: a neural network
+        t_min: minimal time point for ODE integration
+        t_max: maximal time point for ODE integration
 
     Examples:
         >>> import distrax
@@ -91,13 +119,13 @@ class SCMPE(SNE):
         >>> estim = SCMPE(fns, net)
 
     References:
-        .. [1] Wildberger, Jonas, et al. "Flow Matching for Scalable
-           Simulation-Based Inference." Advances in Neural Information
-           Processing Systems, 2024.
+        .. [1] Schmitt, Marvin, et al. "Consistency Models for Scalable and
+           Fast Simulation-Based Inference".
+           arXiv preprint arXiv:2312.05440, 2023.
     """
 
-    def __init__(self, model_fns, network):
-        """Construct a FMPE object.
+    def __init__(self, model_fns, network, t_max=50.0, t_min=0.001):
+        """Construct a SCMPE object.
 
         Args:
             model_fns: a tuple of tuples. The first element is a tuple that
@@ -105,53 +133,12 @@ class SCMPE(SNE):
                     log-probability of a data point. The second element is a
                     simulator function.
             network: network: a neural network
+            t_min: minimal time point for ODE integration
+            t_max: maximal time point for ODE integration
         """
         super().__init__(model_fns, network)
-
-    # pylint: disable=arguments-differ,too-many-locals
-    def fit(
-        self,
-        rng_key,
-        data,
-        *,
-        optimizer=optax.adam(0.0003),
-        n_iter=1000,
-        batch_size=100,
-        percentage_data_as_validation_set=0.1,
-        n_early_stopping_patience=10,
-        **kwargs,
-    ):
-        """Fit the model.
-
-        Args:
-            rng_key: a jax random key
-            data: data set obtained from calling
-                `simulate_data_and_possibly_append`
-            optimizer: an optax optimizer object
-            n_iter: maximal number of training iterations per round
-            batch_size:  batch size used for training the model
-            percentage_data_as_validation_set: percentage of the simulated
-                data that is used for validation and early stopping
-            n_early_stopping_patience: number of iterations of no improvement
-                of training the flow before stopping optimisation\
-
-        Returns:
-            a tuple of parameters and a tuple of the training information
-        """
-        itr_key, rng_key = jr.split(rng_key)
-        train_iter, val_iter = self.as_iterators(
-            itr_key, data, batch_size, percentage_data_as_validation_set
-        )
-        params, losses = self._fit_model_single_round(
-            seed=rng_key,
-            train_iter=train_iter,
-            val_iter=val_iter,
-            optimizer=optimizer,
-            n_iter=n_iter,
-            n_early_stopping_patience=n_early_stopping_patience,
-        )
-
-        return params, losses
+        self._t_min = t_min
+        self._t_max = t_max
 
     # pylint: disable=undefined-loop-variable
     def _fit_model_single_round(
@@ -170,18 +157,22 @@ class SCMPE(SNE):
 
         loss_fn = jax.jit(
             partial(
-                _consistency_loss, apply_fn=self.model.apply, is_training=False
+                _consistency_loss,
+                apply_fn=self.model.apply,
+                is_training=True,
+                t_max=self._t_max,
+                t_min=self._t_min,
             )
         )
 
         @jax.jit
         def ema_update(params, avg_params):
-            return optax.incremental_update(avg_params, params , step_size=0.01)
+            return optax.incremental_update(avg_params, params, step_size=0.01)
 
         @jax.jit
-        def step(params, ema_params, rng, state, **batch):
+        def step(params, ema_params, rng, state, n_iter, **batch):
             loss, grads = jax.value_and_grad(loss_fn)(
-                params, ema_params, rng, **batch
+                params, ema_params, rng, n_iter=n_iter, **batch
             )
             updates, new_state = optimizer.update(grads, state, params)
             new_params = optax.apply_updates(params, updates)
@@ -189,7 +180,7 @@ class SCMPE(SNE):
             return loss, new_params, new_ema_params, new_state
 
         losses = np.zeros([n_iter, 2])
-        early_stop = EarlyStopping(1e-3, n_early_stopping_patience*2)
+        early_stop = EarlyStopping(1e-3, n_early_stopping_patience * 2)
         best_params, best_loss = None, np.inf
         logging.info("training model")
         for i in tqdm(range(n_iter)):
@@ -198,14 +189,14 @@ class SCMPE(SNE):
             for batch in train_iter:
                 train_key, rng_key = jr.split(rng_key)
                 batch_loss, params, ema_params, state = step(
-                    params, ema_params, train_key, state, **batch
+                    params, ema_params, train_key, state, n_iter + 1, **batch
                 )
                 train_loss += batch_loss * (
                     batch["y"].shape[0] / train_iter.num_samples
                 )
             val_key, rng_key = jr.split(rng_key)
             validation_loss = self._validation_loss(
-                val_key, params, ema_params, val_iter
+                val_key, params, ema_params, n_iter, val_iter
             )
             losses[i] = jnp.array([train_loss, validation_loss])
 
@@ -228,14 +219,19 @@ class SCMPE(SNE):
             theta=init_data["theta"],
             time=times,
             context=init_data["y"],
-            is_training=False,
+            is_training=True,
         )
         return params
 
-    def _validation_loss(self, rng_key, params, ema_params, val_iter):
+    def _validation_loss(self, rng_key, params, ema_params, n_iter, val_iter):
         loss_fn = jax.jit(
             partial(
-                _consistency_loss, apply_fn=self.model.apply, is_training=False
+                _consistency_loss,
+                apply_fn=self.model.apply,
+                is_training=False,
+                t_max=self._t_max,
+                t_min=self._t_min,
+                n_iter=n_iter,
             )
         )
 
@@ -248,47 +244,3 @@ class SCMPE(SNE):
             val_key, rng_key = jr.split(rng_key)
             loss += body_fn(val_key, **batch)
         return loss
-
-    def sample_posterior(
-        self, rng_key, params, observable, *, n_samples=4_000, **kwargs
-    ):
-        r"""Sample from the approximate posterior.
-
-        Args:
-            rng_key: a jax random key
-            params: a pytree of neural network parameters
-            observable: observation to condition on
-            n_samples: number of samples to draw
-
-        Returns:
-            returns an array of samples from the posterior distribution of
-            dimension (n_samples \times p)
-        """
-        observable = jnp.atleast_2d(observable)
-
-        thetas = None
-        n_curr = n_samples
-        n_total_simulations_round = 0
-        while n_curr > 0:
-            n_sim = jnp.minimum(200, jnp.maximum(200, n_curr))
-            n_total_simulations_round += n_sim
-            sample_key, rng_key = jr.split(rng_key)
-            proposal = self.model.apply(
-                params,
-                sample_key,
-                method="sample",
-                context=jnp.tile(observable, [n_sim, 1]),
-            )
-            proposal_probs = self.prior_log_density_fn(proposal)
-            proposal_accepted = proposal[jnp.isfinite(proposal_probs)]
-            if thetas is None:
-                thetas = proposal_accepted
-            else:
-                thetas = jnp.vstack([thetas, proposal_accepted])
-            n_curr -= proposal_accepted.shape[0]
-
-        self.n_total_simulations += n_total_simulations_round
-        return (
-            thetas[:n_samples],
-            thetas.shape[0] / n_total_simulations_round,
-        )
