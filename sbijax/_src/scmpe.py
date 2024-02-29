@@ -34,7 +34,7 @@ def _discretization_schedule(n_iter, max_iter=1000):
     return nk
 
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals,too-many-arguments
 def _consistency_loss(
     params,
     ema_params,
@@ -223,6 +223,7 @@ class SCMPE(SFMPE):
         )
         return params
 
+    # pylint: disable=arguments-differ
     def _validation_loss(self, rng_key, params, ema_params, n_iter, val_iter):
         loss_fn = jax.jit(
             partial(
