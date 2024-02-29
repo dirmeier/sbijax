@@ -11,11 +11,11 @@ from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._sne_base import SNE
-from sbijax._src.mcmc import mcmc_diagnostics
+from sbijax._src.mcmc.diagnostics import mcmc_diagnostics
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# ruff: noqa: PLR0913
 class SNL(SNE):
     """Sequential neural likelihood.
 
@@ -173,6 +173,7 @@ class SNL(SNE):
         )
         return params
 
+    # ruff: noqa: D417
     def simulate_data_and_possibly_append(
         self,
         rng_key,
@@ -277,7 +278,6 @@ class SNL(SNE):
         n_warmup=1_000,
         **kwargs,
     ):
-
         part = partial(
             self.model.apply, params=params, method="log_prob", y=observable
         )

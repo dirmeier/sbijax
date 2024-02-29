@@ -1,6 +1,6 @@
 # Parts of this codebase have been adopted from https://github.com/bkmi/cnre
 from functools import partial
-from typing import Callable, NamedTuple, Optional, Tuple
+from typing import Callable, NamedTuple, Optional
 
 import chex
 import jax
@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._sne_base import SNE
-from sbijax._src.mcmc import mcmc_diagnostics
+from sbijax._src.mcmc.diagnostics import mcmc_diagnostics
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
@@ -86,7 +86,7 @@ def _loss(params, rng_key, model, gamma, num_classes, **batch):
     return -jnp.mean(loss)
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# ruff: noqa: PLR0913,
 class SNR(SNE):
     r"""Sequential (contrastive) neural ratio estimation.
 
@@ -118,7 +118,7 @@ class SNR(SNE):
 
     def __init__(
         self,
-        model_fns: Tuple[Tuple[Callable, Callable], Callable],
+        model_fns: tuple[tuple[Callable, Callable], Callable],
         classifier: Transformed,
         num_classes: int = 10,
         gamma: float = 1.0,
@@ -312,6 +312,7 @@ class SNR(SNE):
             **kwargs,
         )
 
+    # ruff: noqa: D417
     def sample_posterior(
         self,
         rng_key,

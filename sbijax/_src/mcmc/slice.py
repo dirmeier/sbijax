@@ -3,7 +3,7 @@ import tensorflow_probability.substrates.jax as tfp
 from jax import random as jr
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# ruff: noqa: PLR0913,D417
 def sample_with_slice(
     rng_key,
     lp,

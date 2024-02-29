@@ -4,7 +4,7 @@ import jax
 from jax import random as jr
 
 
-# pylint: disable=too-many-arguments,unused-argument
+# ruff: noqa: PLR0913,D417
 def sample_with_nuts(
     rng_key, lp, prior, *, n_chains=4, n_samples=2_000, n_warmup=1_000, **kwargs
 ):

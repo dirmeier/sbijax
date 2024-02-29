@@ -1,12 +1,12 @@
-from typing import Callable, Iterable
+from collections.abc import Iterable
+from typing import Callable
 
 import haiku as hk
 import jax
 from jax import numpy as jnp
 
 
-# pylint: disable=missing-function-docstring,missing-class-docstring
-# pydocstyle: disable=D102
+# ruff: noqa: PLR0913,S101
 class SNASSNet(hk.Module):
     """A network for SNASS."""
 
