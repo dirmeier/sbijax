@@ -34,7 +34,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-homepage = "https://github.com/dirmeier/sbijax"
+Homepage = "https://github.com/dirmeier/sbijax"
 
 [tool.hatch.metadata]
 allow-direct-references = true
