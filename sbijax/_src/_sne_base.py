@@ -37,7 +37,7 @@ class SNE(SBI, ABC):
         n_simulations=1000,
         **kwargs,
     ):
-        """Simulate data from the  prior or posterior and append.
+        """Simulate data and paarameters from the prior or posterior and append.
 
         Args:
             rng_key: a random key
@@ -76,6 +76,57 @@ class SNE(SBI, ABC):
             **kwargs: keyword arguments
         """
 
+    def simulate_parameters(
+        self,
+        rng_key,
+        *,
+        params=None,
+        observable=None,
+        n_simulations=1000,
+        **kwargs,
+    ):
+        r"""Simulate parameters from the posterior or prior.
+
+        Args:
+            rng_key: a random key
+            params:a dictionary of neural network parameters. If None, will
+                draw from prior. If parameters given, will draw from amortized
+                posterior using 'observable'.
+            observable: an observation. Needs to be given if posterior draws
+                are desired
+            n_simulations: number of newly simulated data
+            kwargs: dictionary of ey value pairs passed to `sample_posterior`
+
+        Returns:
+            a NamedTuple of two axis, y and theta
+        """
+        if params is None or len(params) == 0:
+            diagnostics = None
+            self.n_total_simulations += n_simulations
+            new_thetas = self.prior_sampler_fn(
+                seed=rng_key,
+                sample_shape=(n_simulations,),
+            )
+        else:
+            if observable is None:
+                raise ValueError(
+                    "need to have access to 'observable' "
+                    "when sampling from posterior"
+                )
+            if "n_samples" not in kwargs:
+                kwargs["n_samples"] = n_simulations
+            new_thetas, diagnostics = self.sample_posterior(
+                rng_key=rng_key,
+                params=params,
+                observable=jnp.atleast_2d(observable),
+                **kwargs,
+            )
+            perm_key, rng_key = jr.split(rng_key)
+            new_thetas = jr.permutation(perm_key, new_thetas)
+            new_thetas = new_thetas[:n_simulations, :]
+
+        return new_thetas, diagnostics
+
     def simulate_data(
         self,
         rng_key,
@@ -100,40 +151,26 @@ class SNE(SBI, ABC):
         Returns:
             a NamedTuple of two axis, y and theta
         """
-        sample_key, rng_key = jr.split(rng_key)
-        if params is None or len(params) == 0:
-            diagnostics = None
-            self.n_total_simulations += n_simulations
-            new_thetas = self.prior_sampler_fn(
-                seed=sample_key,
-                sample_shape=(n_simulations,),
-            )
-        else:
-            if observable is None:
-                raise ValueError(
-                    "need to have access to 'observable' "
-                    "when sampling from posterior"
-                )
-            if "n_samples" not in kwargs:
-                kwargs["n_samples"] = n_simulations
-            new_thetas, diagnostics = self.sample_posterior(
-                rng_key=sample_key,
-                params=params,
-                observable=jnp.atleast_2d(observable),
-                **kwargs,
-            )
-            perm_key, rng_key = jr.split(rng_key)
-            new_thetas = jr.permutation(perm_key, new_thetas)
-            new_thetas = new_thetas[:n_simulations, :]
+        theta_key, data_key = jr.split(rng_key)
 
-        simulate_key, rng_key = jr.split(rng_key)
-        new_obs = self.simulator_fn(seed=simulate_key, theta=new_thetas)
+        new_thetas, diagnostics = self.simulate_parameters(
+            theta_key,
+            params=params,
+            observable=observable,
+            n_simulations=n_simulations,
+            **kwargs,
+        )
+
+        new_obs = self.simulate_observations(data_key, new_thetas)
         chex.assert_shape(new_thetas, [n_simulations, None])
         chex.assert_shape(new_obs, [n_simulations, None])
-
         new_data = named_dataset(new_obs, new_thetas)
 
         return new_data, diagnostics
+
+    def simulate_observations(self, rng_key, thetas):
+        new_obs = self.simulator_fn(seed=rng_key, theta=thetas)
+        return new_obs
 
     @staticmethod
     def as_iterators(
