@@ -1,6 +1,6 @@
 """sbijax: Simulation-based inference in JAX."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.0.post0"
 
 from sbijax._src.abc.smc_abc import SMCABC
 from sbijax._src.scmpe import SCMPE
