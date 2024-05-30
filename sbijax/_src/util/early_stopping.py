@@ -28,7 +28,7 @@ class EarlyStopping:
         """Update the stopping criterion.
 
         Args:
-            metric: the tracjed metric as float
+            metric: the early stopping criterion metric as float
 
         Returns:
             tuple

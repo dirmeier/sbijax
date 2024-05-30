@@ -1,26 +1,30 @@
 from collections import namedtuple
 
 import chex
-import distrax
 import jax
 from blackjax.smc import resampling
 from blackjax.smc.ess import ess
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
+from jax import tree_map
+from jax._src.flatten_util import ravel_pytree
+from tensorflow_probability.substrates.jax import distributions as tfd
+from tqdm import tqdm
 
 from sbijax._src._sbi_base import SBI
+from sbijax._src.util.data import _tree_stack, as_inference_data
 
 
 # ruff: noqa: PLR0913
 class SMCABC(SBI):
     """Sequential Monte Carlo approximate Bayesian computation.
 
-    Implements algorithm~4.8 from [1].
+    Implements the algorithm from [1].
 
     References:
-        .. [1] Sisson, Scott A, et al. "Handbook of approximate Bayesian
-           computation". 2019
+        .. [1] Beaumont, Mark A, et al. "Adaptive approximate Bayesian
+           computation". Biometrika, 2009.
     """
 
     def __init__(self, model_fns, summary_fn, distance_fn):
@@ -43,7 +47,6 @@ class SMCABC(SBI):
         observable,
         n_rounds,
         n_particles,
-        n_simulations_per_theta,
         eps_step,
         ess_min,
         cov_scale=1.0,
@@ -56,8 +59,6 @@ class SMCABC(SBI):
             observable: the observation to condition on
             n_rounds: number of rounds of SMC
             n_particles: number of n_particles to draw for each parameter
-            n_simulations_per_theta: number of simulations for each paramrter
-                sample
             eps_step:  decay of initial epsilon per simulation round
             ess_min: minimal effective sample size
             cov_scale: scaling of the transition kernel covariance
@@ -70,11 +71,11 @@ class SMCABC(SBI):
 
         init_key, rng_key = jr.split(rng_key)
         particles, log_weights, epsilon = self._init_particles(
-            init_key, observable, n_particles, n_simulations_per_theta
+            init_key, observable, n_particles
         )
 
         all_particles, all_n_simulations = [], []
-        for n in range(n_rounds):
+        for n in tqdm(range(n_rounds)):
             epsilon *= eps_step
             rng_key = jr.fold_in(rng_key, n)
             particle_key, rng_key = jr.split(rng_key)
@@ -84,45 +85,40 @@ class SMCABC(SBI):
                 n_particles,
                 particles,
                 log_weights,
-                n_simulations_per_theta,
                 epsilon,
                 cov_scale,
             )
             curr_ess = ess(log_weights)
             if curr_ess < ess_min:
                 resample_key, rng_key = jr.split(rng_key)
+                particles[list(particles.keys())[0]]
                 particles, log_weights = self._resample(
-                    resample_key, particles, log_weights, particles.shape[0]
+                    resample_key,
+                    particles,
+                    log_weights,
+                    particles[list(particles.keys())[0]].shape[0],
                 )
             all_particles.append(particles.copy())
             all_n_simulations.append(self.n_total_simulations)
 
+        thetas = jax.tree_map(lambda x: x.reshape(1, *x.shape), particles)
+        inference_data = as_inference_data(thetas, jnp.squeeze(observable))
         smc_info = namedtuple("smc_info", "particles n_simulations")
-        return particles, smc_info(all_particles, all_n_simulations)
+        return inference_data, smc_info(all_particles, all_n_simulations)
 
     def _chol_factor(self, particles, cov_scale):
+        particles = jax.vmap(lambda x: ravel_pytree(x)[0])(particles)
         chol = jnp.linalg.cholesky(jnp.cov(particles.T) * cov_scale)
         return chol
 
-    def _init_particles(
-        self, rng_key, observable, n_particles, n_simulations_per_theta
-    ):
-        self.n_total_simulations += n_particles * 10
-
+    def _init_particles(self, rng_key, observable, n_particles):
+        self.n_total_simulations += n_particles
         init_key, rng_key = jr.split(rng_key)
         particles = self.prior_sampler_fn(
-            seed=init_key, sample_shape=(n_particles * 10,)
+            seed=init_key, sample_shape=(n_particles,)
         )
-
-        thetas = jnp.tile(particles, [n_simulations_per_theta, 1, 1])
-        chex.assert_axis_dimension(thetas, 0, n_simulations_per_theta)
-        chex.assert_axis_dimension(thetas, 1, n_particles * 10)
-
         simulator_key, rng_key = jr.split(rng_key)
-        ys = self.simulator_fn(seed=simulator_key, theta=thetas)
-        ys = jnp.swapaxes(ys, 1, 0)
-        chex.assert_axis_dimension(ys, 0, n_particles * 10)
-        chex.assert_axis_dimension(ys, 1, n_simulations_per_theta)
+        ys = self.simulator_fn(seed=simulator_key, theta=particles)
 
         summary_statistics = self.summary_fn(ys)
         distances = self.distance_fn(
@@ -130,7 +126,7 @@ class SMCABC(SBI):
         )
 
         sort_idx = jnp.argsort(distances)
-        particles = particles[sort_idx][:n_particles]
+        particles = jax.tree_map(lambda x: x[sort_idx][:n_particles], particles)
         log_weights = -jnp.log(jnp.full(n_particles, n_particles))
         initial_epsilon = distances[-1]
 
@@ -150,25 +146,19 @@ class SMCABC(SBI):
             perturb_key, new_candidate_particles, cov_chol_factor
         )
         cand_lps = self.prior_log_density_fn(new_candidate_particles)
-        new_candidate_particles = new_candidate_particles[
-            jnp.logical_not(jnp.isinf(cand_lps))
-        ]
+        is_finite = jnp.logical_not(jnp.isinf(cand_lps))
+        new_candidate_particles = tree_map(
+            lambda x: x[is_finite], new_candidate_particles
+        )
         return new_candidate_particles
 
     def _simulate_and_distance(
-        self,
-        rng_key,
-        observable,
-        new_candidate_particles,
-        n_simulations_per_theta,
+        self, rng_key, observable, new_candidate_particles
     ):
         ys = self.simulator_fn(
             seed=rng_key,
-            theta=jnp.tile(
-                new_candidate_particles, [n_simulations_per_theta, 1, 1]
-            ),
+            theta=new_candidate_particles,
         )
-        ys = jnp.swapaxes(ys, 1, 0)
         summary_statistics = self.summary_fn(ys)
         ds = self.distance_fn(summary_statistics, self.summary_fn(observable))
         return ds
@@ -181,7 +171,6 @@ class SMCABC(SBI):
         n_particles,
         particles,
         log_weights,
-        n_simulations_per_theta,
         epsilon,
         cov_scale,
     ):
@@ -197,20 +186,21 @@ class SMCABC(SBI):
                 simulate_key,
                 observable,
                 new_candidate_particles,
-                n_simulations_per_theta,
             )
 
             idxs = jnp.where(ds < epsilon)[0]
-            new_candidate_particles = new_candidate_particles[idxs]
+            new_candidate_particles = tree_map(
+                lambda x: x[idxs], new_candidate_particles
+            )
             if new_particles is None:
                 new_particles = new_candidate_particles
             else:
-                new_particles = jnp.vstack(
+                new_particles = _tree_stack(
                     [new_particles, new_candidate_particles]
                 )
             n -= len(idxs)
 
-        new_particles = new_particles[:n_particles,]
+        new_particles = tree_map(lambda x: x[:n_particles], new_particles)
         new_log_weights = self._new_log_weights(
             new_particles, particles, log_weights, cov_chol_factor
         )
@@ -219,7 +209,7 @@ class SMCABC(SBI):
 
     def _resample(self, rng_key, particles, log_weights, n_samples):
         idxs = resampling.multinomial(rng_key, jnp.exp(log_weights), n_samples)
-        particles = particles[idxs]
+        particles = tree_map(lambda x: x[idxs], particles)
         return particles, -jnp.log(jnp.full(n_samples, n_samples))
 
     def _new_log_weights(
@@ -233,6 +223,7 @@ class SMCABC(SBI):
             weight = jsp.special.logsumexp(probs)
             return weight
 
+        new_particles = jax.vmap(lambda x: ravel_pytree(x)[0])(new_particles)
         new_particles = new_particles[:, None, :]
         log_weighted_sum = jax.vmap(_particle_weight)(new_particles)
 
@@ -241,7 +232,11 @@ class SMCABC(SBI):
         return new_log_weights
 
     def _kernel(self, mus, cov_chol_factor):
-        return distrax.MultivariateNormalTri(loc=mus, scale_tri=cov_chol_factor)
+        mus = jax.vmap(lambda x: ravel_pytree(x)[0])(mus)
+        return tfd.MultivariateNormalTriL(loc=mus, scale_tril=cov_chol_factor)
 
     def _perturb(self, rng_key, mus, cov_chol_factor):
-        return self._kernel(mus, cov_chol_factor).sample(seed=rng_key)
+        _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(0)))
+        samples = self._kernel(mus, cov_chol_factor).sample(seed=rng_key)
+        samples = jax.vmap(unravel_fn)(samples)
+        return samples

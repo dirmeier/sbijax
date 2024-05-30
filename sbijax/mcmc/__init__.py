@@ -1,4 +1,4 @@
-"""MCMC module."""
+"""MCMC samplers."""
 
 from sbijax._src.mcmc.irmh import sample_with_imh
 from sbijax._src.mcmc.mala import sample_with_mala
