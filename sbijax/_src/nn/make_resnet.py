@@ -2,6 +2,8 @@ from typing import Callable
 
 import haiku as hk
 import jax
+from jax import numpy as jnp
+from jax._src.nn.functions import glu
 
 
 # pylint: disable=too-many-arguments
@@ -23,7 +25,7 @@ class _ResnetBlock(hk.Module):
         self.dropout_rate = dropout_rate
         self.batch_norm_decay = batch_norm_decay
 
-    def __call__(self, inputs, is_training=False):
+    def __call__(self, inputs, context=None, is_training=False):
         outputs = inputs
         if self.do_batch_norm:
             outputs = hk.BatchNorm(True, True, self.batch_norm_decay)(
@@ -36,6 +38,9 @@ class _ResnetBlock(hk.Module):
                 rng=hk.next_rng_key(), rate=self.dropout_rate, x=outputs
             )
         outputs = hk.Linear(self.hidden_size)(outputs)
+        if context is not None:
+            context_proj = hk.Linear(inputs.shape[-1])(context)
+            outputs = glu(jnp.concatenate([outputs, context_proj], axis=-1))
         return outputs + inputs
 
 

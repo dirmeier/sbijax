@@ -21,14 +21,17 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
+    "arviz>=0.17.1",
     "blackjax-nightly>=1.0.0.post17",
     "distrax>=0.1.2",
     "dm-haiku>=0.0.9",
+    "matplotlib>=3.6.2",
     "optax>=0.1.3",
-    "surjectors>=0.3.0",
-    "tfp-nightly>=0.20.0.dev20230404",
+    "seaborn>=0.12.2",
+    "surjectors>=0.3.1",
     "tensorflow==2.15.0",
     "tensorflow-datasets==4.9.3",
+    "tfp-nightly>=0.20.0.dev20230404",
     "tqdm>=4.64.1"
 ]
 dynamic = ["version"]

@@ -27,6 +27,38 @@
 
     ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
+Example
+-------
+
+:code:`sbijax` uses an object-oriented API with functional elements stemming from JAX. You can, for instance, define
+a neural likelihood estimation method and generate posterior samples like this:
+
+.. code-block:: python
+
+    import distrax
+    import optax
+    from jax import numpy as jnp, random as jr
+    from sbijax import SNL
+    from sbijax.nn import make_affine_maf
+
+    def prior_model_fns():
+        p = distrax.Independent(distrax.Normal(jnp.zeros(2), jnp.ones(2)), 1)
+        return p.sample, p.log_prob
+
+    def simulator_fn(seed, theta):
+        p = distrax.Normal(jnp.zeros_like(theta), 1.0)
+        y = theta + p.sample(seed=seed)
+        return y
+
+    prior_simulator_fn, prior_logdensity_fn = prior_model_fns()
+    fns = (prior_simulator_fn, prior_logdensity_fn), simulator_fn
+    model = SNL(fns, make_affine_maf(2))
+
+    y_observed = jnp.array([-1.0, 1.0])
+    data, _ = model.simulate_data(jr.PRNGKey(0), n_simulations=5)
+    params, _ = model.fit(jr.PRNGKey(1), data=data, optimizer=optax.adam(0.001))
+    posterior, _ = model.sample_posterior(jr.PRNGKey(2), params, y_observed)
+
 Installation
 ------------
 
@@ -60,13 +92,23 @@ In order to contribute:
 4) test it by calling :code:`hatch run test` on the (Unix) command line,
 5) submit a PR 🙂
 
+Citing sbijax
+-------------
+
+.. code-block:: latex
+
+    @article{dirmeier2024sbijax,
+        author = {Simon Dirmeier and Antonietta Mira and Carlo Albert},
+        title = {Simulation-based inference with the Python Package sbijax},
+        year = {2024},
+    }
+
 Acknowledgements
 ----------------
 
 .. note::
 
-    📝 The API of the package is heavily inspired by the excellent Pytorch-based `sbi <https://github.com/sbi-dev/sbi>`_ package which is
-    substantially more feature-complete and user-friendly.
+    📝 The API of the package is heavily inspired by the excellent Pytorch-based `sbi <https://github.com/sbi-dev/sbi>`_ package.
 
 License
 -------
@@ -78,12 +120,14 @@ License
     :hidden:
 
     🏠 Home <self>
+    📰 News <news>
 
 ..  toctree::
     :caption: 🎓 Examples
     :maxdepth: 1
     :hidden:
 
+    Introduction <notebooks/introduction>
     Self-contained scripts <examples>
 
 ..  toctree::
@@ -92,4 +136,6 @@ License
     :hidden:
 
     sbijax
+    sbijax.mcmc
     sbijax.nn
+    sbijax.util
