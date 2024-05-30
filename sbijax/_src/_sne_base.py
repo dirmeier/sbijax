@@ -123,7 +123,7 @@ class SNE(SBI, ABC):
             )
             perm_key, rng_key = jr.split(rng_key)
             new_thetas = jr.permutation(perm_key, new_thetas)
-            new_thetas = new_thetas[:n_simulations, :]
+            new_thetas = {k: v[:n_simulations] for k, v in new_thetas.items()}
 
         return new_thetas, diagnostics
 
@@ -162,7 +162,8 @@ class SNE(SBI, ABC):
         )
 
         new_obs = self.simulate_observations(data_key, new_thetas)
-        chex.assert_shape(new_thetas, [n_simulations, None])
+        for v in new_thetas.values():
+            chex.assert_shape(v, [n_simulations, None])
         chex.assert_shape(new_obs, [n_simulations, None])
         new_data = named_dataset(new_obs, new_thetas)
 

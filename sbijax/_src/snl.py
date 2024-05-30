@@ -7,6 +7,7 @@ import optax
 from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
+from jax._src.flatten_util import ravel_pytree
 from tqdm import tqdm
 
 from sbijax._src import mcmc
@@ -283,6 +284,7 @@ class SNL(SNE):
         )
 
         def _log_likelihood_fn(theta):
+            theta = jax.vmap(lambda x: ravel_pytree(x)[0])(theta)
             theta = jnp.tile(theta, [observable.shape[0], 1])
             return part(x=theta)
 
@@ -300,7 +302,7 @@ class SNL(SNE):
         else:
 
             def lp__(theta):
-                return _joint_logdensity_fn(**theta)
+                return _joint_logdensity_fn(theta)
 
             # take whatever sampler is or per default nuts
             sampler = kwargs.pop("sampler", "nuts")

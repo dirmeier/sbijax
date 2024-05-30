@@ -14,6 +14,10 @@ class SBI(abc.ABC):
         Args:
             model_fns: tuple
         """
-        self.prior_sampler_fn, self.prior_log_density_fn = model_fns[0]
+        prior = model_fns[0]()
+        self.prior_sampler_fn, self.prior_log_density_fn = (
+            prior.sample,
+            prior.log_prob,
+        )
         self.simulator_fn = model_fns[1]
         self._len_theta = len(self.prior_sampler_fn(seed=jr.PRNGKey(123)))

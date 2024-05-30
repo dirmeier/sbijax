@@ -28,6 +28,9 @@ where the acronyms in parentheses denote the names of the classes in `sbijax`. I
 
 ## Examples
 
+`sbijax` uses an object-oriented API with functional elements stemming from JAX. You can, for instance, define
+a neural likelihood estimation method and generate posterior samples like this:
+
 ```python
 import distrax
 import optax
@@ -53,7 +56,6 @@ data, _ = model.simulate_data(jr.PRNGKey(0), n_simulations=5)
 params, _ = model.fit(jr.PRNGKey(1), data=data, optimizer=optax.adam(0.001))
 posterior, _ = model.sample_posterior(jr.PRNGKey(2), params, y_observed)
 ```
-
 
 More self-contained examples can be found in [examples](https://github.com/dirmeier/sbijax/tree/main/examples).
 
@@ -99,7 +101,7 @@ If you find our work relevant to your research, please consider citing:
 @article{dirmeier2024sbijax,
     author = {Simon Dirmeier and Antonietta Mira and Carlo Albert},
     title = {Simulation-based inference with the Python Package sbijax},
-    year = {2024},    
+    year = {2024},
 }
 ```
 
