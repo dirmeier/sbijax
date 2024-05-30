@@ -9,7 +9,7 @@ from jax import random as jr
 from tqdm import tqdm
 
 from sbijax._src.snl import SNL
-from sbijax._src.util.dataloader import as_batch_iterator, named_dataset
+from sbijax._src.util.dataloader import as_batch_iterator
 from sbijax._src.util.early_stopping import EarlyStopping
 
 

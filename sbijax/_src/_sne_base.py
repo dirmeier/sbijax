@@ -7,7 +7,7 @@ from jax import random as jr
 
 from sbijax._src._sbi_base import SBI
 from sbijax._src.util.data import stack_data
-from sbijax._src.util.dataloader import as_batch_iterators, named_dataset
+from sbijax._src.util.dataloader import as_batch_iterators
 
 
 # ruff: noqa: PLR0913
@@ -165,7 +165,7 @@ class SNE(SBI, ABC):
         for v in new_thetas.values():
             chex.assert_shape(v, [n_simulations, None])
         chex.assert_shape(new_obs, [n_simulations, None])
-        new_data = named_dataset(new_obs, new_thetas)
+        new_data = {"y": new_obs, "theta": new_thetas}
 
         return new_data, diagnostics
 

@@ -4,6 +4,7 @@ import jax
 
 from jax import numpy as jnp, random as jr
 from jax._src.flatten_util import ravel_pytree
+from matplotlib import pyplot as plt
 
 from sbijax import SNL
 from sbijax.nn import make_affine_maf
@@ -30,5 +31,9 @@ model = SNL(fns, make_affine_maf(2))
 
 y_observed = jnp.array([-1.0, 1.0])
 data, a = model.simulate_data(jr.PRNGKey(0), n_simulations=10_000)
-params, b = model.fit(jr.PRNGKey(1), data=data, optimizer=optax.adam(0.001))
+params, b = model.fit(jr.PRNGKey(1), data=data, optimizer=optax.adam(0.001), n_iter=10)
 posterior, c = model.sample_posterior(jr.PRNGKey(2), params, y_observed)
+print(posterior.posterior)
+import arviz as az
+az.plot_trace(posterior)
+plt.show()

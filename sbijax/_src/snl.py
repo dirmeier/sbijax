@@ -12,7 +12,9 @@ from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._sne_base import SNE
-from sbijax._src.mcmc.diagnostics import mcmc_diagnostics
+from sbijax._src.mcmc.util import mcmc_diagnostics
+
+from sbijax._src.mcmc.util import as_inference_data
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
@@ -284,7 +286,7 @@ class SNL(SNE):
         )
 
         def _log_likelihood_fn(theta):
-            theta = jax.vmap(lambda x: ravel_pytree(x)[0])(theta)
+            theta, _ = ravel_pytree(theta)
             theta = jnp.tile(theta, [observable.shape[0], 1])
             return part(x=theta)
 
@@ -317,8 +319,11 @@ class SNL(SNE):
             n_warmup=n_warmup,
             **kwargs,
         )
-        chex.assert_shape(samples, [n_samples - n_warmup, n_chains, None])
+        for v in samples.values():
+            chex.assert_shape(v, [n_chains, n_samples - n_warmup, None])
+        samples = as_inference_data(
+            samples,
+            jnp.squeeze(observable)
+        )
         diagnostics = mcmc_diagnostics(samples)
-        samples = samples.reshape((n_samples - n_warmup) * n_chains, -1)
-
         return samples, diagnostics

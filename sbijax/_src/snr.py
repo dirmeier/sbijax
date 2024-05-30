@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._sne_base import SNE
-from sbijax._src.mcmc.diagnostics import mcmc_diagnostics
+from sbijax._src.mcmc.util import mcmc_diagnostics
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
