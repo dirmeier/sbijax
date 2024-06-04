@@ -31,7 +31,7 @@ def sample_with_slice(
         a JAX array of dimension n_samples \times n_chains \times len_theta
     """
     init_key, rng_key = jr.split(rng_key)
-    initial_states = _slice_init(init_key, n_chains, prior)
+    initial_states = _slice_init(init_key, n_chains, prior)["theta"]
 
     sample_key, rng_key = jr.split(rng_key)
     samples = tfp.mcmc.sample_chain(

@@ -5,6 +5,7 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 
+
 def as_inference_data(samples: dict[str, jax.Array], observed: jax.Array):
     inf = az.InferenceData(
         posterior=az.dict_to_dataset(
