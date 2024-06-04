@@ -6,6 +6,7 @@ from jax import numpy as jnp
 from jax import random as jr
 
 from sbijax._src._sbi_base import SBI
+from sbijax._src.mcmc.util import flatten
 from sbijax._src.util.data import stack_data
 from sbijax._src.util.dataloader import as_batch_iterators
 
@@ -115,15 +116,17 @@ class SNE(SBI, ABC):
                 )
             if "n_samples" not in kwargs:
                 kwargs["n_samples"] = n_simulations
-            new_thetas, diagnostics = self.sample_posterior(
+            inference_data, diagnostics = self.sample_posterior(
                 rng_key=rng_key,
                 params=params,
                 observable=jnp.atleast_2d(observable),
                 **kwargs,
             )
+            new_thetas = flatten(inference_data.posterior)
             perm_key, rng_key = jr.split(rng_key)
-            new_thetas = jr.permutation(perm_key, new_thetas)
-            new_thetas = {k: v[:n_simulations] for k, v in new_thetas.items()}
+            first_key = list(new_thetas.keys())[0]
+            idxs = jr.choice(perm_key, new_thetas[first_key].shape[0], shape=(n_simulations,), replace=False)
+            new_thetas = {k: v[idxs] for k, v in new_thetas.items()}
 
         return new_thetas, diagnostics
 

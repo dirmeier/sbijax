@@ -16,8 +16,9 @@ def tree_stack(trees):
         treedef_list.append(treedef)
 
     grouped_leaves = zip(*leaves_list)
-    result_leaves = [jnp.stack(l) for l in grouped_leaves]
+    result_leaves = [jnp.vstack(l) for l in grouped_leaves]
     return treedef_list[0].unflatten(result_leaves)
+
 
 def stack_data(data, also_data):
     """Stack two data sets.
@@ -33,5 +34,6 @@ def stack_data(data, also_data):
         return also_data
     if also_data is None:
         return data
-    return tree_stack([data, also_data])
+    stacked =  tree_stack([data, also_data])
+    return stacked
 

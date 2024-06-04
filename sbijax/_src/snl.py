@@ -4,7 +4,9 @@ import chex
 import jax
 import numpy as np
 import optax
+import arviz
 from absl import logging
+from arviz import InferenceData
 from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
@@ -321,9 +323,13 @@ class SNL(SNE):
         )
         for v in samples.values():
             chex.assert_shape(v, [n_chains, n_samples - n_warmup, None])
-        samples = as_inference_data(
+        inference_data = as_inference_data(
             samples,
             jnp.squeeze(observable)
         )
-        diagnostics = mcmc_diagnostics(samples)
-        return samples, diagnostics
+        diagnostics = mcmc_diagnostics(inference_data)
+        return inference_data, diagnostics
+
+    @staticmethod
+    def plot(inference_data: InferenceData):
+        arviz.plot_trace(inference_data)
