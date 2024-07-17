@@ -89,10 +89,10 @@ def _consistency_loss(
 
 # ruff: noqa: PLR0913
 class CMPE(FMPE):
-    r"""Sequential consistency model posterior estimation.
+    r"""Consistency model posterior estimation.
 
     Implements a sequential version of the CMPE algorithm introduced in [1]_.
-    For all rounds $r > 1$ parameter samples
+    For all rounds $`r > 1`$ parameter samples
     :math:`\theta \sim \hat{p}^r(\theta)` are drawn from
     the approximate posterior instead of the prior when computing consistency
     loss. Note that the implementation does not strictly follow the paper.
@@ -119,9 +119,8 @@ class CMPE(FMPE):
         >>> estim = CMPE(fns, net)
 
     References:
-        .. [1] Schmitt, Marvin, et al. "Consistency Models for Scalable and
-           Fast Simulation-Based Inference".
-           arXiv preprint arXiv:2312.05440, 2023.
+        [1] Schmitt, Marvin, et al. "Consistency Models for Scalable and Fast
+        Simulation-Based Inference". arXiv preprint arXiv:2312.05440, 2023.
     """
 
     def __init__(self, model_fns, network, t_max=50.0, t_min=0.001):

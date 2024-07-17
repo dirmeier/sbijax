@@ -17,14 +17,10 @@ __all__ = [
     "make_mdn",
     "make_maf",
     "make_spf",
-    #
     "make_cnf",
-    #
     "make_mlp",
     "make_resnet",
-    #
     "make_cm",
-    #
     "make_nass_net",
     "make_nasss_net",
 ]

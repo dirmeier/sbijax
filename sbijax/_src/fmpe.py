@@ -111,7 +111,7 @@ class FMPE(NE):
     # ruff: noqa: D417
     def fit(
         self,
-        rng_key,
+        rng_key: jr.PRNGKey,
         data,
         *,
         optimizer=optax.adam(0.0003),

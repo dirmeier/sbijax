@@ -32,7 +32,7 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
 
 # ruff: noqa: PLR0913
 class NASS(SBI):
-    """Sequential neural approximate summary statistics.
+    """Neural approximate summary statistics.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -91,15 +91,6 @@ class NASS(SBI):
             n_early_stopping_patience: number of iterations of no improvement
               of training the flow before stopping optimisation
             **kwargs: additional keyword arguments not used for NASS)
-
-        # Keyword Args:
-        #     sampler (str): either 'nuts', 'slice' or None (defaults to nuts)
-        #     n_thin (int): number of thinning steps
-        #         (only used if sampler='slice')
-        #     n_doubling (int): number of doubling steps of the interval
-        #          (only used if sampler='slice')
-        #     step_size (float): step size of the initial interval
-        #          (only used if sampler='slice')
 
         Returns:
             tuple of parameters and a tuple of the training information
