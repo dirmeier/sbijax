@@ -34,34 +34,39 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
 class NASS(SBI):
     """Neural approximate summary statistics.
 
+    Implements the NASS algorithm introduced in :cite:t:`chen2023learning`.
+    NASS can be used to automatically summary statistics of a data set.
+    With the learned summaries, inferential algorithms like NLE or SMCABC
+    can be used to infer posterior distributions.
+
     Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
+        model_fns: a tuple of functions. The first element is a tuple that
                 consists of functions to sample and evaluate the
                 log-probability of a data point. The second element is a
                 simulator function.
-        density_estimator: a (neural) conditional density estimator
-            to model the likelihood function of summary statistics, i.e.,
-            the modelled dimensionality is that of the summaries
-        snass_net: a SNASSNet object
+        summary_net: a SNASSNet object
+
+        Examples:
+            >>> from sbijax import NASS
+            >>> from sbijax.nn import make_nass_net
+            >>> from tensorflow_probability.substrates.jax import distributions as tfd
+            ...
+            >>> prior = lambda: tfd.JointDistributionNamed(
+            ...    dict(theta=tfd.Normal(jnp.zeros(5), 1.0))
+            ... )
+            >>> s = lambda seed, theta: tfd.Normal(
+            ...     theta["theta"], 1.0).sample(seed=seed, sample_shape=(2,)
+            ... ).reshape(-1, 10)
+            >>> fns = prior, s
+            >>> net = make_nass_net([64, 64, 5], [64, 64, 1])
+            ...
+            >>> model = NASS(fns, net)
 
     References:
-        .. [1] Chen, Yanzhi et al. "Neural Approximate Sufficient Statistics for
-           Implicit Models". ICLR, 2021
+        Chen, Yanzhi et al. "Neural Approximate Sufficient Statistics for Implicit Models". ICLR, 2021
     """
 
     def __init__(self, model_fns, summary_net):
-        """Construct a SNASS object.
-
-        Args:
-            model_fns: a tuple of tuples. The first element is a tuple that
-                    consists of functions to sample and evaluate the
-                    log-probability of a data point. The second element is a
-                    simulator function.
-            density_estimator: a (neural) conditional density estimator
-                to model the likelihood function of summary statistics, i.e.,
-                the modelled dimensionality is that of the summaries
-            summary_net: a SNASSNet object
-        """
         super().__init__(model_fns)
         self.model = summary_net
 

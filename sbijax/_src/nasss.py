@@ -56,35 +56,43 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
 class NASSS(NASS):
     """Neural approximate slice sufficient statistics.
 
+    Implements the NASSS algorithm introduced in :cite:t:`chen2021neural`.
+    NASS can be used to automatically summary statistics of a data set.
+    With the learned summaries, inferential algorithms like NLE or SMCABC
+    can be used to infer posterior distributions.
+
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
                 consists of functions to sample and evaluate the
                 log-probability of a data point. The second element is a
                 simulator function.
-        density_estimator: a (neural) conditional density estimator
+        summary_net: a (neural) conditional density estimator
             to model the likelihood function of summary statistics, i.e.,
             the modelled dimensionality is that of the summaries
         summary_net: a SNASSSNet object
 
+    Examples:
+        >>> from sbijax import NASSS
+        >>> from sbijax.nn import make_nasss_net
+        >>> from tensorflow_probability.substrates.jax import distributions as tfd
+        ...
+        >>> prior = lambda: tfd.JointDistributionNamed(
+        ...    dict(theta=tfd.Normal(jnp.zeros(5), 1.0))
+        ... )
+        >>> s = lambda seed, theta: tfd.Normal(
+        ...     theta["theta"], 1.0).sample(seed=seed, sample_shape=(2,)
+        ... ).reshape(-1, 10)
+        >>> fns = prior, s
+        >>> net = make_nasss_net([64, 64, 5], [64, 64, 1])
+        ...
+        >>> model = NASSS(fns, net)
+
     References:
-        .. [1] Yanzhi Chen et al. "Is Learning Summary Statistics Necessary for
-           Likelihood-free Inference". ICML, 2023
+        Yanzhi Chen et al. "Is Learning Summary Statistics Necessary for Likelihood-free Inference". ICML, 2023
     """
 
     # pylint: disable=useless-parent-delegation
     def __init__(self, model_fns, summary_net):
-        """Construct a SNASSS object.
-
-        Args:
-            model_fns: a tuple of tuples. The first element is a tuple that
-                    consists of functions to sample and evaluate the
-                    log-probability of a data point. The second element is a
-                    simulator function.
-            density_estimator: a (neural) conditional density estimator
-                to model the likelihood function of summary statistics, i.e.,
-                the modelled dimensionality is that of the summaries
-            summary_net: a SNASSSNet object
-        """
         super().__init__(model_fns, summary_net)
 
     # pylint: disable=undefined-loop-variable

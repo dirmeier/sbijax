@@ -1,0 +1,31 @@
+axes.spines.left: True
+axes.spines.bottom: True
+axes.spines.top: False
+axes.spines.right: False
+axes.grid: true
+axes.linewidth: 0.5
+
+mathtext.fontset: cm
+font.family: serif
+font.serif: Computer Modern Roman
+text.usetex: True
+
+ytick.left: True
+ytick.direction: out
+
+xtick.bottom: True
+xtick.direction: out
+
+xtick.major.width: 0.5
+ytick.major.width: 0.5
+xtick.major.size: 2
+ytick.major.size: 2
+
+grid.alpha: 0.5
+
+legend.frameon: False
+legend.loc: best
+
+savefig.transparent: True
+
+axes.prop_cycle: cycler('color', ['b26679', '636363', 'bd8089', '8b656e', 'c79999'])

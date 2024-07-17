@@ -12,6 +12,7 @@ from tqdm import tqdm
 from sbijax._src._ne_base import NE
 from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.early_stopping import EarlyStopping
+from sbijax._src.util.types import PyTree
 
 
 def _sample_theta_t(rng_key, times, theta, sigma_min):
@@ -61,14 +62,9 @@ def _cfm_loss(
 
 # ruff: noqa: PLR0913
 class FMPE(NE):
-    r"""Sequential flow matching posterior estimation.
+    r"""Flow matching posterior estimation.
 
-    Implements a sequential version of the FMPE algorithm introduced in [1]_.
-    For all rounds $r > 1$ parameter samples
-    :math:`\theta \sim \hat{p}^r(\theta)` are drawn from
-    the approximate posterior instead of the prior when computing the flow
-    matching loss. Note that the implementation does not strictly follow the
-    paper.
+    Implements the FMPE algorithm introduced in :cite:t:`wilderberger2023flow`.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -78,48 +74,35 @@ class FMPE(NE):
         density_estimator: a continuous normalizing flow model
 
     Examples:
-        >>> import distrax
         >>> from sbijax import FMPE
         >>> from sbijax.nn import make_cnf
-        >>>
-        >>> prior = distrax.Normal(0.0, 1.0)
-        >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
-        >>> fns = (prior.sample, prior.log_prob), s
-        >>> flow = make_ccnf(1)
-        >>>
-        >>> estim = SFMPE(fns, flow)
+        >>> from tensorflow_probability.substrates.jax import distributions as tfd
+        ...
+        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
+        >>> fns = prior, s
+        >>> flow = make_cnf(1)
+        ...
+        >>> estim = FMPE(fns, flow)
 
     References:
-        .. [1] Wildberger, Jonas, et al. "Flow Matching for Scalable
-           Simulation-Based Inference." Advances in Neural Information
-           Processing Systems, 2024.
+        Wildberger, Jonas, et al. "Flow Matching for Scalable Simulation-Based Inference." Advances in Neural Information Processing Systems, 2024.
     """
 
     def __init__(self, model_fns, density_estimator):
-        """Construct a SFMPE object.
-
-        Args:
-            model_fns: a tuple of tuples. The first element is a tuple that
-                    consists of functions to sample and evaluate the
-                    log-probability of a data point. The second element is a
-                    simulator function.
-            density_estimator: a (neural) conditional density estimator
-                to model the posterior distribution
-        """
         super().__init__(model_fns, density_estimator)
 
-    # ruff: noqa: D417
     def fit(
         self,
         rng_key: jr.PRNGKey,
-        data,
+        data: PyTree,
         *,
-        optimizer=optax.adam(0.0003),
-        n_iter=1000,
-        batch_size=100,
-        percentage_data_as_validation_set=0.1,
-        n_early_stopping_patience=10,
-        n_early_stopping_delta=0.001,
+        optimizer: optax.GradientTransformation=optax.adam(0.0003),
+        n_iter:int=1000,
+        batch_size:int=100,
+        percentage_data_as_validation_set:float=0.1,
+        n_early_stopping_patience:int=10,
+        n_early_stopping_delta:float=0.001,
         **kwargs,
     ):
         """Fit the model.
@@ -134,7 +117,8 @@ class FMPE(NE):
             percentage_data_as_validation_set: percentage of the simulated
                 data that is used for validation and early stopping
             n_early_stopping_patience: number of iterations of no improvement
-                of training the flow before stopping optimisation\
+                of training the flow before stopping optimisation
+            **kwargs: optional keyword arguments
 
         Returns:
             a tuple of parameters and a tuple of the training information
@@ -155,7 +139,6 @@ class FMPE(NE):
 
         return params, losses
 
-    # pylint: disable=undefined-loop-variable
     def _fit_model_single_round(
         self,
         seed,

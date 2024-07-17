@@ -3,8 +3,6 @@
 
 .. currentmodule:: sbijax.nn
 
-----
-
 ``sbijax.nn`` contains utility functions and classes to construct neural
 networks and normalizing flows.
 

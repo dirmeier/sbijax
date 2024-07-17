@@ -1,0 +1,4 @@
+📚  References
+==============
+
+.. bibliography:: references.bib

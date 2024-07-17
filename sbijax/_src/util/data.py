@@ -50,7 +50,7 @@ def as_inference_data(samples: dict[str, jax.Array], observed: jax.Array):
     return inf
 
 
-def flatten(posterior):
+def inference_data_as_dictionary(posterior):
     posterior = posterior.to_dict()
     posterior = {
         k: jnp.array(v["data"]) for k, v in posterior["data_vars"].items()

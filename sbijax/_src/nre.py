@@ -90,7 +90,11 @@ def _loss(params, rng_key, model, gamma, num_classes, **batch):
 
 # ruff: noqa: PLR0913,
 class NRE(NE):
-    r"""Sequential (contrastive) neural ratio estimation.
+    r"""Neural ratio estimation.
+
+    Implements the method by :cite:t:`miller2022contrast`. The original
+    publication calls the method as CNRE or NRE-C, but here, we refer to
+    it as NRE.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -102,40 +106,28 @@ class NRE(NE):
         gamma: relative weight of classes
 
     Examples:
-        >>> import distrax
         >>> from sbijax import NRE
         >>> from sbijax.nn import make_resnet
-        >>>
-        >>> prior = distrax.Normal(0.0, 1.0)
-        >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
-        >>> fns = (prior.sample, prior.log_prob), s
+        >>> from tensorflow_probability.substrates.jax import distributions as tfd
+        ...
+        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
+        >>> fns = prior, s
         >>> resnet = make_resnet()
         >>>
-        >>> snr = SNR(fns, resnet)
+        >>> model = NRE(fns, resnet)
 
     References:
-        .. [1] Miller, Benjamin K., et al. "Contrastive neural ratio
-           estimation." Advances in Neural Information Processing Systems, 2022.
+        Miller, Benjamin K., et al. "Contrastive neural ratio estimation." Advances in Neural Information Processing Systems, 2022.
     """
 
     def __init__(
         self,
-        model_fns: tuple[tuple[Callable, Callable], Callable],
+        model_fns: tuple[Callable, Callable],
         classifier: Transformed,
         num_classes: int = 10,
         gamma: float = 1.0,
     ):
-        """Construct an SNR object.
-
-        Args:
-            model_fns: a tuple of tuples. The first element is a tuple that
-                consists of functions to sample and evaluate the
-                log-probability of a data point. The second element is a
-                simulator function.
-            classifier: a neural network for classification
-            num_classes: number of classes to classify against
-            gamma: relative weight of classes
-        """
         super().__init__(model_fns, classifier)
         self.gamma = gamma
         self.num_classes = num_classes
@@ -154,7 +146,7 @@ class NRE(NE):
         n_early_stopping_delta=0.001,
         **kwargs,
     ):
-        """Fit an SNR model.
+        """Fit the model.
 
         Args:
             rng_key: a jax random key
@@ -167,6 +159,8 @@ class NRE(NE):
                 data that is used for validation and early stopping
             n_early_stopping_patience: number of iterations of no improvement
                 of training the flow before stopping optimisation
+            n_early_stopping_delta: minimal value for improvement for
+                early stopping
 
         Returns:
             a tuple of parameters and a tuple of the training information

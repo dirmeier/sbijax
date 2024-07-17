@@ -21,9 +21,9 @@ from sbijax._src.util.early_stopping import EarlyStopping
 
 # ruff: noqa: PLR0913
 class NLE(NE):
-    """Sequential neural likelihood.
+    """Neural likelihood estimation.
 
-    Implements both SNL and SSNL estimation methods.
+    Implements the method introduced in :cite:t:`papama2019neural`.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -34,28 +34,8 @@ class NLE(NE):
             to model the likelihood function
 
     References:
-        .. [1] Papamakarios, George, et al. "Sequential neural likelihood:
-           Fast likelihood-free inference with autoregressive flows."
-           International Conference on Artificial Intelligence and Statistics,
-           2019.
-        .. [2] Dirmeier, Simon, et al. "Simulation-based inference using
-           surjective sequential neural likelihood estimation."
-           arXiv preprint arXiv:2308.01054, 2023.
+        Papamakarios, George, et al. "Sequential neural likelihood: Fast likelihood-free inference with autoregressive flows." International Conference on Artificial Intelligence and Statistics, 2019.
     """
-
-    # pylint: disable=useless-parent-delegation
-    def __init__(self, model_fns, density_estimator):
-        """Construct a SNL object.
-
-        Args:
-            model_fns: a tuple of tuples. The first element is a tuple that
-                    consists of functions to sample and evaluate the
-                    log-probability of a data point. The second element is a
-                    simulator function.
-            density_estimator: a (neural) conditional density estimator
-                        to model the likelihood function
-        """
-        super().__init__(model_fns, density_estimator)
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -69,7 +49,7 @@ class NLE(NE):
         n_early_stopping_patience=10,
         **kwargs,
     ):
-        """Fit a SNL or SSNL model.
+        """Fit the model.
 
         Args:
             rng_key: a jax random key
@@ -368,4 +348,21 @@ class NLE(NE):
         arviz.plot_trace(inference_data)
 
 
-SNLE = NLE
+class SNLE(NLE):
+    """Surjective neural likelihood estimation,
+
+    Implements the method introduced in :cite:t:`dirmeier2023simulation`.
+    SNLE is particularly useful when dealing with high-dimensional data since
+    it reduces its dimensionality using dimensionality reduction.
+
+    Args:
+        model_fns: a tuple of tuples. The first element is a tuple that
+                consists of functions to sample and evaluate the
+                log-probability of a data point. The second element is a
+                simulator function.
+        density_estimator: a (neural) conditional density estimator
+            to model the likelihood function
+
+    References:
+        Dirmeier, Simon, et al. "Simulation-based inference using surjective sequential neural likelihood estimation." arXiv preprint arXiv:2308.01054, 2023.
+    """

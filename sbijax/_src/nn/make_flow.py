@@ -21,11 +21,11 @@ from surjectors.util import make_alternating_binary_mask, unstack
 
 # ruff: noqa: PLR0913
 def make_maf(
-    n_dimension: int,
-    n_layers: Optional[int] = 5,
-    n_layer_dimensions: Optional[Iterable[int]] = None,
-    hidden_sizes: Iterable[int] = (64, 64),
-    activation: Callable = jax.nn.tanh,
+        n_dimension: int,
+        n_layers: Optional[int] = 5,
+        n_layer_dimensions: Optional[Iterable[int]] = None,
+        hidden_sizes: Iterable[int] = (64, 64),
+        activation: Callable = jax.nn.tanh,
 ):
     """Create an affine (surjective) masked autoregressive flow.
 
@@ -69,10 +69,10 @@ def make_maf(
 
 
 def _make_maf(
-    n_dimension,
-    n_layer_dimensions,
-    hidden_sizes,
-    activation,
+        n_dimension,
+        n_layer_dimensions,
+        hidden_sizes,
+        activation,
 ):
     def _bijector_fn(params):
         means, log_scales = unstack(params, -1)
@@ -151,13 +151,14 @@ def _make_maf(
 
 # ruff: noqa: PLR0913
 def make_spf(
-    n_dimension: int,
-    range_min: float,
-    range_max: float,
-    n_layers: Optional[int] = 5,
-    n_layer_dimensions: Optional[Iterable[int]] = None,
-    hidden_sizes: Iterable[int] = (64, 64),
-    activation: Callable = jax.nn.tanh,
+        n_dimension: int,
+        range_min: float,
+        range_max: float,
+        n_layers: Optional[int] = 5,
+        n_layer_dimensions: Optional[Iterable[int]] = None,
+        hidden_sizes: Iterable[int] = (64, 64),
+        n_params: int = 10,
+        activation: Callable = jax.nn.tanh,
 ):
     """Create a rational-quadratic (surjective) spline coupling flow.
 
@@ -179,6 +180,7 @@ def make_spf(
         n_layer_dimensions: list of integers that determine if a layer is
             dimensionality-preserving or -reducing
         hidden_sizes: sizes of hidden layers for each normalizing flow
+        n_params: number of parameters of each spline
         activation: a jax activation function
 
     Examples:
@@ -200,17 +202,19 @@ def make_spf(
         range_max=range_max,
         n_layer_dimensions=n_layer_dimensions,
         hidden_sizes=hidden_sizes,
+        n_params=n_params,
         activation=activation,
     )
 
 
 def _make_spf(
-    n_dimension,
-    n_layer_dimensions,
-    range_min,
-    range_max,
-    hidden_sizes,
-    activation,
+        n_dimension,
+        n_layer_dimensions,
+        range_min,
+        range_max,
+        n_params,
+        hidden_sizes,
+        activation,
 ):
     def _bijector_fn(params):
         return distrax.RationalQuadraticSpline(
@@ -225,23 +229,26 @@ def _make_spf(
 
         return fn
 
+    def _conditioner(n_dim):
+        return hk.Sequential([
+            surjectors_mlp(
+                list(hidden_sizes) + [n_params * n_dim], activation=activation,
+            ),
+            hk.Reshape((n_dimension, n_params))]
+        )
+
     @hk.transform
     def _flow(method, **kwargs):
         layers = []
-        order = jnp.arange(n_dimension)
         curr_dim = n_dimension
         for i, n_dim_curr_layer in enumerate(n_layer_dimensions):
             # layer is dimensionality preserving
             if n_dim_curr_layer == curr_dim:
                 layer = MaskedCoupling(
                     mask=make_alternating_binary_mask(curr_dim, i % 2 == 0),
-                    conditioner=surjectors_mlp(
-                        list(hidden_sizes) + [2 * curr_dim],
-                        activation=activation,
-                    ),
+                    conditioner=_conditioner(curr_dim),
                     bijector_fn=_bijector_fn,
                 )
-                order = order[::-1]
             # layer is dimensionality reducing
             elif n_dim_curr_layer < curr_dim:
                 n_latent = n_dim_curr_layer
@@ -257,16 +264,13 @@ def _make_spf(
                     bijector_fn=_bijector_fn,
                 )
                 curr_dim = n_latent
-                order = order[::-1]
-                order = order[:curr_dim] - jnp.min(order[:curr_dim])
             else:
                 raise ValueError(
                     f"n_dimension at layer {i} is layer than the dimension of"
                     f" the following layer {i + 1}"
                 )
             layers.append(layer)
-            layers.append(Permutation(order, 1))
-        chain = Chain(layers[:-1])
+        chain = Chain(layers)
 
         base_distribution = distrax.Independent(
             distrax.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
