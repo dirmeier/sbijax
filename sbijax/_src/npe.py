@@ -17,7 +17,11 @@ from sbijax._src.util.early_stopping import EarlyStopping
 
 # ruff: noqa: PLR0913
 class NPE(NE):
-    """Sequential neural posterior estimation.
+    """Neural posterior estimation.
+
+    Implements the method introduced in :cite:t:`greenberg2019automatic`.
+    In the literature, the method is usually referred to as APT or NPE-C, but
+    here we refer to it simply as NPE.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
@@ -29,21 +33,19 @@ class NPE(NE):
         num_atoms: number of atomic atoms
 
     Examples:
-        >>> import distrax
         >>> from sbijax import NPE
         >>> from sbijax.nn import make_maf
-        >>>
-        >>> prior = distrax.Normal(0.0, 1.0)
-        >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
-        >>> fns = (prior.sample, prior.log_prob), s
-        >>> flow = make_affine_maf(1)
-        >>>
-        >>> estim = SNP(fns, flow)
+        >>> from tensorflow_probability.substrates.jax import distributions as tfd
+        ...
+        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
+        >>> fns = prior, s
+        >>> flow = make_maf(1)
+        ...
+        >>> model = NPE(fns, flow)
 
     References:
-        .. [1] Greenberg, David, et al. "Automatic posterior transformation for
-           likelihood-free inference." International Conference on Machine
-           Learning, 2019.
+        Greenberg, David, et al. "Automatic posterior transformation for likelihood-free inference." International Conference on Machine Learning, 2019.
     """
 
     def __init__(self, model_fns, density_estimator, num_atoms=10):

@@ -1,10 +1,10 @@
+
 import matplotlib.pyplot as plt
-from jax import numpy as jnp
-from jax import random as jr
+from jax import numpy as jnp, random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax import NLE, plot_posterior
-from sbijax.nn import make_mdn
+from sbijax.nn import make_spf, make_mdn
 
 
 def prior_fn():
@@ -24,12 +24,13 @@ def simulator_fn(seed, theta):
     return y
 
 
-def run():
+def run(use_spf):
     y_observed = jnp.array([-2.0, 1.0])
     fns = prior_fn, simulator_fn
-    model = NLE(fns, make_mdn(2, 10))
+    neural_network = make_spf(2, -5.0, 5.0, n_params=3) if use_spf else make_mdn(2, 10)
+    model = NLE(fns, neural_network)
 
-    data, _ = model.simulate_data(jr.PRNGKey(11))
+    data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10_000)
     params, info = model.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25)
     inference_result, _ = model.sample_posterior(jr.PRNGKey(3), params, y_observed)
 
@@ -38,4 +39,8 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--use-spf", action="store_true", default=True)
+    args = parser.parse_args()
+    run(False)

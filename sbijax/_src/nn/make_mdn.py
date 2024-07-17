@@ -31,7 +31,6 @@ def make_mdn(
         a normalizing flow model
     """
 
-    @hk.without_apply_rng
     @hk.transform
     def mdn(method, **kwargs):
         n = kwargs["x"].shape[0]

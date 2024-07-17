@@ -87,59 +87,42 @@ def _consistency_loss(
     return jnp.mean(loss)
 
 
-# ruff: noqa: PLR0913
 class CMPE(FMPE):
     r"""Consistency model posterior estimation.
 
-    Implements a sequential version of the CMPE algorithm introduced in [1]_.
-    For all rounds $`r > 1`$ parameter samples
-    :math:`\theta \sim \hat{p}^r(\theta)` are drawn from
-    the approximate posterior instead of the prior when computing consistency
-    loss. Note that the implementation does not strictly follow the paper.
+    Implements the CMPE algorithm introduced in
+    :cite:t:`schmitt2023con`.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
                 consists of functions to sample and evaluate the
                 log-probability of a data point. The second element is a
                 simulator function.
-        network: a neural network
+        network: a consistency model
         t_min: minimal time point for ODE integration
         t_max: maximal time point for ODE integration
 
     Examples:
-        >>> import distrax
         >>> from sbijax import CMPE
         >>> from sbijax.nn import make_cm
-        >>>
-        >>> prior = distrax.Normal(0.0, 1.0)
-        >>> s = lambda seed, theta: distrax.Normal(theta, 1.0).sample(seed=seed)
-        >>> fns = (prior.sample, prior.log_prob), s
+        >>> from tensorflow_probability.substrates.jax import distributions as tfd
+        ...
+        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
+        >>> fns = prior, s
         >>> net = make_cm(1)
-        >>>
+        ...
         >>> estim = CMPE(fns, net)
 
     References:
-        [1] Schmitt, Marvin, et al. "Consistency Models for Scalable and Fast
-        Simulation-Based Inference". arXiv preprint arXiv:2312.05440, 2023.
+        Schmitt, Marvin, et al. "Consistency Models for Scalable and Fast Simulation-Based Inference". arXiv preprint arXiv:2312.05440, 2023.
     """
 
     def __init__(self, model_fns, network, t_max=50.0, t_min=0.001):
-        """Construct a SCMPE object.
-
-        Args:
-            model_fns: a tuple of tuples. The first element is a tuple that
-                    consists of functions to sample and evaluate the
-                    log-probability of a data point. The second element is a
-                    simulator function.
-            network: network: a neural network
-            t_min: minimal time point for ODE integration
-            t_max: maximal time point for ODE integration
-        """
         super().__init__(model_fns, network)
         self._t_min = t_min
         self._t_max = t_max
 
-    # pylint: disable=undefined-loop-variable
     def _fit_model_single_round(
         self,
         seed,
