@@ -1,20 +1,10 @@
 -e .
-ipykernel
+fybdthemes
 ipython
 matplotlib
-nbsphinx
-pandas
-scikit-learn
-seaborn
+mkdocs
+mkdocs-bibtex
+mkdocs-jupyter
+mkdocs-material
+mkdocstrings[crystal,python]
 session_info
-sphinx
-sphinx-autobuild
-sphinx-book-theme>=1.1.0
-sphinx-copybutton
-sphinx-math-dollar
-sphinx_autodoc_typehints
-sphinx_design
-sphinx_fontawesome
-sphinx_gallery
-sphinxcontrib-fulltoc
-tqdm

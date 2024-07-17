@@ -1,0 +1,8 @@
+[general]
+ignore=body-is-missing
+
+[title-min-length]
+min-length=10
+
+[title-must-not-contain-word]
+words=wip,todo

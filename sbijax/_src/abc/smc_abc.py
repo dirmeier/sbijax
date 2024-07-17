@@ -4,10 +4,7 @@ import chex
 import jax
 from blackjax.smc import resampling
 from blackjax.smc.ess import ess
-from jax import numpy as jnp
-from jax import random as jr
-from jax import scipy as jsp
-from jax import tree_map
+from jax import numpy as jnp, random as jr, scipy as jsp, tree_map
 from jax._src.flatten_util import ravel_pytree
 from tensorflow_probability.substrates.jax import distributions as tfd
 from tqdm import tqdm

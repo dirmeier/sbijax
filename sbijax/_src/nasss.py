@@ -54,7 +54,7 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
 
 # ruff: noqa: PLR0913
 class NASSS(NASS):
-    """Sequential neural approximate slice sufficient statistics.
+    """Neural approximate slice sufficient statistics.
 
     Args:
         model_fns: a tuple of tuples. The first element is a tuple that
