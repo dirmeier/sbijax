@@ -14,7 +14,7 @@ approximate Bayesian computation using `JAX <https://github.com/google/jax>`_.
 It implements recent methods, such as *Sequential Monte Carlo ABC*,
 *Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient Statistics*
 or *Consistency model posterior*, as well as methods to compute model
-diagnostics and visualization of posterior distributions.
+diagnostics and for visualizing posterior distributions.
 
 .. caution::
 
@@ -82,22 +82,8 @@ In order to contribute:
 1) Clone :code:`sbijax` and install :code:`hatch` via :code:`pip install hatch`,
 2) create a new branch locally :code:`git checkout -b feature/my-new-feature` or :code:`git checkout -b issue/fixes-bug`,
 3) implement your contribution and ideally a test case,
-4) test it by calling ``make tests`` and ``make lints`` on the (Unix) command line,
+4) test it by calling ``make tests``, ``make lints`` and ``make format`` on the (Unix) command line,
 5) submit a PR 🙂
-
-
-Citing ``sbijax``
------------------
-
-If you find our work relevant to your research, please consider citing:
-
-.. code-block:: latex
-
-    @article{dirmeier2024sbijax,
-        author = {Simon Dirmeier and Antonietta Mira and Carlo Albert},
-        title = {Simulation-based inference with the Python Package sbijax},
-        year = {2024},
-    }
 
 Acknowledgements
 ----------------
