@@ -1,10 +1,11 @@
 # pylint: skip-file
 
-from jax import numpy as jnp, random as jr
+from jax import numpy as jnp
+from jax import random as jr
+from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax import NASSS, NLE
-from sbijax.nn import make_nasss_net, make_maf
-from tensorflow_probability.substrates.jax import distributions as tfd
+from sbijax.nn import make_maf, make_nasss_net
 
 
 def simulator_fn(seed, theta):

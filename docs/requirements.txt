@@ -14,5 +14,5 @@ sphinx_autodoc_typehints
 sphinx_design
 sphinx_fontawesome
 sphinx_gallery
-sphinxcontrib-fulltoc
 sphinxcontrib-bibtex
+sphinxcontrib-fulltoc

@@ -52,7 +52,7 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
     return -mi
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, E501
 class NASSS(NASS):
     """Neural approximate slice sufficient statistics.
 
@@ -62,10 +62,9 @@ class NASSS(NASS):
     can be used to infer posterior distributions.
 
     Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
-                consists of functions to sample and evaluate the
-                log-probability of a data point. The second element is a
-                simulator function.
+        model_fns: a tuple of calalbles. The first element needs to be a
+            function that constructs a tfd.JointDistributionNamed, the second
+            element is a simulator function.
         summary_net: a (neural) conditional density estimator
             to model the likelihood function of summary statistics, i.e.,
             the modelled dimensionality is that of the summaries
@@ -83,9 +82,8 @@ class NASSS(NASS):
         ...     theta["theta"], 1.0).sample(seed=seed, sample_shape=(2,)
         ... ).reshape(-1, 10)
         >>> fns = prior, s
-        >>> net = make_nasss_net([64, 64, 5], [64, 64, 1])
-        ...
-        >>> model = NASSS(fns, net)
+        >>> neural_network = make_nasss_net([64, 64, 5], [64, 64, 1])
+        >>> model = NASSS(fns, neural_network)
 
     References:
         Yanzhi Chen et al. "Is Learning Summary Statistics Necessary for Likelihood-free Inference". ICML, 2023

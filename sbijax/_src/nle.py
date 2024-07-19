@@ -19,19 +19,31 @@ from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, E501
 class NLE(NE):
     """Neural likelihood estimation.
 
     Implements the method introduced in :cite:t:`papama2019neural`.
 
     Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
-                consists of functions to sample and evaluate the
-                log-probability of a data point. The second element is a
-                simulator function.
+        model_fns: a tuple of calalbles. The first element needs to be a
+            function that constructs a tfd.JointDistributionNamed, the second
+            element is a simulator function.
         density_estimator: a (neural) conditional density estimator
             to model the likelihood function
+
+    Examples:
+        >>> from sbijax import NLE
+        >>> from sbijax.nn import make_mdn
+        >>> from tensorflow_probability.substrates.jax import distributions as tfd
+        ...
+        >>> prior = lambda: tfd.JointDistributionNamed(
+        ...    dict(theta=tfd.Normal(0.0, 1.0))
+        ... )
+        >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
+        >>> fns = prior, s
+        >>> neural_network = make_mdn(1, 5)
+        >>> model = NLE(fns, neural_network)
 
     References:
         Papamakarios, George, et al. "Sequential neural likelihood: Fast likelihood-free inference with autoregressive flows." International Conference on Artificial Intelligence and Statistics, 2019.
@@ -346,23 +358,3 @@ class NLE(NE):
     @staticmethod
     def plot(inference_data: InferenceData):
         arviz.plot_trace(inference_data)
-
-
-class SNLE(NLE):
-    """Surjective neural likelihood estimation,
-
-    Implements the method introduced in :cite:t:`dirmeier2023simulation`.
-    SNLE is particularly useful when dealing with high-dimensional data since
-    it reduces its dimensionality using dimensionality reduction.
-
-    Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
-                consists of functions to sample and evaluate the
-                log-probability of a data point. The second element is a
-                simulator function.
-        density_estimator: a (neural) conditional density estimator
-            to model the likelihood function
-
-    References:
-        Dirmeier, Simon, et al. "Simulation-based inference using surjective sequential neural likelihood estimation." arXiv preprint arXiv:2308.01054, 2023.
-    """

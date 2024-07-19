@@ -4,7 +4,10 @@ import chex
 import jax
 from blackjax.smc import resampling
 from blackjax.smc.ess import ess
-from jax import numpy as jnp, random as jr, scipy as jsp, tree_map
+from jax import numpy as jnp
+from jax import random as jr
+from jax import scipy as jsp
+from jax import tree_map
 from jax._src.flatten_util import ravel_pytree
 from tensorflow_probability.substrates.jax import distributions as tfd
 from tqdm import tqdm
@@ -13,25 +16,37 @@ from sbijax._src._sbi_base import SBI
 from sbijax._src.util.data import _tree_stack, as_inference_data
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, E501
 class SMCABC(SBI):
-    """Sequential Monte Carlo approximate Bayesian computation.
+    r"""Sequential Monte Carlo approximate Bayesian computation.
 
-    Implements the algorithm from [1].
+    Implements the algorithm from :cite:t:`beaumont2009adaptive`.
+
+    Args:
+        model_fns: a tuple of callables. The first element needs to be a
+            function that constructs a tfd.JointDistributionNamed, the second
+            element is a simulator function.
+        summary_fn: summary function
+        distance_fn: distance function
+
+    Examples:
+        >>> from sbijax import SMCABC
+        >>> from tensorflow_probability.substrates.jax import distributions as tfd
+        ...
+        >>> prior = lambda: tfd.JointDistributionNamed(
+        ...     dict(theta=tfd.Normal(0.0, 1.0))
+        ... )
+        >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
+        >>> fns = prior, s
+        >>> summary_fn = lambda x: x
+        >>> distance_fn = lambda x, y: jax.vmap(lambda z: jnp.linalg.norm(z))(x - y)
+        >>> model = SMCABC(fns, summary_fn, distance_fn)
 
     References:
-        .. [1] Beaumont, Mark A, et al. "Adaptive approximate Bayesian
-           computation". Biometrika, 2009.
+        Beaumont, Mark A, et al. "Adaptive approximate Bayesian computation". Biometrika, 2009.
     """
 
     def __init__(self, model_fns, summary_fn, distance_fn):
-        """Construct a SMCABC object.
-
-        Args:
-            model_fns: tuple
-            summary_fn: summary function
-            distance_fn: distance function
-        """
         super().__init__(model_fns)
         self.summary_fn = summary_fn
         self.distance_fn = distance_fn

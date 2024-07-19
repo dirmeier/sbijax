@@ -60,17 +60,16 @@ def _cfm_loss(
     return loss
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, E501
 class FMPE(NE):
     r"""Flow matching posterior estimation.
 
     Implements the FMPE algorithm introduced in :cite:t:`wilderberger2023flow`.
 
     Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
-                consists of functions to sample and evaluate the
-                log-probability of a data point. The second element is a
-                simulator function.
+        model_fns: a tuple of calalbles. The first element needs to be a
+            function that constructs a tfd.JointDistributionNamed, the second
+            element is a simulator function.
         density_estimator: a continuous normalizing flow model
 
     Examples:
@@ -78,12 +77,13 @@ class FMPE(NE):
         >>> from sbijax.nn import make_cnf
         >>> from tensorflow_probability.substrates.jax import distributions as tfd
         ...
-        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> prior = lambda: tfd.JointDistributionNamed(
+        ...     dict(theta=tfd.Normal(0.0, 1.0))
+        ... )
         >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
         >>> fns = prior, s
-        >>> flow = make_cnf(1)
-        ...
-        >>> estim = FMPE(fns, flow)
+        >>> neural_network = make_cnf(1)
+        >>> model = FMPE(fns, neural_network)
 
     References:
         Wildberger, Jonas, et al. "Flow Matching for Scalable Simulation-Based Inference." Advances in Neural Information Processing Systems, 2024.
@@ -97,12 +97,12 @@ class FMPE(NE):
         rng_key: jr.PRNGKey,
         data: PyTree,
         *,
-        optimizer: optax.GradientTransformation=optax.adam(0.0003),
-        n_iter:int=1000,
-        batch_size:int=100,
-        percentage_data_as_validation_set:float=0.1,
-        n_early_stopping_patience:int=10,
-        n_early_stopping_delta:float=0.001,
+        optimizer: optax.GradientTransformation = optax.adam(0.0003),
+        n_iter: int = 1000,
+        batch_size: int = 100,
+        percentage_data_as_validation_set: float = 0.1,
+        n_early_stopping_patience: int = 10,
+        n_early_stopping_delta: float = 0.001,
         **kwargs,
     ):
         """Fit the model.

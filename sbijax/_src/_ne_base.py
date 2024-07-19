@@ -6,7 +6,8 @@ from jax import numpy as jnp
 from jax import random as jr
 
 from sbijax._src._sbi_base import SBI
-from sbijax._src.util.data import inference_data_as_dictionary as flatten, stack_data
+from sbijax._src.util.data import inference_data_as_dictionary as flatten
+from sbijax._src.util.data import stack_data
 
 
 # ruff: noqa: PLR0913

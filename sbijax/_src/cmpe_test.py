@@ -3,11 +3,10 @@
 import distrax
 import haiku as hk
 from jax import numpy as jnp
+from jax import random as jr
 
 from sbijax import CMPE
 from sbijax.nn import make_cm
-
-from jax import numpy as jnp, random as jr
 
 
 def test_cmpe(prior_simulator_tuple):

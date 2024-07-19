@@ -88,7 +88,7 @@ def _loss(params, rng_key, model, gamma, num_classes, **batch):
     return -jnp.mean(loss)
 
 
-# ruff: noqa: PLR0913,
+# ruff: noqa: PLR0913, E501
 class NRE(NE):
     r"""Neural ratio estimation.
 
@@ -97,10 +97,9 @@ class NRE(NE):
     it as NRE.
 
     Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
-            consists of functions to sample and evaluate the
-            log-probability of a data point. The second element is a
-            simulator function.
+        model_fns: a tuple of calalbles. The first element needs to be a
+            function that constructs a tfd.JointDistributionNamed, the second
+            element is a simulator function.
         classifier: a neural network for classification
         num_classes: number of classes to classify against
         gamma: relative weight of classes
@@ -110,12 +109,13 @@ class NRE(NE):
         >>> from sbijax.nn import make_resnet
         >>> from tensorflow_probability.substrates.jax import distributions as tfd
         ...
-        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> prior = lambda: tfd.JointDistributionNamed(
+        ...     dict(theta=tfd.Normal(0.0, 1.0))
+        ... )
         >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
         >>> fns = prior, s
-        >>> resnet = make_resnet()
-        >>>
-        >>> model = NRE(fns, resnet)
+        >>> neural_network = make_resnet()
+        >>> model = NRE(fns, neural_network)
 
     References:
         Miller, Benjamin K., et al. "Contrastive neural ratio estimation." Advances in Neural Information Processing Systems, 2022.

@@ -21,11 +21,11 @@ from surjectors.util import make_alternating_binary_mask, unstack
 
 # ruff: noqa: PLR0913
 def make_maf(
-        n_dimension: int,
-        n_layers: Optional[int] = 5,
-        n_layer_dimensions: Optional[Iterable[int]] = None,
-        hidden_sizes: Iterable[int] = (64, 64),
-        activation: Callable = jax.nn.tanh,
+    n_dimension: int,
+    n_layers: Optional[int] = 5,
+    n_layer_dimensions: Optional[Iterable[int]] = None,
+    hidden_sizes: Iterable[int] = (64, 64),
+    activation: Callable = jax.nn.tanh,
 ):
     """Create an affine (surjective) masked autoregressive flow.
 
@@ -69,10 +69,10 @@ def make_maf(
 
 
 def _make_maf(
-        n_dimension,
-        n_layer_dimensions,
-        hidden_sizes,
-        activation,
+    n_dimension,
+    n_layer_dimensions,
+    hidden_sizes,
+    activation,
 ):
     def _bijector_fn(params):
         means, log_scales = unstack(params, -1)
@@ -151,14 +151,14 @@ def _make_maf(
 
 # ruff: noqa: PLR0913
 def make_spf(
-        n_dimension: int,
-        range_min: float,
-        range_max: float,
-        n_layers: Optional[int] = 5,
-        n_layer_dimensions: Optional[Iterable[int]] = None,
-        hidden_sizes: Iterable[int] = (64, 64),
-        n_params: int = 10,
-        activation: Callable = jax.nn.tanh,
+    n_dimension: int,
+    range_min: float,
+    range_max: float,
+    n_layers: Optional[int] = 5,
+    n_layer_dimensions: Optional[Iterable[int]] = None,
+    hidden_sizes: Iterable[int] = (64, 64),
+    n_params: int = 10,
+    activation: Callable = jax.nn.tanh,
 ):
     """Create a rational-quadratic (surjective) spline coupling flow.
 
@@ -208,13 +208,13 @@ def make_spf(
 
 
 def _make_spf(
-        n_dimension,
-        n_layer_dimensions,
-        range_min,
-        range_max,
-        n_params,
-        hidden_sizes,
-        activation,
+    n_dimension,
+    n_layer_dimensions,
+    range_min,
+    range_max,
+    n_params,
+    hidden_sizes,
+    activation,
 ):
     def _bijector_fn(params):
         return distrax.RationalQuadraticSpline(
@@ -230,11 +230,14 @@ def _make_spf(
         return fn
 
     def _conditioner(n_dim):
-        return hk.Sequential([
-            surjectors_mlp(
-                list(hidden_sizes) + [n_params * n_dim], activation=activation,
-            ),
-            hk.Reshape((n_dimension, n_params))]
+        return hk.Sequential(
+            [
+                surjectors_mlp(
+                    list(hidden_sizes) + [n_params * n_dim],
+                    activation=activation,
+                ),
+                hk.Reshape((n_dimension, n_params)),
+            ]
         )
 
     @hk.transform

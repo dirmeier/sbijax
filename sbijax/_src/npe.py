@@ -15,7 +15,7 @@ from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, E501
 class NPE(NE):
     """Neural posterior estimation.
 
@@ -24,10 +24,9 @@ class NPE(NE):
     here we refer to it simply as NPE.
 
     Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
-                consists of functions to sample and evaluate the
-                log-probability of a data point. The second element is a
-                simulator function.
+        model_fns: a tuple of calalbles. The first element needs to be a
+            function that constructs a tfd.JointDistributionNamed, the second
+            element is a simulator function.
         density_estimator: a (neural) conditional density estimator
             to model the posterior distribution
         num_atoms: number of atomic atoms
@@ -37,12 +36,13 @@ class NPE(NE):
         >>> from sbijax.nn import make_maf
         >>> from tensorflow_probability.substrates.jax import distributions as tfd
         ...
-        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> prior = lambda: tfd.JointDistributionNamed(
+        ...     dict(theta=tfd.Normal(0.0, 1.0))
+        ... )
         >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
         >>> fns = prior, s
-        >>> flow = make_maf(1)
-        ...
-        >>> model = NPE(fns, flow)
+        >>> neural_network = make_maf(1)
+        >>> model = NPE(fns, neural_network)
 
     References:
         Greenberg, David, et al. "Automatic posterior transformation for likelihood-free inference." International Conference on Machine Learning, 2019.
