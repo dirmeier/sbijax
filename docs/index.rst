@@ -120,15 +120,22 @@ License
     📚 References <references>
 
 ..  toctree::
-    :caption: 🎓 Examples
+    :caption: 🎓 Tutorials
     :maxdepth: 1
     :hidden:
 
     Getting started <notebooks/introduction>
     SBI with sbijax <notebooks/sbi_with_sbijax>
     Neural networks <notebooks/neural_networks>
-    Density estimators <notebooks/mdns_vs_mafs_vs_spfs_vs_cnfs>
+    Density estimators <notebooks/density_estimators>
     High-dimensional inference <notebooks/high_dimensional_inference>
+    Figure styling <notebooks/figure_styling>
+
+..  toctree::
+    :caption: 🚀 Examples
+    :maxdepth: 1
+    :hidden:
+
     Self-contained examples <examples>
 
 ..  toctree::

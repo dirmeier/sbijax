@@ -2,6 +2,7 @@
 .PHONY: tests
 .PHONY: lints
 .PHONY: docs
+.PHONY: format
 
 PKG_VERSION=`hatch version`
 
@@ -14,6 +15,9 @@ tests:
 
 lints:
 	hatch run test:lint
+
+format:
+	hatch run test:format
 
 docs:
 	cd docs && make html

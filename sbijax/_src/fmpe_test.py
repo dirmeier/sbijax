@@ -3,12 +3,10 @@
 import distrax
 import haiku as hk
 from jax import numpy as jnp
+from jax import random as jr
 
 from sbijax import FMPE
 from sbijax.nn import make_cnf
-
-from jax import numpy as jnp, random as jr
-
 
 
 def test_fmpe(prior_simulator_tuple):

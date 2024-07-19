@@ -5,8 +5,10 @@ build:
   tools:
     python: "3.11"
 
-mkdocs:
-  configuration: mkdocs.yaml
+sphinx:
+  builder: html
+  configuration: docs/conf.py
+  fail_on_warning: false
 
 python:
   install:

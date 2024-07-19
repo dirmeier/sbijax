@@ -1,6 +1,7 @@
 # pylint: skip-file
 
-from jax import numpy as jnp, random as jr
+from jax import numpy as jnp
+from jax import random as jr
 
 from sbijax import NRE
 from sbijax.nn import make_mlp

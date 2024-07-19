@@ -4,6 +4,8 @@ import numpy as np
 from jax import numpy as jnp
 from jax.tree_util import tree_flatten
 
+from sbijax._src.util.types import PyTree
+
 
 def _tree_stack(trees):
     leaves_list = []
@@ -18,7 +20,7 @@ def _tree_stack(trees):
     return treedef_list[0].unflatten(result_leaves)
 
 
-def stack_data(data, also_data):
+def stack_data(data: PyTree, also_data: PyTree) -> PyTree:
     """Stack two data sets.
 
     Args:
@@ -36,7 +38,16 @@ def stack_data(data, also_data):
     return stacked
 
 
-def as_inference_data(samples: dict[str, jax.Array], observed: jax.Array):
+def as_inference_data(samples: PyTree, observed: jax.Array) -> az.InferenceData:
+    """Convert a PyTree to an inference data object.
+
+    Args:
+        samples: a PyTree of posterior samples
+        observed: a jax.Array representing the observed data
+
+    Returns:
+        an inference data object
+    """
     inf = az.InferenceData(
         posterior=az.dict_to_dataset(
             samples,
@@ -50,7 +61,15 @@ def as_inference_data(samples: dict[str, jax.Array], observed: jax.Array):
     return inf
 
 
-def inference_data_as_dictionary(posterior):
+def inference_data_as_dictionary(posterior: az.InferenceData) -> PyTree:
+    """Convert inference data to a PyTree.
+
+    Args:
+        posterior: the `posterior` variable of an inference data object
+
+    Returns:
+        a PyTree
+    """
     posterior = posterior.to_dict()
     posterior = {
         k: jnp.array(v["data"]) for k, v in posterior["data_vars"].items()

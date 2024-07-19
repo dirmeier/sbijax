@@ -34,7 +34,7 @@ def _discretization_schedule(n_iter, max_iter=1000):
     return nk
 
 
-# pylint: disable=too-many-locals,too-many-arguments
+# ruff: noqa: PLR0913
 def _consistency_loss(
     params,
     ema_params,
@@ -87,6 +87,7 @@ def _consistency_loss(
     return jnp.mean(loss)
 
 
+# ruff: noqa: E501
 class CMPE(FMPE):
     r"""Consistency model posterior estimation.
 
@@ -94,10 +95,9 @@ class CMPE(FMPE):
     :cite:t:`schmitt2023con`.
 
     Args:
-        model_fns: a tuple of tuples. The first element is a tuple that
-                consists of functions to sample and evaluate the
-                log-probability of a data point. The second element is a
-                simulator function.
+       model_fns: a tuple of callables. The first element needs to be a
+            function that constructs a tfd.JointDistributionNamed, the second
+            element is a simulator function.
         network: a consistency model
         t_min: minimal time point for ODE integration
         t_max: maximal time point for ODE integration
@@ -107,12 +107,13 @@ class CMPE(FMPE):
         >>> from sbijax.nn import make_cm
         >>> from tensorflow_probability.substrates.jax import distributions as tfd
         ...
-        >>> prior = lambda: tfd.JointDistributionNamed(dict(theta=tfd.Normal(0.0, 1.0)))
+        >>> prior = lambda: tfd.JointDistributionNamed(
+        ...     dict(theta=tfd.Normal(0.0, 1.0))
+        ... )
         >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
         >>> fns = prior, s
-        >>> net = make_cm(1)
-        ...
-        >>> estim = CMPE(fns, net)
+        >>> neural_network = make_cm(1)
+        >>> model = CMPE(fns, neural_network)
 
     References:
         Schmitt, Marvin, et al. "Consistency Models for Scalable and Fast Simulation-Based Inference". arXiv preprint arXiv:2312.05440, 2023.
@@ -123,6 +124,7 @@ class CMPE(FMPE):
         self._t_min = t_min
         self._t_max = t_max
 
+    # ruff: noqa: PLR0913
     def _fit_model_single_round(
         self,
         seed,
@@ -208,7 +210,7 @@ class CMPE(FMPE):
         )
         return params
 
-    # pylint: disable=arguments-differ
+    # ruff: noqa: PLR0913
     def _validation_loss(self, rng_key, params, ema_params, n_iter, val_iter):
         loss_fn = jax.jit(
             partial(

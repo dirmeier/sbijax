@@ -11,7 +11,7 @@ license = "Apache-2.0"
 homepage = "https://github.com/dirmeier/sbijax"
 keywords = [ "sbi", "abc", "simulation-based inference", "approximate Bayesian computation"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 -Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
@@ -57,12 +57,12 @@ dependencies = [
     "ruff>=0.3.0",
     "pytest>=7.2.0",
     "pytest-cov>=4.0.0",
-    "mkdocs"
 ]
 
 [tool.hatch.envs.test.scripts]
-lint = 'ruff check sbijax'
-test = 'pytest -v --cov=./sbijax --cov-report=xml sbijax'
+lint = 'ruff check sbijax examples'
+format = 'ruff format sbijax examples'
+test = 'pytest -v --doctest-modules --cov=./sbijax --cov-report=xml sbijax'
 
 [tool.bandit]
 skips = ["B101"]
@@ -72,7 +72,7 @@ line-length = 80
 exclude = ["*_test.py", "docs/**", "examples/**"]
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]
+select = ["E", "F"]
 extend-select = [
   "UP", "D", "I", "PL", "S"
 ]
