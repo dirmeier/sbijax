@@ -19,14 +19,14 @@ from surjectors.nn import make_mlp as surjectors_mlp
 from surjectors.util import make_alternating_binary_mask, unstack
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, E501
 def make_maf(
     n_dimension: int,
     n_layers: Optional[int] = 5,
     n_layer_dimensions: Optional[Iterable[int]] = None,
     hidden_sizes: Iterable[int] = (64, 64),
     activation: Callable = jax.nn.tanh,
-):
+) -> hk.Transformed:
     """Create an affine (surjective) masked autoregressive flow.
 
     The MAFs use `n_layers` layers and are parameterized using MADE networks
@@ -48,16 +48,14 @@ def make_maf(
         activation: a jax activation function
 
     Examples:
-        >>> make_maf(10, n_layer_dimensions=(10, 10, 5, 5, 5))
+        >>> neural_network = make_maf(10, n_layer_dimensions=(10, 10, 5, 5, 5))
 
     Returns:
         a (surjective) normalizing flow model
     """
     if isinstance(n_layers, int) and n_layer_dimensions is not None:
-        raise ValueError(
-            "provide only either of 'n_layers'/'n_layer_dimensions'"
-        )
-    if isinstance(n_layers, int):
+        assert n_layers == len(list(n_layer_dimensions))
+    elif isinstance(n_layers, int):
         n_layer_dimensions = [n_dimension] * n_layers
 
     return _make_maf(
@@ -149,7 +147,7 @@ def _make_maf(
     return _flow
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913, E501
 def make_spf(
     n_dimension: int,
     range_min: float,
@@ -159,7 +157,7 @@ def make_spf(
     hidden_sizes: Iterable[int] = (64, 64),
     n_params: int = 10,
     activation: Callable = jax.nn.tanh,
-):
+) -> hk.Transformed:
     """Create a rational-quadratic (surjective) spline coupling flow.
 
     The MAFs use `n_layers` layers and are parameterized using MADE networks
@@ -184,15 +182,13 @@ def make_spf(
         activation: a jax activation function
 
     Examples:
-        >>> make_spf(10, n_layer_dimensions=(10, 10, 5, 5, 5))
+        >>> neural_network = make_spf(10, -1.0, 1.0, n_layer_dimensions=(10, 10, 5, 5, 5))
 
     Returns:
         a (surjective) normalizing flow model
     """
     if isinstance(n_layers, int) and n_layer_dimensions is not None:
-        raise ValueError(
-            "provide only either of 'n_layers'/'n_layer_dimensions'"
-        )
+        assert n_layers == len(list(n_layer_dimensions))
     if isinstance(n_layers, int):
         n_layer_dimensions = [n_dimension] * n_layers
 

@@ -4,9 +4,6 @@ Demonstrates neural approximate sufficient statistics with sequential
 neural likelihood estimation on the simple likelihood complex posterior model.
 """
 
-
-import distrax
-import jax
 from jax import numpy as jnp
 from jax import random as jr
 from matplotlib import pyplot as plt
@@ -39,7 +36,7 @@ def simulator_fn(seed, theta):
         return m0, m1, s0, s1, r
 
     m0, m1, s0, s1, r = _unpack_params(theta)
-    us = distrax.Normal(0.0, 1.0).sample(
+    us = tfd.Normal(0.0, 1.0).sample(
         seed=us_key, sample_shape=(theta.shape[0], theta.shape[1], 4, 2)
     )
     xs = jnp.empty_like(us)
@@ -52,8 +49,6 @@ def simulator_fn(seed, theta):
     else:
         y = y.reshape((*theta.shape[:2], 8))
     return y
-
-
 
 
 def run():

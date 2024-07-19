@@ -190,9 +190,11 @@ def plot_rhat_and_ress(
         rhats, range(len(rhats)), marker="o", linestyle="None", color="black"
     )
     axes[0].hlines(range(len(rhats)), np.ones(len(rhats)), rhats, color="black")
-    axes[0].axvline(1.05, color="", alpha=0.5, linestyle="dashed")
+    axes[0].axvline(1.05, color="darkgrey", alpha=0.5, linestyle="dashed")
     axes[0].axvline(1.1, color="darkgrey", alpha=0.5, linestyle="dashed")
     axes[0].axvline(1.0, color="black", alpha=0.5)
+    axes[0].set_yticks(list(range(len(rhats))))
+
     if np.any(rhats < 1.0):
         axes[0].set_xlim(0.95)
     else:
@@ -215,9 +217,9 @@ def plot_rhat_and_ress(
     axes[1].axvline(0.5, color="darkgrey", alpha=0.5, linestyle="dashed")
     axes[1].axvline(1.0, color="darkgrey", alpha=0.5, linestyle="dashed")
     axes[1].set_xticks([0.0, 0.1, 0.5, 1.0])
+    axes[1].set_yticks(list(range(len(ress))))
     axes[1].set_yticklabels([])
     axes[1].set_xlabel(r"Relative ESS")
-
     for i, ax in enumerate(axes):
         if i > 0:
             ax.set_ylabel(None)

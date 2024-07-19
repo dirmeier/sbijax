@@ -17,6 +17,7 @@ class SNLE(NLE):
             to model the likelihood function
 
     Examples:
+        >>> from jax import numpy as jnp
         >>> from sbijax import SNLE
         >>> from sbijax.nn import make_maf
         >>> from tensorflow_probability.substrates.jax import distributions as tfd

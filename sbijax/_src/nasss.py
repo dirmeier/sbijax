@@ -71,6 +71,7 @@ class NASSS(NASS):
         summary_net: a SNASSSNet object
 
     Examples:
+        >>> from jax import numpy as jnp
         >>> from sbijax import NASSS
         >>> from sbijax.nn import make_nasss_net
         >>> from tensorflow_probability.substrates.jax import distributions as tfd
@@ -82,7 +83,7 @@ class NASSS(NASS):
         ...     theta["theta"], 1.0).sample(seed=seed, sample_shape=(2,)
         ... ).reshape(-1, 10)
         >>> fns = prior, s
-        >>> neural_network = make_nasss_net([64, 64, 5], [64, 64, 1])
+        >>> neural_network = make_nasss_net([64, 64, 5], [64, 64, 1], [64, 64, 1])
         >>> model = NASSS(fns, neural_network)
 
     References:

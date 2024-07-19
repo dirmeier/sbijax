@@ -192,7 +192,7 @@ def make_cm(
         sigma_data: the standard deviation of the data :)
 
     Returns:
-        returns a consistency model
+        a consistency model
     """
 
     @hk.transform

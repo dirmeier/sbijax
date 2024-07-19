@@ -1,7 +1,8 @@
-"""
-Example using SSNL on the SLCP experiment
-"""
+"""SNLE example.
 
+Demonstrates sequential surjective neural likelihood estimation on the simple
+ likelihood complex posterior model.
+"""
 import argparse
 from functools import partial
 
@@ -24,19 +25,21 @@ from surjectors import (
 )
 from surjectors.nn import MADE, make_mlp
 from surjectors.util import unstack
+from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax import SNLE
 from sbijax.mcmc import sample_with_nuts
+from sbijax.nn import make_maf
 
 
-def prior_model_fns():
-    p = distrax.Independent(
-        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
-    )
-    return p.sample, p.log_prob
-
+def prior_fn():
+    prior = tfd.JointDistributionNamed(dict(
+        theta=tfd.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0))
+    ), batch_ndims=0)
+    return prior
 
 def simulator_fn(seed, theta):
+    theta = theta["theta"]
     orig_shape = theta.shape
     if theta.ndim == 2:
         theta = theta[:, None, :]
@@ -158,16 +161,20 @@ def make_model(dim, use_surjectors):
 
 
 def run(use_surjectors):
-    len_theta = 5
-    thetas = jnp.linspace(-2.0, 2.0, len_theta)
-    y_0 = simulator_fn(jr.PRNGKey(0), thetas.reshape(-1, len_theta)).reshape(
-        -1, 8
-    )
+    y_obs = jnp.array([[
+        -0.9707123,
+        -2.9461224,
+        -0.4494722,
+        -3.4231849,
+        -0.13285634,
+        -3.364017,
+        -0.85367596,
+        -2.4271638,
+    ]])
+    fns = prior_fn, simulator_fn
 
-    prior_simulator_fn, prior_fn = prior_model_fns()
-    fns = (prior_simulator_fn, prior_fn), simulator_fn
-
-    snl = SNLE(fns, make_model(y_0.shape[1], use_surjectors))
+    neural_network = make_maf(8, n_layer_dimensions=[8, 8, 5, 5, 5])
+    snl = SNLE(fns, neural_network)
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
@@ -175,7 +182,7 @@ def run(use_surjectors):
         data, _ = snl.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(12), i),
             params=params,
-            observable=y_0,
+            observable=y_obs,
             data=data,
         )
         params, info = snl.fit(
@@ -183,17 +190,17 @@ def run(use_surjectors):
         )
 
     sample_key, rng_key = jr.split(jr.PRNGKey(123))
-    snl_samples, _ = snl.sample_posterior(sample_key, params, y_0)
+    snl_samples, _ = snl.sample_posterior(sample_key, params, y_obs)
 
     sample_key, rng_key = jr.split(rng_key)
-    log_density_partial = partial(log_density_fn, y=y_0)
+    log_density_partial = partial(log_density_fn, y=y_obs)
     log_density = lambda x: log_density_partial(**x)
     slice_samples = sample_with_nuts(
         sample_key,
         log_density,
-        prior_simulator_fn,
+        prior_fn().sample,
     )
-    slice_samples = slice_samples.reshape(-1, len_theta)
+    slice_samples = slice_samples.reshape(-1, 5)
 
     g = sns.PairGrid(pd.DataFrame(slice_samples))
     g.map_upper(sns.scatterplot, color="black", marker=".", edgecolor=None, s=2)
@@ -205,8 +212,8 @@ def run(use_surjectors):
     g.fig.set_figwidth(5)
     plt.show()
 
-    fig, axes = plt.subplots(len_theta, 2)
-    for i in range(len_theta):
+    fig, axes = plt.subplots(5, 2)
+    for i in range(5):
         sns.histplot(slice_samples[:, i], color="darkgrey", ax=axes[i, 0])
         sns.histplot(snl_samples[:, i], color="darkblue", ax=axes[i, 1])
         axes[i, 0].set_title(rf"Sampled posterior $\theta_{i}$")

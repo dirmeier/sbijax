@@ -53,7 +53,9 @@ html_theme_options = {
     "use_download_button": False,
 }
 
-html_title = "sbijax 🚀"
+html_title = "sbijax"
+html_logo = './_static/sticker_middle.png'
+html_favicon = './_static/sticker_empty_small.png'
 
 
 def skip(app, what, name, obj, would_skip, options):

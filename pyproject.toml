@@ -11,7 +11,7 @@ license = "Apache-2.0"
 homepage = "https://github.com/dirmeier/sbijax"
 keywords = [ "sbi", "abc", "simulation-based inference", "approximate Bayesian computation"]
 classifiers = [
-    "Development Status :: 4 -Beta",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
@@ -76,6 +76,7 @@ select = ["E", "F"]
 extend-select = [
   "UP", "D", "I", "PL", "S"
 ]
+ignore=["S101"]
 
 [tool.ruff.lint.pydocstyle]
 convention= 'google'
