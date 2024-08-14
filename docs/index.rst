@@ -13,7 +13,7 @@
 approximate Bayesian computation using `JAX <https://github.com/google/jax>`_.
 It implements recent methods, such as *Sequential Monte Carlo ABC*,
 *Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient Statistics*
-or *Consistency model posterior*, as well as methods to compute model
+or *Consistency model posterior estimation*, as well as methods to compute model
 diagnostics and for visualizing posterior distributions.
 
 .. caution::
