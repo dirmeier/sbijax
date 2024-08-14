@@ -6,6 +6,7 @@ import os
 
 from matplotlib.pyplot import style
 
+from sbijax._src.abc.sabc import SABC
 from sbijax._src.abc.smc_abc import SMCABC
 from sbijax._src.cmpe import CMPE
 from sbijax._src.fmpe import FMPE
@@ -29,6 +30,7 @@ from sbijax._src.util.data import (
 )
 
 __all__ = [
+    "SABC",
     "SMCABC",
     "CMPE",
     "FMPE",

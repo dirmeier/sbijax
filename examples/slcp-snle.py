@@ -27,7 +27,7 @@ from surjectors.nn import MADE, make_mlp
 from surjectors.util import unstack
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import SNLE
+from sbijax import SNLE, inference_data_as_dictionary
 from sbijax.mcmc import sample_with_nuts
 from sbijax.nn import make_maf
 
@@ -178,7 +178,7 @@ def run(use_surjectors):
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
-    for i in range(5):
+    for i in range(2):
         data, _ = snl.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(12), i),
             params=params,
@@ -186,11 +186,11 @@ def run(use_surjectors):
             data=data,
         )
         params, info = snl.fit(
-            jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer
+            jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer, n_iter=10
         )
 
     sample_key, rng_key = jr.split(jr.PRNGKey(123))
-    snl_samples, _ = snl.sample_posterior(sample_key, params, y_obs)
+    inference_results, _ = snl.sample_posterior(sample_key, params, y_obs)
 
     sample_key, rng_key = jr.split(rng_key)
     log_density_partial = partial(log_density_fn, y=y_obs)
@@ -200,7 +200,8 @@ def run(use_surjectors):
         log_density,
         prior_fn().sample,
     )
-    slice_samples = slice_samples.reshape(-1, 5)
+    slice_samples = slice_samples['theta'].reshape(-1, 5)
+    snl_samples = inference_data_as_dictionary(inference_results.posterior)["theta"]
 
     g = sns.PairGrid(pd.DataFrame(slice_samples))
     g.map_upper(sns.scatterplot, color="black", marker=".", edgecolor=None, s=2)
