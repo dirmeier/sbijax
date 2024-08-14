@@ -5,17 +5,37 @@ html[data-theme="light"] {
     --pst-color-inline-code-links: #b26679;
 }
 
+pre > span {
+    line-height: 20px;
+}
+
+span.kn {
+     color: rgb(0, 120, 161) !important;
+}
+
+span.ml, span.mi, span.nb {
+     color: lightcoral !important;
+}
+
+span.k, span.nn {
+     color: rgb(168, 70, 185) !important;
+}
+
 h1 > code > span {
-    font-family: var(--pst-font-family-monospace);
-    font-weight: 575;
+    font-weight: 300 !important;
 }
 
-a > code {
-    font-weight: 575;
+pre {
+    border: 0;
+    font-size: 13px;
+    background-color: rgb(245, 245, 245) !important;
 }
 
-h2, h1 {
-    font-weight: 400 !important;
+h1 {
+    margin-bottom: 50px;
+}
+h3, h2, h1 {
+    font-weight: 300 !important;
 }
 
 nav > li > a > code.literal {
@@ -35,10 +55,13 @@ code.literal {
   border-radius: 0;
 }
 
+a > code {
+    font-weight: 575;
+}
+
 a:hover {
       text-decoration-thickness: 1px !important;
 }
-
 
 ul.bd-breadcrumbs li.breadcrumb-item a:hover {
   text-decoration-thickness: 1px;

@@ -138,7 +138,7 @@ def _make_maf(
         chain = Chain(layers[:-1])
 
         base_distribution = distrax.Independent(
-            distrax.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
+            distrax.Normal(jnp.zeros(curr_dim), jnp.ones(curr_dim)),
             1,
         )
         td = TransformedDistribution(base_distribution, chain)

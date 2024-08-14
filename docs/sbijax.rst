@@ -14,6 +14,7 @@ functionality for visualization and other utility.
     NLE
     SNLE
     NRE
+    SMCABC
     NASS
     NASSS
     plot_ess
@@ -55,9 +56,6 @@ Likelihood-ratio estimation
 
 Approximate Bayesian computation
 --------------------------------
-
-..  autoclass:: SABC
-    :members: sample_posterior
 
 ..  autoclass:: SMCABC
     :members: sample_posterior
