@@ -22,7 +22,7 @@ span.k, span.nn {
 }
 
 h1 > code > span {
-    font-weight: 700 !important;
+    font-weight: 300 !important;
 }
 
 pre {

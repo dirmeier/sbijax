@@ -178,7 +178,7 @@ def run(use_surjectors):
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
-    for i in range(2):
+    for i in range(10):
         data, _ = snl.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(12), i),
             params=params,
