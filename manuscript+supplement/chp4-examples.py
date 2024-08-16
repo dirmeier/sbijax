@@ -38,7 +38,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 # We implement a custom function to visualize posterior pairs.
 
 # %%
-def plot_posteriors(obj, save_path=None):
+def plot_posteriors(obj):
     _, axes = plt.subplots(figsize=(12, 10), nrows=5, ncols=5)
     with az.style.context(["arviz-doc"], after_reset=True):
         for i in range(0, 5):
@@ -65,10 +65,7 @@ def plot_posteriors(obj, save_path=None):
                 ax.grid(which='major', axis='both', alpha=0.5)
         for i in range(5):
             axes[i, i].hist(obj[..., i], color="black")
-    plt.tight_layout()
-    if save_path is not None:
-        plt.savefig(save_path)
-    plt.show()
+    return axes
 
 
 # %%
@@ -135,9 +132,7 @@ def prior_fn():
 
 def simulator_fn(seed, theta):
     theta = theta["theta"]
-    orig_shape = theta.shape
-    if theta.ndim == 2:
-        theta = theta[:, None, :]
+    theta = theta[:, None, :]
     us_key, noise_key = jr.split(seed)
 
     def _unpack_params(ps):
@@ -156,11 +151,8 @@ def simulator_fn(seed, theta):
     xs = xs.at[:, :, :, 0].set(s0 * us[:, :, :, 0] + m0)
     y = xs.at[:, :, :, 1].set(
         s1 * (r * us[:, :, :, 0] + jnp.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
-    )
-    if len(orig_shape) == 2:
-        y = y.reshape((*theta.shape[:1], 8))
-    else:
-        y = y.reshape((*theta.shape[:2], 8))
+    )    
+    y = y.reshape((*theta.shape[:1], 8))    
     return y
 
 
@@ -251,10 +243,13 @@ from sbijax import SNLE, inference_data_as_dictionary
 from sbijax.nn import make_maf
 
 # %%
-n_dim_data = y_obs.shape[-1]
-
+n_dim_data = 8
 n_layer_dimensions, hidden_sizes = (8, 8, 5, 5, 5), (64, 64)
-neural_network = make_maf(n_dim_data, n_layer_dimensions=n_layer_dimensions, hidden_sizes=hidden_sizes)
+neural_network = make_maf(
+    n_dim_data, 
+    n_layer_dimensions=n_layer_dimensions,
+    hidden_sizes=hidden_sizes
+)
 
 fns = prior_fn, simulator_fn
 snle = SNLE(fns, neural_network)
@@ -302,11 +297,11 @@ fmpe = FMPE(fns, neural_network)
 
 # %%
 data, _ = fmpe.simulate_data(
-    jr.fold_in(jr.PRNGKey(1), i),
+    jr.PRNGKey(1),
     n_simulations=20_000,
 )
 fmpe_params, info = fmpe.fit(
-    jr.fold_in(jr.PRNGKey(2), i),
+    jr.PRNGKey(2),
     data=data,
     optimizer=optax.adam(0.001),
     n_early_stopping_delta=0.00001,
@@ -345,23 +340,24 @@ params_nass, _ = model_nass.fit(jr.PRNGKey(2), data=data, n_early_stopping_patie
 
 
 # %%
+def summary_fn(y):
+    s = model_nass.summarize(params_nass, y)
+    return s
+
 def distance_fn(y_simulated, y_observed):
     diff = y_simulated - y_observed
     dist = jax.vmap(lambda el: jnp.linalg.norm(el))(diff)
     return dist
 
-def summary_fn(y):
-    s = model_nass.summarize(params_nass, y)
-    return s
-
-model_smc = SMCABC(fns, summary_fn, distance_fn)
 
 # %%
+model_smc = SMCABC(fns, summary_fn, distance_fn)
+
 smc_inference_results, _ = model_smc.sample_posterior(
     jr.PRNGKey(5),
     y_obs,
     n_rounds=10,
-    n_particles=5_000,
+    n_particles=10_000,
     eps_step=0.825,
     ess_min=2_000
 )

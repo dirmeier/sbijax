@@ -57,10 +57,10 @@ class SMCABC(SBI):
         self,
         rng_key,
         observable,
-        n_rounds,
-        n_particles,
-        eps_step,
-        ess_min,
+        n_rounds=10,
+        n_particles=10_000,
+        eps_step=0.825,
+        ess_min=2_000,
         cov_scale=1.0,
     ):
         r"""Sample from the approximate posterior.

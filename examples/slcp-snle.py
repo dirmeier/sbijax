@@ -38,11 +38,10 @@ def prior_fn():
     ), batch_ndims=0)
     return prior
 
+
 def simulator_fn(seed, theta):
     theta = theta["theta"]
-    orig_shape = theta.shape
-    if theta.ndim == 2:
-        theta = theta[:, None, :]
+    theta = theta[:, None, :]
     us_key, noise_key = jr.split(seed)
 
     def _unpack_params(ps):
@@ -62,10 +61,7 @@ def simulator_fn(seed, theta):
     y = xs.at[:, :, :, 1].set(
         s1 * (r * us[:, :, :, 0] + jnp.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
     )
-    if len(orig_shape) == 2:
-        y = y.reshape((*theta.shape[:1], 8))
-    else:
-        y = y.reshape((*theta.shape[:2], 8))
+    y = y.reshape((*theta.shape[:1], 8))
     return y
 
 
@@ -160,7 +156,7 @@ def make_model(dim, use_surjectors):
     return td
 
 
-def run(use_surjectors):
+def run(n_iter):
     y_obs = jnp.array([[
         -0.9707123,
         -2.9461224,
@@ -180,16 +176,16 @@ def run(use_surjectors):
     data, params = None, {}
     for i in range(10):
         data, _ = snl.simulate_data_and_possibly_append(
-            jr.fold_in(jr.PRNGKey(12), i),
+            jr.fold_in(jr.PRNGKey(1), i),
             params=params,
             observable=y_obs,
             data=data,
         )
         params, info = snl.fit(
-            jr.fold_in(jr.PRNGKey(23), i), data=data, optimizer=optimizer, n_iter=10
+            jr.fold_in(jr.PRNGKey(2), i), data=data, optimizer=optimizer, n_iter=n_iter
         )
 
-    sample_key, rng_key = jr.split(jr.PRNGKey(123))
+    sample_key, rng_key = jr.split(jr.PRNGKey(3))
     inference_results, _ = snl.sample_posterior(sample_key, params, y_obs)
 
     sample_key, rng_key = jr.split(rng_key)
@@ -228,6 +224,6 @@ def run(use_surjectors):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use-surjectors", action="store_true", default=True)
+    parser.add_argument("--n-iter", type=int, default=1_000)
     args = parser.parse_args()
-    run(args.use_surjectors)
+    run(args.n_iter)

@@ -228,16 +228,17 @@ from sbijax.util import stack_data
 n_rounds = 1
 data, params = None, {}
 for i in range(n_rounds):
-    new_data, _ = model.simulate_data(jr.fold_in(jr.PRNGKey(0), i),
+    new_data, _ = model.simulate_data(
+        jr.fold_in(jr.PRNGKey(1), i),
         params=params,
         observable=y_obs,
         data=data,
     )
     data = stack_data(data, new_data)
-    params, info = model.fit(jr.fold_in(jr.PRNGKey(1), i), data=data)
+    params, info = model.fit(jr.fold_in(jr.PRNGKey(2), i), data=data)
 
 inference_results, diagnostics = model.sample_posterior(
-    jr.PRNGKey(2), params, y_obs
+    jr.PRNGKey(3), params, y_obs
 )
 
 # %% [markdown]
