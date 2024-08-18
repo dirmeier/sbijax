@@ -19,7 +19,7 @@ def test_nass(prior_simulator_tuple):
     y_observed = jr.normal(jr.PRNGKey(0), (10,))
     fns = prior_simulator_tuple[0], simulator_fn
 
-    model_nass = NASS(fns, make_nass_net([64, 64, 5], [64, 64, 1]))
+    model_nass = NASS(fns, make_nass_net(5, [64, 64]))
     model_nle = NLE(fns, make_maf(5))
 
     data, params_nle, params_nass = None, {}, {}

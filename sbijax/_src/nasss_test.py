@@ -21,7 +21,7 @@ def test_nasss(prior_simulator_tuple):
 
     model_nass = NASSS(
         fns,
-        make_nasss_net((32, 5), (32, 1), (32, 1)),
+        make_nasss_net(5, 1, (32, 32)),
     )
     model_nle = NLE(fns, make_maf(5))
 
