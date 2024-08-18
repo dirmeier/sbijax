@@ -79,7 +79,7 @@ def run(n_rounds, n_iter):
         )
         params_nass, _ = model_nass.fit(nass_key, data=data, n_iter=n_iter)
         summaries = model_nass.summarize(params_nass, data)
-        params_nle, _ = model_nle.fit(nle_key, data=summaries)
+        params_nle, _ = model_nle.fit(nle_key, data=summaries, n_iter=n_iter)
 
     s_observed = model_nass.summarize(params_nass, y_observed)
     inference_results, _ = model_nle.sample_posterior(jr.PRNGKey(3), params_nle, s_observed)

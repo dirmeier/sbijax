@@ -60,7 +60,7 @@ def distance_fn(y_simulated, y_observed):
     return dist
 
 
-def run(n_rounds):
+def run(n_rounds, n_iter):
     y_observed = jnp.array([[
         -0.9707123,
         -2.9461224,
@@ -72,10 +72,10 @@ def run(n_rounds):
         -2.4271638,
     ]])
     fns = prior_fn, simulator_fn
-    model_nass = NASS(fns, make_nass_net([64, 64, 5], [64, 64, 1]))
+    model_nass = NASS(fns, make_nass_net(5, (64, 64)))
 
     data, _ = model_nass.simulate_data(jr.PRNGKey(1), n_simulations=20_000)
-    params_nass, _ = model_nass.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25)
+    params_nass, _ = model_nass.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter)
 
     def summary_fn(y):
         s = model_nass.summarize(params_nass, y)
@@ -103,5 +103,6 @@ def run(n_rounds):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-rounds", type=int, default=15)
+    parser.add_argument("--n-iter", type=int, default=1_000)
     args = parser.parse_args()
-    run(args.n_rounds)
+    run(args.n_rounds, args.n_iter)

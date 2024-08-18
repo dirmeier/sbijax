@@ -43,5 +43,5 @@ jobs:
             python examples/mixture_model-nre.py --n-iter 10
             python examples/slcp-fmpe.py --n-iter 10
             python examples/slcp-nass_nle.py --n-iter 10 --n-rounds 1
-            python examples/slcp-nass_smcabc.py --n-rounds 1
-            python examples/slcp-snle.py --n-iter 10
+            python examples/slcp-nass_smcabc.py --n-iter 10 --n-rounds 1
+            python examples/slcp-snle.py --n-iter 10  --n-rounds 1

@@ -156,7 +156,7 @@ def make_model(dim, use_surjectors):
     return td
 
 
-def run(n_iter):
+def run(n_rounds, n_iter):
     y_obs = jnp.array([[
         -0.9707123,
         -2.9461224,
@@ -174,7 +174,7 @@ def run(n_iter):
     optimizer = optax.adam(1e-3)
 
     data, params = None, {}
-    for i in range(10):
+    for i in range(n_rounds):
         data, _ = snl.simulate_data_and_possibly_append(
             jr.fold_in(jr.PRNGKey(1), i),
             params=params,
@@ -224,6 +224,7 @@ def run(n_iter):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--n-rounds", type=int, default=15)
     parser.add_argument("--n-iter", type=int, default=1_000)
     args = parser.parse_args()
-    run(args.n_iter)
+    run(args.n_rounds, args.n_iter)
