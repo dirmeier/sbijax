@@ -1,4 +1,4 @@
-"""SNLE example.
+"""Surjective neural likelihood estimation example.
 
 Demonstrates sequential surjective neural likelihood estimation on the simple
  likelihood complex posterior model.

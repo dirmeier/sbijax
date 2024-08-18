@@ -150,8 +150,8 @@ def make_cnf(
     n_dimension: int,
     n_layers: int = 2,
     hidden_size: int = 64,
-    activation: Callable = jax.nn.tanh,
-    dropout_rate: float = 0.2,
+    activation: Callable = jax.nn.relu,
+    dropout_rate: float = 0.1,
     do_batch_norm: bool = False,
     batch_norm_decay: float = 0.2,
 ):

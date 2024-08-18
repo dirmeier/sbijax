@@ -51,7 +51,7 @@ def simulator_fn(seed, theta):
     return y
 
 
-def run():
+def run(n_rounds, n_iter):
     y_observed = jnp.array([[
         -0.9707123,
         -2.9461224,
@@ -63,11 +63,12 @@ def run():
         -2.4271638,
     ]])
     fns = prior_fn, simulator_fn
-    model_nass = NASS(fns, make_nass_net([64, 64, 5], [64, 64, 1]))
+    neural_network = make_nass_net(5, (64, 64))
+    model_nass = NASS(fns, neural_network)
     model_nle = NLE(fns, make_maf(5))
 
     data, params_nle, params_nass = None, {}, {}
-    for i in range(5):
+    for i in range(n_rounds):
         simulate_key, nass_key, nle_key = jr.split(jr.fold_in(jr.PRNGKey(1), i), 3)
         s_observed = model_nass.summarize(params_nass, y_observed)
         data, _ = model_nle.simulate_data_and_possibly_append(
@@ -76,7 +77,7 @@ def run():
             observable=s_observed,
             data=data,
         )
-        params_nass, _ = model_nass.fit(nass_key, data=data)
+        params_nass, _ = model_nass.fit(nass_key, data=data, n_iter=n_iter)
         summaries = model_nass.summarize(params_nass, data)
         params_nle, _ = model_nle.fit(nle_key, data=summaries)
 
@@ -97,6 +98,10 @@ def run():
     plt.show()
 
 
-
 if __name__ == "__main__":
-    run()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n-iter", type=int, default=1_000)
+    parser.add_argument("--n-rounds", type=int, default=15)
+    args = parser.parse_args()
+    run(args.n_rounds, args.n_iter)

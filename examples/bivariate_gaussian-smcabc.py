@@ -2,6 +2,7 @@
 
 Demonstrates sequential Monte Carlo ABC on a simple bivariate Gaussian example.
 """
+import argparse
 
 import jax
 import matplotlib.pyplot as plt
@@ -35,18 +36,21 @@ def distance_fn(y_simulated, y_observed):
     return dist
 
 
-def run():
+def run(n_rounds):
     y_observed = jnp.array([-2.0, 1.0])
 
     fns = prior_fn, simulator_fn
 
     smc = SMCABC(fns, summary_fn, distance_fn)
     smc_samples, _ = smc.sample_posterior(
-        jr.PRNGKey(1), y_observed, 10, 1000, 0.85, 500
+        jr.PRNGKey(1), y_observed, n_rounds=n_rounds, n_particles=1000, ess_min=500
     )
     plot_posterior(smc_samples)
     plt.show()
 
 
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n-rounds", type=int, default=10)
+    args = parser.parse_args()
+    run(args.n_rounds)

@@ -1,4 +1,7 @@
+"""Neural likelihood estimation example.
 
+Demonstrates NLE on a simple mixture model.
+"""
 import matplotlib.pyplot as plt
 from jax import numpy as jnp, random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
@@ -24,14 +27,14 @@ def simulator_fn(seed, theta):
     return y
 
 
-def run(use_spf):
+def run(use_spf, n_iter):
     y_observed = jnp.array([-2.0, 1.0])
     fns = prior_fn, simulator_fn
     neural_network = make_spf(2, -5.0, 5.0, n_params=3) if use_spf else make_mdn(2, 10)
     model = NLE(fns, neural_network)
 
     data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10_000)
-    params, info = model.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25)
+    params, info = model.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter)
     inference_result, _ = model.sample_posterior(jr.PRNGKey(3), params, y_observed)
 
     plot_posterior(inference_result)
@@ -42,5 +45,6 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--use-spf", action="store_true", default=True)
+    parser.add_argument("--n-iter", type=int, default=1_000)
     args = parser.parse_args()
-    run(False)
+    run(args.use_spf, args.n_iter)

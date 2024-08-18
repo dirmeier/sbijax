@@ -3,7 +3,7 @@
 Demonstrates neural approximate sufficient statistics with SMCABC on the
 simple likelihood complex posterior model.
 """
-
+import argparse
 
 import distrax
 import jax
@@ -60,7 +60,7 @@ def distance_fn(y_simulated, y_observed):
     return dist
 
 
-def run():
+def run(n_rounds):
     y_observed = jnp.array([[
         -0.9707123,
         -2.9461224,
@@ -83,7 +83,7 @@ def run():
 
     model_smc = SMCABC(fns, summary_fn, distance_fn)
     inference_results, _ = model_smc.sample_posterior(
-        jr.PRNGKey(3), y_observed, n_rounds=10, n_particles=5_000, eps_step=0.825, ess_min=2_000
+        jr.PRNGKey(3), y_observed, n_rounds=n_rounds, n_particles=5_000, eps_step=0.825, ess_min=2_000
     )
 
     samples = inference_data_as_dictionary(inference_results.posterior)["theta"]
@@ -100,6 +100,8 @@ def run():
     plt.show()
 
 
-
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n-rounds", type=int, default=10)
+    args = parser.parse_args()
+    run(args.n_rounds)
