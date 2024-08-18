@@ -35,7 +35,13 @@ jobs:
           pip install .
       - name: Run tests
         run: |
-            python examples/autoregressive_inference_surjection.py --n-iter 10
-            python examples/conditional_density_estimation.py --n-iter 10 --model coupling
-            python examples/conditional_density_estimation.py --n-iter 10 --model autoregressive
-            python examples/coupling_inference_surjection.py --n-iter 10
+            python examples/bivariate_gaussian-smcabc.py --n-rounds 1
+            python examples/mixture_model-cmpe.py --n-iter 10
+            python examples/mixture_model-nle.py --n-iter 10
+            python examples/mixture_model-nle.py --n-iter 10 --use-spf
+            python examples/mixture_model-npe.py --n-iter 10
+            python examples/mixture_model-nre.py --n-iter 10
+            python examples/slcp-fmpe.py --n-iter 10
+            python examples/slcp-nass_nle.py --n-iter 10 --n-rounds 1
+            python examples/slcp-nass_smcabc.py --n-rounds 1
+            python examples/slcp-snle.py --n-iter 10

@@ -44,7 +44,7 @@ def run(use_spf, n_iter):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--use-spf", action="store_true", default=True)
+    parser.add_argument("--use-spf", action="store_true", default=False)
     parser.add_argument("--n-iter", type=int, default=1_000)
     args = parser.parse_args()
     run(args.use_spf, args.n_iter)

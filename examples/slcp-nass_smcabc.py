@@ -102,6 +102,6 @@ def run(n_rounds):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n-rounds", type=int, default=10)
+    parser.add_argument("--n-rounds", type=int, default=15)
     args = parser.parse_args()
     run(args.n_rounds)

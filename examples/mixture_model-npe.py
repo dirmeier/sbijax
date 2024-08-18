@@ -45,6 +45,6 @@ def run(n_iter):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n-iter", type=int, default=10)
+    parser.add_argument("--n-iter", type=int, default=1_000)
     args = parser.parse_args()
     run(args.n_iter)
