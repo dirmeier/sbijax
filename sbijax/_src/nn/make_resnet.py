@@ -53,7 +53,7 @@ class _Resnet(hk.Module):
         n_layers: int,
         hidden_size: int,
         activation: Callable = jax.nn.relu,
-        dropout_rate: float = 0.2,
+        dropout_rate: float = 0.1,
         do_batch_norm: bool = True,
         batch_norm_decay: float = 0.1,
     ):

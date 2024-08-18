@@ -3,7 +3,7 @@
 Demonstrates neural approximate sufficient statistics with SMCABC on the
 simple likelihood complex posterior model.
 """
-
+import argparse
 
 import distrax
 import jax
@@ -60,7 +60,7 @@ def distance_fn(y_simulated, y_observed):
     return dist
 
 
-def run():
+def run(n_rounds, n_iter):
     y_observed = jnp.array([[
         -0.9707123,
         -2.9461224,
@@ -72,10 +72,10 @@ def run():
         -2.4271638,
     ]])
     fns = prior_fn, simulator_fn
-    model_nass = NASS(fns, make_nass_net([64, 64, 5], [64, 64, 1]))
+    model_nass = NASS(fns, make_nass_net(5, (64, 64)))
 
     data, _ = model_nass.simulate_data(jr.PRNGKey(1), n_simulations=20_000)
-    params_nass, _ = model_nass.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25)
+    params_nass, _ = model_nass.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter)
 
     def summary_fn(y):
         s = model_nass.summarize(params_nass, y)
@@ -83,7 +83,7 @@ def run():
 
     model_smc = SMCABC(fns, summary_fn, distance_fn)
     inference_results, _ = model_smc.sample_posterior(
-        jr.PRNGKey(3), y_observed, n_rounds=10, n_particles=5_000, eps_step=0.825, ess_min=2_000
+        jr.PRNGKey(3), y_observed, n_rounds=n_rounds, n_particles=5_000, eps_step=0.825, ess_min=2_000
     )
 
     samples = inference_data_as_dictionary(inference_results.posterior)["theta"]
@@ -100,6 +100,9 @@ def run():
     plt.show()
 
 
-
 if __name__ == "__main__":
-    run()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n-rounds", type=int, default=15)
+    parser.add_argument("--n-iter", type=int, default=1_000)
+    args = parser.parse_args()
+    run(args.n_rounds, args.n_iter)
