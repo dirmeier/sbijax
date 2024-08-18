@@ -8,7 +8,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from tqdm import tqdm
 
-from sbijax._src._sbi_base import SBI
+from sbijax._src._ne_base import NE
 from sbijax._src.util.dataloader import as_numpy_iterator_from_slices
 from sbijax._src.util.early_stopping import EarlyStopping
 
@@ -31,7 +31,7 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
 
 
 # ruff: noqa: PLR0913, E501
-class NASS(SBI):
+class NASS(NE):
     """Neural approximate summary statistics.
 
     Implements the NASS algorithm introduced in :cite:t:`chen2023learning`.
@@ -64,9 +64,11 @@ class NASS(SBI):
         Chen, Yanzhi et al. "Neural Approximate Sufficient Statistics for Implicit Models". ICLR, 2021
     """
 
+    def sample_posterior(self, rng_key, params, observable, *args, **kwargs):
+        raise NotImplementedError()
+
     def __init__(self, model_fns, summary_net):
-        super().__init__(model_fns)
-        self.model = summary_net
+        super().__init__(model_fns, summary_net)
 
     # pylint: disable=arguments-differ,too-many-locals
     def fit(
@@ -207,3 +209,14 @@ class NASS(SBI):
             batch_key, rng_key = jr.split(rng_key)
             losses += body_fn(batch_key, **batch)
         return losses
+
+    def simulate_data(
+        self,
+        rng_key,
+        *,
+        n_simulations=1000,
+        **kwargs,
+    ):
+        return super().simulate_data(
+            rng_key, n_simulations=n_simulations, **kwargs
+        )

@@ -8,7 +8,9 @@ from matplotlib.ticker import AutoLocator, MaxNLocator
 
 
 def plot_trace(
-    inference_data: az.InferenceData, axes: np.ndarray[pyplot.Axes] = None
+    inference_data: az.InferenceData,
+    axes: np.ndarray[pyplot.Axes] = None,
+    **kwargs,
 ) -> np.ndarray[pyplot.Axes]:
     """MCMC trace plot.
 
@@ -16,6 +18,7 @@ def plot_trace(
         inference_data: an inference data object received from calling
             `sample_posterior` of an SBI algorithm
         axes: an array of matplotlib axes
+        **kwargs: additional parameters passed to Arviz
 
     Returns:
         the same array of matplotlib axes with added plots
@@ -23,7 +26,7 @@ def plot_trace(
     n_dim = len(inference_data.posterior.data_vars)
     if axes is None:
         _, axes = pyplot.subplots(nrows=n_dim, ncols=2)
-    axes = az.plot_trace(inference_data, axes=axes.reshape(n_dim, 2))
+    axes = az.plot_trace(inference_data, axes=axes.reshape(n_dim, 2), **kwargs)
     for ax in axes.flatten():
         ax.yaxis.set_major_locator(MaxNLocator(5))
     plt.tight_layout()

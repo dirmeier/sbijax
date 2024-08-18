@@ -103,7 +103,7 @@ def _make_maf(
                     bijector_fn=_bijector_fn,
                     conditioner=MADE(
                         n_dim_curr_layer,
-                        list(hidden_sizes) + [n_dim_curr_layer * 2],
+                        list(hidden_sizes),
                         2,
                         w_init=hk.initializers.TruncatedNormal(0.001),
                         b_init=jnp.zeros,
@@ -118,7 +118,7 @@ def _make_maf(
                     _decoder_fn(curr_dim - n_latent, list(hidden_sizes)),
                     conditioner=MADE(
                         n_latent,
-                        list(hidden_sizes) + [n_dim_curr_layer * 2],
+                        list(hidden_sizes),
                         2,
                         w_init=hk.initializers.TruncatedNormal(0.001),
                         b_init=jnp.zeros,
