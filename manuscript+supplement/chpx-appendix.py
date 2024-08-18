@@ -20,13 +20,12 @@
 
 # %%
 import haiku as hk
-%matplotlib inline
 import matplotlib.pyplot as plt
-import sbijax
-
-from jax import numpy as jnp, random as jr
+from jax import numpy as jnp
+from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
+import sbijax
 
 # %% [markdown]
 # ## Generative model
@@ -39,11 +38,12 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 # y \mid \theta &\sim 0.5 \ \mathcal{N}_2(\theta, I) + 0.5 \ \mathcal{N}_2(\theta, 0.01 I)
 # \end{align}
 
+
 # %%
 def prior_fn():
-    prior = tfd.JointDistributionNamed(dict(
-        theta=tfd.Normal(jnp.zeros(2), 1)
-    ), batch_ndims=0)
+    prior = tfd.JointDistributionNamed(
+        dict(theta=tfd.Normal(jnp.zeros(2), 1)), batch_ndims=0
+    )
     return prior
 
 
@@ -68,10 +68,12 @@ y_observed = jnp.array([-1.0, 1.0])
 # ## NUTS
 
 # %%
+from functools import partial
+
 import arviz as az
+
 from sbijax import as_inference_data
 from sbijax.mcmc import sample_with_nuts
-from functools import partial
 
 
 # %%
@@ -82,8 +84,10 @@ def likelihood_fn(y, theta):
         mixture_distribution=mix,
         components_distribution=tfd.MultivariateNormalDiag(
             jnp.concatenate([mean, mean], axis=0),
-            jnp.concatenate([jnp.full((1, 2), 1.0), jnp.full((1, 2), 0.01)], axis=0),
-        )
+            jnp.concatenate(
+                [jnp.full((1, 2), 1.0), jnp.full((1, 2), 0.01)], axis=0
+            ),
+        ),
     )
     ll = likelihood.log_prob(y)
     return ll
@@ -100,9 +104,7 @@ def log_density_fn(theta, y):
 # %%
 log_density_partial = partial(log_density_fn, y=y_observed)
 samples = sample_with_nuts(
-    jr.PRNGKey(0),
-    log_density_partial,
-    prior_fn().sample
+    jr.PRNGKey(0), log_density_partial, prior_fn().sample
 )
 inference_results = as_inference_data(samples, jnp.squeeze(y_observed))
 
@@ -124,6 +126,7 @@ plt.show()
 
 # %%
 import optax
+
 from sbijax import CMPE
 from sbijax._src.nn.make_consistency_model import ConsistencyModel
 
@@ -159,7 +162,7 @@ params, info = model.fit(
     jr.PRNGKey(2),
     data=data,
     optimizer=optax.adam(1e-3),
-    n_early_stopping_patience=25
+    n_early_stopping_patience=25,
 )
 
 # %%
@@ -193,14 +196,12 @@ def make_model():
 fns = prior_fn, simulator_fn
 model = NRE(fns, make_model())
 
-data, _ = model.simulate_data(
-    jr.PRNGKey(1), n_simulations=10000
-)
+data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10000)
 params, info = model.fit(
     jr.PRNGKey(2),
     data=data,
     optimizer=optax.adam(1e-3),
-    n_early_stopping_patience=25
+    n_early_stopping_patience=25,
 )
 
 # %%
@@ -217,7 +218,6 @@ plt.show()
 # ## NPE
 
 # %%
-from sbijax import NPE
 from surjectors import (
     Chain,
     MaskedAutoregressive,
@@ -227,6 +227,8 @@ from surjectors import (
 )
 from surjectors.nn import MADE
 from surjectors.util import unstack
+
+from sbijax import NPE
 
 
 # %%
@@ -242,7 +244,9 @@ def make_flow(dim):
             layer = MaskedAutoregressive(
                 bijector_fn=_bijector_fn,
                 conditioner=MADE(
-                    dim, [50, 50], 2,
+                    dim,
+                    [50, 50],
+                    2,
                     w_init=hk.initializers.TruncatedNormal(0.001),
                     b_init=jnp.zeros,
                 ),
@@ -267,15 +271,13 @@ def make_flow(dim):
 fns = prior_fn, simulator_fn
 model = NPE(fns, make_flow(2))
 
-data, _ = model.simulate_data(
-    jr.PRNGKey(1), n_simulations=10000
-)
+data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10000)
 params, info = model.fit(
     jr.PRNGKey(2),
     data=data,
     n_iter=1000,
     optimizer=optax.adam(1e-3),
-    n_early_stopping_patience=25
+    n_early_stopping_patience=25,
 )
 
 # %%
@@ -297,7 +299,6 @@ from sbijax import NLE
 
 # %%
 def make_mdn(hidden_sizes=[50, 50], n_components=10, n_dimension=2):
-
     @hk.transform
     def mdn(method, y, x):
         n = x.shape[0]
@@ -308,12 +309,13 @@ def make_mdn(hidden_sizes=[50, 50], n_components=10, n_dimension=2):
 
         mixture = tfd.MixtureSameFamily(
             tfd.Categorical(logits=logits),
-                tfd.MultivariateNormalDiag(
+            tfd.MultivariateNormalDiag(
                 mu.reshape(n, n_components, n_dimension),
-                    jnp.exp(sigma.reshape(n, n_components, n_dimension)),
-            )
+                jnp.exp(sigma.reshape(n, n_components, n_dimension)),
+            ),
         )
         return mixture.log_prob(y)
+
     return mdn
 
 

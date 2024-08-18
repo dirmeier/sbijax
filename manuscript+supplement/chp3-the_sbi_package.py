@@ -20,10 +20,7 @@
 
 # %%
 import jax
-import sbijax
-%matplotlib inline
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator, AutoLocator
 
 # %% [markdown]
 # ## 3.1 Model definition
@@ -37,17 +34,24 @@ from matplotlib.ticker import MaxNLocator, AutoLocator
 # \end{align}
 #
 # Using TensorFlow Probability, the prior model and simulator are implemented like this:
-
 # %%
-from jax import numpy as jnp, random as jr
+from jax import numpy as jnp
+from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
+import sbijax
+
+
 def prior_fn():
-    prior = tfd.JointDistributionNamed(dict(
-        mean=tfd.Normal(jnp.zeros(2), 1.0),
-        scale=tfd.HalfNormal(jnp.ones(1)),
-    ), batch_ndims=0)
+    prior = tfd.JointDistributionNamed(
+        dict(
+            mean=tfd.Normal(jnp.zeros(2), 1.0),
+            scale=tfd.HalfNormal(jnp.ones(1)),
+        ),
+        batch_ndims=0,
+    )
     return prior
+
 
 def simulator_fn(seed: jr.PRNGKey, theta: dict[str, jax.Array]):
     p = tfd.Normal(jnp.zeros_like(theta["mean"]), 1.0)
@@ -86,6 +90,7 @@ import haiku as hk
 import surjectors
 import surjectors.nn
 import surjectors.util
+
 from sbijax import NLE
 
 # %%
@@ -149,10 +154,7 @@ data
 # We then fit the model using the typical flow matching loss.
 
 # %%
-params, losses = model.fit(
-    jr.PRNGKey(2),
-    data=data
-)
+params, losses = model.fit(jr.PRNGKey(2), data=data)
 
 # %% [markdown]
 # Finally, we sample from the posterior distribution for a specific observation $y_{\text{obs}}$.
@@ -182,7 +184,9 @@ plt.show()
 
 # %%
 _, axes = plt.subplots(figsize=(9, 4), ncols=2, nrows=2)
-sbijax.plot_trace(inference_results, axes=axes, compact_prop={'color': ['#636363', '#b26679']})
+sbijax.plot_trace(
+    inference_results, axes=axes, compact_prop={"color": ["#636363", "#b26679"]}
+)
 for i, ax in enumerate(axes.flatten()):
     if i % 2 == 0:
         ax.set_yticks([0, 0.5, 1, 1.5])

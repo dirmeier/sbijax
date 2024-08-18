@@ -8,7 +8,6 @@ description = " Simulation-based inference in JAX"
 authors = [{name = "Simon Dirmeier", email = "sfyrbnd@pm.me"}]
 readme = "README.md"
 license = "Apache-2.0"
-homepage = "https://github.com/dirmeier/sbijax"
 keywords = [ "sbi", "abc", "simulation-based inference", "approximate Bayesian computation"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -38,6 +37,7 @@ dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/dirmeier/sbijax"
+Documentation = "https://sbijax.readthedocs.io"
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -67,9 +67,13 @@ test = 'pytest -v --doctest-modules --cov=./sbijax --cov-report=xml sbijax'
 [tool.bandit]
 skips = ["B101"]
 
+[tool.mypy]
+exclude = ["manuscript+supplement"]
+
+
 [tool.ruff]
 line-length = 80
-exclude = ["*_test.py", "docs/**", "examples/**"]
+exclude = ["*_test.py", "docs/**", "examples/**", "manuscript+supplement/**"]
 
 [tool.ruff.lint]
 select = ["E", "F"]

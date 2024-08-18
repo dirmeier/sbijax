@@ -25,7 +25,6 @@ import numpy as np
 import optax
 import sbijax
 import seaborn as sns
-%matplotlib inline
 import matplotlib.pyplot as plt
 
 from matplotlib.ticker import AutoLocator, MaxNLocator
@@ -151,8 +150,8 @@ def simulator_fn(seed, theta):
     xs = xs.at[:, :, :, 0].set(s0 * us[:, :, :, 0] + m0)
     y = xs.at[:, :, :, 1].set(
         s1 * (r * us[:, :, :, 0] + jnp.sqrt(1.0 - r**2) * us[:, :, :, 1]) + m1
-    )    
-    y = y.reshape((*theta.shape[:1], 8))    
+    )
+    y = y.reshape((*theta.shape[:1], 8))
     return y
 
 
@@ -223,8 +222,8 @@ plt.tight_layout()
 plt.savefig("./figs/example-rhat_ress-slice.pdf", dpi=200)
 plt.show()
 
-    # %%
-    plot_ess_and_trace(slice_inference_data)
+# %%
+plot_ess_and_trace(slice_inference_data)
 plt.tight_layout()
 plt.savefig("./figs/example-triple_plot-slice.pdf", dpi=200)
 plt.show()
@@ -246,7 +245,7 @@ from sbijax.nn import make_maf
 n_dim_data = 8
 n_layer_dimensions, hidden_sizes = (8, 8, 5, 5, 5), (64, 64)
 neural_network = make_maf(
-    n_dim_data, 
+    n_dim_data,
     n_layer_dimensions=n_layer_dimensions,
     hidden_sizes=hidden_sizes
 )
@@ -255,7 +254,8 @@ fns = prior_fn, simulator_fn
 snle = SNLE(fns, neural_network)
 
 # %%
-data, snle_params = None, {}
+data = None
+snle_params: dict[str, np.array] = {}
 for i in range(15):
     data, _ = snle.simulate_data_and_possibly_append(
         jr.fold_in(jr.PRNGKey(1), i),

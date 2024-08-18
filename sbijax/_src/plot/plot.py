@@ -18,6 +18,7 @@ def plot_trace(
         inference_data: an inference data object received from calling
             `sample_posterior` of an SBI algorithm
         axes: an array of matplotlib axes
+        **kwargs: additional parameters passed to Arviz
 
     Returns:
         the same array of matplotlib axes with added plots
