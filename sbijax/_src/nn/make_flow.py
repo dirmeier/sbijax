@@ -4,6 +4,7 @@ from typing import Callable, Optional
 import distrax
 import haiku as hk
 import jax
+import surjectors
 from jax import numpy as jnp
 from surjectors import (
     AffineMaskedAutoregressiveInferenceFunnel,
@@ -17,6 +18,7 @@ from surjectors import (
 from surjectors.nn import MADE
 from surjectors.nn import make_mlp as surjectors_mlp
 from surjectors.util import make_alternating_binary_mask, unstack
+from tensorflow_probability.substrates.jax import distributions as tfd
 
 
 # ruff: noqa: PLR0913, E501
@@ -74,7 +76,7 @@ def _make_maf(
 ):
     def _bijector_fn(params):
         means, log_scales = unstack(params, -1)
-        return distrax.ScalarAffine(means, jnp.exp(log_scales))
+        return surjectors.ScalarAffine(means, jnp.exp(log_scales))
 
     def _decoder_fn(n_dim, hidden_sizes):
         decoder_net = surjectors_mlp(
@@ -85,9 +87,7 @@ def _make_maf(
         def _fn(z):
             params = decoder_net(z)
             mu, log_scale = jnp.split(params, 2, -1)
-            return distrax.Independent(
-                distrax.Normal(mu, jnp.exp(log_scale)), 1
-            )
+            return tfd.Independent(tfd.Normal(mu, jnp.exp(log_scale)), 1)
 
         return _fn
 
@@ -137,8 +137,8 @@ def _make_maf(
             layers.append(Permutation(order, 1))
         chain = Chain(layers[:-1])
 
-        base_distribution = distrax.Independent(
-            distrax.Normal(jnp.zeros(curr_dim), jnp.ones(curr_dim)),
+        base_distribution = tfd.Independent(
+            tfd.Normal(jnp.zeros(curr_dim), jnp.ones(curr_dim)),
             1,
         )
         td = TransformedDistribution(base_distribution, chain)
@@ -221,7 +221,7 @@ def _make_spf(
         def fn(z):
             params = surjectors_mlp(dims, activation=activation)(z)
             mu, log_scale = jnp.split(params, 2, -1)
-            return distrax.Independent(distrax.Normal(mu, jnp.exp(log_scale)))
+            return tfd.Independent(tfd.Normal(mu, jnp.exp(log_scale)))
 
         return fn
 
@@ -271,8 +271,8 @@ def _make_spf(
             layers.append(layer)
         chain = Chain(layers)
 
-        base_distribution = distrax.Independent(
-            distrax.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
+        base_distribution = tfd.Independent(
+            tfd.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
             1,
         )
         td = TransformedDistribution(base_distribution, chain)

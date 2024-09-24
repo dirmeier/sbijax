@@ -1,4 +1,3 @@
-import distrax
 import tensorflow_probability.substrates.jax as tfp
 from jax import random as jr
 
@@ -49,6 +48,6 @@ def sample_with_slice(
 
 
 # pylint: disable=missing-function-docstring
-def _slice_init(rng_key, n_chains, prior: distrax.Distribution):
+def _slice_init(rng_key, n_chains, prior):
     initial_positions = prior(seed=rng_key, sample_shape=(n_chains,))
     return initial_positions

@@ -18,6 +18,3 @@ lints:
 
 format:
 	hatch run test:format
-
-docs:
-	cd docs && make html

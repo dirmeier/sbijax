@@ -1,5 +1,4 @@
 import blackjax as bj
-import distrax
 import jax
 from jax import random as jr
 
@@ -47,7 +46,7 @@ def sample_with_mala(
 
 
 # pylint: disable=missing-function-docstring,no-member
-def _mala_init(rng_key, n_chains, prior: distrax.Distribution, lp):
+def _mala_init(rng_key, n_chains, prior, lp):
     init_key, rng_key = jr.split(rng_key)
     initial_positions = prior(seed=init_key, sample_shape=(n_chains,))
 

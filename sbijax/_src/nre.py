@@ -266,7 +266,7 @@ class NRE(NE):
         rng_key: Array,
         params: Optional[Params] = None,
         observable: Array = None,
-        data: NamedTuple = None,
+        data: Optional[NamedTuple] = None,
         n_simulations: int = 1_000,
         n_chains: int = 4,
         n_samples: int = 2_000,

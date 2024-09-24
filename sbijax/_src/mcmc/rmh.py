@@ -1,5 +1,4 @@
 import blackjax as bj
-import distrax
 import jax
 from jax import numpy as jnp
 from jax import random as jr
@@ -45,7 +44,7 @@ def sample_with_rmh(
 
 
 # pylint: disable=missing-function-docstring,no-member
-def _mh_init(rng_key, n_chains, prior: distrax.Distribution, lp):
+def _mh_init(rng_key, n_chains, prior, lp):
     init_key, rng_key = jr.split(rng_key)
     initial_positions = prior(seed=init_key, sample_shape=(n_chains,))
     kernel = bj.rmh(
@@ -54,6 +53,5 @@ def _mh_init(rng_key, n_chains, prior: distrax.Distribution, lp):
             jnp.full_like(initial_positions.shape[1], 0.25)
         ),
     )
-    initial_positions = {"theta": initial_positions}
     initial_state = jax.vmap(kernel.init)(initial_positions)
     return initial_state, kernel.step

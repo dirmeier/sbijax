@@ -1,9 +1,9 @@
 from typing import Callable
 
-import distrax
 import haiku as hk
 import jax
 from jax import numpy as jnp
+from tensorflow_probability.substrates.jax import distributions as tfd
 
 __all__ = ["ConsistencyModel", "make_cm"]
 
@@ -47,7 +47,7 @@ class ConsistencyModel(hk.Module):
         self._network = transform
         self._t_max = t_max
         self._t_min = t_min
-        self._base_distribution = distrax.Normal(jnp.zeros(n_dimension), 1.0)
+        self._base_distribution = tfd.Normal(jnp.zeros(n_dimension), 1.0)
 
     def __call__(self, method, **kwargs):
         """Aplpy the flow.

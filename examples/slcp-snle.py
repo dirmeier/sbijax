@@ -5,11 +5,11 @@ Demonstrates sequential surjective neural likelihood estimation on the simple
 """
 import argparse
 
-import distrax
 import haiku as hk
 import jax
 import matplotlib.pyplot as plt
 import optax
+import surjectors
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
@@ -49,7 +49,7 @@ def simulator_fn(seed, theta):
         return m0, m1, s0, s1, r
 
     m0, m1, s0, s1, r = _unpack_params(theta)
-    us = distrax.Normal(0.0, 1.0).sample(
+    us = tfd.Normal(0.0, 1.0).sample(
         seed=us_key, sample_shape=(theta.shape[0], theta.shape[1], 4, 2)
     )
     xs = jnp.empty_like(us)
@@ -67,13 +67,13 @@ def likelihood_fn(theta, y):
     corr = s1 * s2 * jnp.tanh(theta[4])
     cov = jnp.array([[s1**2, corr], [corr, s2**2]])
     cov = jsp.linalg.block_diag(*[cov for _ in range(4)])
-    p = distrax.MultivariateNormalFullCovariance(mu, cov)
+    p = tfd.MultivariateNormalFullCovariance(mu, cov)
     return p.log_prob(y)
 
 
 def log_density_fn(theta, y):
-    prior_lp = distrax.Independent(
-        distrax.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
+    prior_lp = tfd.Independent(
+        tfd.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)), 1
     ).log_prob(theta)
     likelihood_lp = likelihood_fn(theta, y)
 
@@ -84,7 +84,7 @@ def log_density_fn(theta, y):
 def make_model(dim, use_surjectors):
     def _bijector_fn(params):
         means, log_scales = unstack(params, -1)
-        return distrax.ScalarAffine(means, jnp.exp(log_scales))
+        return surjectors.ScalarAffine(means, jnp.exp(log_scales))
 
     def _decoder_fn(n_dim):
         decoder_net = make_mlp(
@@ -95,8 +95,8 @@ def make_model(dim, use_surjectors):
         def _fn(z):
             params = decoder_net(z)
             mu, log_scale = jnp.split(params, 2, -1)
-            return distrax.Independent(
-                distrax.Normal(mu, jnp.exp(log_scale)), 1
+            return tfd.Independent(
+                tfd.Normal(mu, jnp.exp(log_scale)), 1
             )
 
         return _fn
@@ -140,8 +140,8 @@ def make_model(dim, use_surjectors):
             layers.append(Permutation(order, 1))
         chain = Chain(layers)
 
-        base_distribution = distrax.Independent(
-            distrax.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
+        base_distribution = tfd.Independent(
+            tfd.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
             reinterpreted_batch_ndims=1,
         )
         td = TransformedDistribution(base_distribution, chain)

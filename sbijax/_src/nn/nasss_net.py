@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Callable
+from typing import Callable, Optional
 
 import haiku as hk
 import jax
@@ -14,12 +14,12 @@ class NASSSNet(NASSNet):
 
     def __init__(
         self,
-        summary_net_dimensions: Iterable[int] = None,
-        sec_summary_net_dimensions: Iterable[int] = None,
-        critic_net_dimensions: Iterable[int] = None,
-        summary_net: Callable = None,
-        sec_summary_net: Callable = None,
-        critic_net: Callable = None,
+        summary_net_dimensions: Optional[Iterable[int]] = None,
+        sec_summary_net_dimensions: Optional[Iterable[int]] = None,
+        critic_net_dimensions: Optional[Iterable[int]] = None,
+        summary_net: Optional[Callable] = None,
+        sec_summary_net: Optional[Callable] = None,
+        critic_net: Optional[Callable] = None,
     ):
         """Constructs a SNASSSNet.
 

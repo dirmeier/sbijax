@@ -5,7 +5,6 @@ simple likelihood complex posterior model.
 """
 import argparse
 
-import distrax
 import jax
 from jax import numpy as jnp
 from jax import random as jr
@@ -39,7 +38,7 @@ def simulator_fn(seed, theta):
         return m0, m1, s0, s1, r
 
     m0, m1, s0, s1, r = _unpack_params(theta)
-    us = distrax.Normal(0.0, 1.0).sample(
+    us = tfd.Normal(0.0, 1.0).sample(
         seed=us_key, sample_shape=(theta.shape[0], theta.shape[1], 4, 2)
     )
     xs = jnp.empty_like(us)
