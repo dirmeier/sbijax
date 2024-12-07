@@ -297,6 +297,7 @@ class NPE(NE):
                 jax.vmap(unravel_fn)(proposal)
             )
             proposal_accepted = proposal[jnp.isfinite(proposal_probs)]
+            #proposal_accepted = proposal
             if thetas is None:
                 thetas = proposal_accepted
             else:
@@ -305,9 +306,12 @@ class NPE(NE):
         self.n_total_simulations += n_total_simulations_round
 
         ess = float(thetas.shape[0] / n_total_simulations_round)
-        thetas = jax.tree_map(
-            lambda x: x.reshape(1, *x.shape),
-            jax.vmap(unravel_fn)(thetas[:n_samples]),
-        )
+
+        def reshape(p):
+            if p.ndim == 1: p = p.reshape(p.shape[0], 1)
+            p = p.reshape(1, *p.shape)
+            return p
+
+        thetas = jax.tree_map(reshape, jax.vmap(unravel_fn)(thetas[:n_samples]))
         inference_data = as_inference_data(thetas, jnp.squeeze(observable))
         return inference_data, ess
