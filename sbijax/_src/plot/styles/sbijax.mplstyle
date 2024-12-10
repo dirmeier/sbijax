@@ -22,6 +22,7 @@ xtick.major.size: 2
 ytick.major.size: 2
 
 grid.alpha: 0.5
+grid.linewidth: 0.5
 
 legend.frameon: False
 legend.loc: best
