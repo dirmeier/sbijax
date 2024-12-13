@@ -1,0 +1,7 @@
+venv/
+venv/*
+
+figs/
+figs/*
+
+eeg_data.pkl
