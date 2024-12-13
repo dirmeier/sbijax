@@ -270,7 +270,8 @@ class FMPE(NE):
         ess = float(thetas.shape[0] / n_total_simulations_round)
 
         def reshape(p):
-            if p.ndim == 1: p = p.reshape(p.shape[0], 1)
+            if p.ndim == 1:
+                p = p.reshape(p.shape[0], 1)
             p = p.reshape(1, *p.shape)
             return p
 

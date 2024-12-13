@@ -297,7 +297,7 @@ class NPE(NE):
                 jax.vmap(unravel_fn)(proposal)
             )
             proposal_accepted = proposal[jnp.isfinite(proposal_probs)]
-            #proposal_accepted = proposal
+            # proposal_accepted = proposal
             if thetas is None:
                 thetas = proposal_accepted
             else:
@@ -308,7 +308,8 @@ class NPE(NE):
         ess = float(thetas.shape[0] / n_total_simulations_round)
 
         def reshape(p):
-            if p.ndim == 1: p = p.reshape(p.shape[0], 1)
+            if p.ndim == 1:
+                p = p.reshape(p.shape[0], 1)
             p = p.reshape(1, *p.shape)
             return p
 

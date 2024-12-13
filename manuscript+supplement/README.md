@@ -7,7 +7,7 @@ Install a new Python3.11 virtual environment and activate it using:
 ```shell
 python3.11 -m venv venv
 source venv/bin/activate
-``` 
+```
 
 Install `sbijax` and all dependencies using:
 ```shell
@@ -34,7 +34,7 @@ This opens Jupyter on your web browser. You can now run any of the three noteboo
 
 ## Usage with Python files
 
-For each section that contains code and figures, we also provide separate Python files. 
+For each section that contains code and figures, we also provide separate Python files.
 
 To execute each and reproduce the results of a section, call:
 ```shell
