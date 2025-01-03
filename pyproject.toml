@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-zipped-directory"]
 build-backend = "hatchling.build"
 
 [project]
@@ -34,6 +34,10 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+examples = [
+  "jrnmm @ git+https://github.com/dirmeier/jrnmm@v0.1.0.post1",
+]
 [project.urls]
 Homepage = "https://github.com/dirmeier/sbijax"
 Documentation = "https://sbijax.readthedocs.io"
@@ -48,7 +52,23 @@ path = "sbijax/__init__.py"
 exclude = [
     "/.github",
     "./gitignore",
-    "/.pre-commit-config.yaml"
+    "/.pre-commit-config.yaml",
+    "manuscript+supplement",
+    "docs"
+]
+
+[tool.hatch.build.targets.zipped-directory]
+exclude = [
+    "/.gitattributes",
+    "/.gitignore",
+    "/.gitlint",
+    "/.github",
+    "./gitignore",
+    "/.pre-commit-config.yaml",
+    "/.readthedocs.yaml",
+    "/Makefile",
+    "/examples",
+    "/manuscript+supplement",
 ]
 
 [tool.hatch.envs.test]

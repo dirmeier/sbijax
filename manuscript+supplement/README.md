@@ -30,17 +30,19 @@ cd experimental_code
 jupyter lab
 ```
 
-This opens Jupyter on your web browser. You can now run any of the three notebooks.
+This opens Jupyter on your web browser. You can now run any of the four notebooks.
 
 ## Usage with Python files
 
-For each section that contains code and figures, we also provide separate Python files.
+For each section that contains code and figures, we also provide separate Python files which
+are exported from the notebooks.
 
 To execute each and reproduce the results of a section, call:
 ```shell
 cd experimental_code/scripts
 python chp3-the_sbi_package.py
 python chp4-examples.py
+python chp5-real_data_example.py
 python chpx-appendix.py
 ```
 
