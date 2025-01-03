@@ -3,6 +3,7 @@ diffrax==0.6.0
 dm-haiku==0.0.12
 jax==0.4.31
 jaxlib==0.4.31
+jrnmm@git+https://github.com/dirmeier/jrnmm@v0.1.0.post1
 jupyterlab==4.3.1
 matplotlib==3.9.2
 mne==1.8.0

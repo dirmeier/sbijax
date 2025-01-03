@@ -48,7 +48,13 @@ class NPE(NE):
         Greenberg, David, et al. "Automatic posterior transformation for likelihood-free inference." International Conference on Machine Learning, 2019.
     """
 
-    def __init__(self, model_fns, density_estimator, num_atoms=10):
+    def __init__(
+        self,
+        model_fns,
+        density_estimator,
+        num_atoms=10,
+        use_event_space_bijections=True,
+    ):
         """Construct an SNP object.
 
         Args:
@@ -59,10 +65,22 @@ class NPE(NE):
             density_estimator: a (neural) conditional density estimator
                 to model the posterior distribution
             num_atoms: number of atomic atoms
+            use_event_space_bijections: if True uses a unconstraining bijection
+                to map the constrained parameters onto the real line and do
+                training there
         """
         super().__init__(model_fns, density_estimator)
         self.num_atoms = num_atoms
         self.n_round = 0
+        prior = model_fns[0]()
+        # TODO(simon): check out event bijections
+        if (
+            hasattr(prior, "experimental_default_event_space_bijector")
+            and use_event_space_bijections
+        ):
+            self._prior_bijectors = (
+                prior.experimental_default_event_space_bijector()
+            )
 
     # ruff: noqa: D417
     def fit(
@@ -126,20 +144,32 @@ class NPE(NE):
         state = optimizer.init(params)
 
         n_round = self.n_round
+        _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(1)))
+
         if n_round == 0:
 
             def loss_fn(params, rng, **batch):
+                theta, y = batch["theta"], batch["y"]
+                log_det = 0
+                if hasattr(self, "_prior_bijectors"):
+                    theta_map = jax.vmap(unravel_fn)(theta)
+                    theta = self._prior_bijectors.inverse(theta_map)
+                    log_det = self._prior_bijectors.inverse_log_det_jacobian(
+                        theta_map
+                    )
+                    theta = jax.vmap(lambda x: ravel_pytree(x)[0])(theta)
                 lp = self.model.apply(
                     params,
                     None,
                     method="log_prob",
-                    y=batch["theta"],
-                    x=batch["y"],
+                    y=theta,
+                    x=y,
                 )
+                lp = lp + log_det
                 return -jnp.mean(lp)
 
         else:
-
+            # TODO(simon): do bijections here? probably
             def loss_fn(params, rng, **batch):
                 lp = self._proposal_posterior_log_prob(
                     params,
@@ -232,15 +262,28 @@ class NPE(NE):
 
     def _validation_loss(self, rng_key, params, val_iter, n_atoms):
         if self.n_round == 0:
+            _, unravel_fn = ravel_pytree(
+                self.prior_sampler_fn(seed=jr.PRNGKey(1))
+            )
 
             def loss_fn(rng, **batch):
+                theta, y = batch["theta"], batch["y"]
+                log_det = 0
+                if hasattr(self, "_prior_bijectors"):
+                    theta_map = jax.vmap(unravel_fn)(theta)
+                    theta = self._prior_bijectors.inverse(theta_map)
+                    log_det = self._prior_bijectors.inverse_log_det_jacobian(
+                        theta_map
+                    )
+                    theta = jax.vmap(lambda x: ravel_pytree(x)[0])(theta)
                 lp = self.model.apply(
                     params,
                     None,
                     method="log_prob",
-                    y=batch["theta"],
-                    x=batch["y"],
+                    y=theta,
+                    x=y,
                 )
+                lp = lp + log_det
                 return -jnp.mean(lp)
 
         else:
@@ -262,7 +305,14 @@ class NPE(NE):
         return loss
 
     def sample_posterior(
-        self, rng_key, params, observable, *, n_samples=4_000, **kwargs
+        self,
+        rng_key,
+        params,
+        observable,
+        *,
+        n_samples=4_000,
+        check_proposal_probs=True,
+        **kwargs,
     ):
         r"""Sample from the approximate posterior.
 
@@ -271,6 +321,11 @@ class NPE(NE):
             params: a pytree of neural network parameters
             observable: observation to condition on
             n_samples: number of samples to draw
+            check_proposal_probs: check if the proposal draws have finite density
+                and only accept a proposal if it is. This is convenient to turn
+                off if the density estimator has to learn a density of a
+                constrained variable, and the RejectionMC takes a long time to
+                draw valid samples.
 
         Returns:
             returns an array of samples from the posterior distribution of
@@ -293,16 +348,22 @@ class NPE(NE):
                 sample_shape=(n_sim,),
                 x=jnp.tile(observable, [n_sim, 1]),
             )
-            proposal_probs = self.prior_log_density_fn(
-                jax.vmap(unravel_fn)(proposal)
-            )
-            proposal_accepted = proposal[jnp.isfinite(proposal_probs)]
-            # proposal_accepted = proposal
-            if thetas is None:
-                thetas = proposal_accepted
+            if hasattr(self, "_prior_bijectors"):
+                proposal = jax.vmap(unravel_fn)(proposal)
+                proposal = self._prior_bijectors.forward(proposal)
+                proposal_probs = self.prior_log_density_fn(proposal)
+                proposal = jax.vmap(lambda x: ravel_pytree(x)[0])(proposal)
             else:
-                thetas = jnp.vstack([thetas, proposal_accepted])
-            n_curr -= proposal_accepted.shape[0]
+                proposal_probs = self.prior_log_density_fn(
+                    jax.vmap(unravel_fn)(proposal)
+                )
+            if check_proposal_probs:
+                proposal = proposal[jnp.isfinite(proposal_probs)]
+            if thetas is None:
+                thetas = proposal
+            else:
+                thetas = jnp.vstack([thetas, proposal])
+            n_curr -= proposal.shape[0]
         self.n_total_simulations += n_total_simulations_round
 
         ess = float(thetas.shape[0] / n_total_simulations_round)

@@ -14,9 +14,6 @@ Install `sbijax` and all dependencies using:
 pip install -r requirements.txt
 ```
 
-**NOTE**: In addiition, to be able to evaluate the notebook `chp5-real_data_example.ipynb` you need a working
-`R`-installation. For our experiments, we used version `4.4.2 - Pile of Leaves`.
-
 ## Usage with Jupyter notebooks
 
 For each section that contains code and figures, we provide a separate Jupyter notebook.

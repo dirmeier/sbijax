@@ -33,7 +33,7 @@ def run(n_iter):
     y_observed = jnp.array([-2.0, 1.0])
     fns = prior_fn, simulator_fn
     neural_network = make_maf(2)
-    model = NPE(fns, neural_network)
+    model = NPE(fns, neural_network, use_event_space_bijections=False)
 
     data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10_000)
     params, info = model.fit(jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter)
