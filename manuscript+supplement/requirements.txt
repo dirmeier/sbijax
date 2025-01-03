@@ -8,8 +8,7 @@ jupyterlab==4.3.1
 matplotlib==3.9.2
 mne==1.8.0
 moabb==1.1.1
-rpy2==3.5.12
-sbijax@git+https://github.com/dirmeier/sbijax@v0.3.2
+sbijax@git+https://github.com/dirmeier/sbijax@v0.3.3
 session_info==1.0.0
 surjectors==0.3.3
 tfp-nightly==0.25.0-dev20240815
