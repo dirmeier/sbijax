@@ -2,7 +2,7 @@
 
 In order to reproduce the results of the paper, please follow the steps below.
 
-Install a new Python3.11 virtual environment and activate it using:
+Install a new Python 3.11 virtual environment and activate it using:
 
 ```shell
 python3.11 -m venv venv
@@ -46,4 +46,4 @@ python chp5-real_data_example.py
 python chpx-appendix.py
 ```
 
-Calling a Python script creates files in a folder called `fig`.
+Calling a Python script creates files in a folder called `figs`.
