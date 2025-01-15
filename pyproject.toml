@@ -36,7 +36,7 @@ dynamic = ["version"]
 
 [project.optional-dependencies]
 examples = [
-  "jrnmm @ git+https://github.com/dirmeier/jrnmm@v0.1.0.post1",
+  "jrnmm==0.1.1.post2",
 ]
 [project.urls]
 Homepage = "https://github.com/dirmeier/sbijax"
