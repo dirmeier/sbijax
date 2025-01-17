@@ -14,10 +14,10 @@ def make_mdn(
     hidden_sizes: Iterable[int] = (64, 64),
     activation: Callable = jax.nn.relu,
 ):
-    """Create an affine masked autoregressive flow.
+    """Create a mixture density network.
 
-    The MAFs use `n_layers` layers and are parameterized using MADE networks
-    with `hidden_sizes` neurons per layer.
+    The MDN uses `n_components` mixture components each modelling the distribution of
+    a `n_dimension`al data point.
 
     Args:
         n_dimension: dimensionality of data
@@ -28,7 +28,7 @@ def make_mdn(
         activation: a jax activation function
 
     Returns:
-        a normalizing flow model
+        a mixture density network
     """
 
     @hk.transform

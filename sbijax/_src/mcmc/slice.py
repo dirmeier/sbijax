@@ -1,5 +1,7 @@
+import jax
 import tensorflow_probability.substrates.jax as tfp
 from jax import random as jr
+from jax._src.flatten_util import ravel_pytree
 
 
 # ruff: noqa: PLR0913,D417
@@ -30,7 +32,8 @@ def sample_with_slice(
         a JAX array of dimension n_samples \times n_chains \times len_theta
     """
     init_key, rng_key = jr.split(rng_key)
-    initial_states = _slice_init(init_key, n_chains, prior)["theta"]
+    initial_states = _slice_init(init_key, n_chains, prior)
+    initial_states = jax.vmap(lambda x: ravel_pytree(x)[0])(initial_states)
 
     sample_key, rng_key = jr.split(rng_key)
     samples = tfp.mcmc.sample_chain(

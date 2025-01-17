@@ -31,35 +31,6 @@ def _ut(theta_t, theta, times, sigma_min):
     return num / denom
 
 
-# pylint: disable=too-many-locals
-def _cfm_loss(
-    params, rng_key, apply_fn, sigma_min=0.001, is_training=True, **batch
-):
-    theta = batch["theta"]
-    n, _ = theta.shape
-
-    t_key, rng_key = jr.split(rng_key)
-    times = jr.uniform(t_key, shape=(n, 1))
-
-    theta_key, rng_key = jr.split(rng_key)
-    theta_t = _sample_theta_t(theta_key, times, theta, sigma_min)
-
-    train_rng, rng_key = jr.split(rng_key)
-    vs = apply_fn(
-        params,
-        train_rng,
-        method="vector_field",
-        theta=theta_t,
-        time=times,
-        context=batch["y"],
-        is_training=is_training,
-    )
-    uts = _ut(theta_t, theta, times, sigma_min)
-
-    loss = jnp.mean(jnp.square(vs - uts))
-    return loss
-
-
 # ruff: noqa: PLR0913, E501
 class FMPE(NE):
     r"""Flow matching posterior estimation.
@@ -67,7 +38,7 @@ class FMPE(NE):
     Implements the FMPE algorithm introduced in :cite:t:`wilderberger2023flow`.
 
     Args:
-        model_fns: a tuple of calalbles. The first element needs to be a
+        model_fns: a tuple of callables. The first element needs to be a
             function that constructs a tfd.JointDistributionNamed, the second
             element is a simulator function.
         density_estimator: a continuous normalizing flow model
@@ -89,8 +60,9 @@ class FMPE(NE):
         Wildberger, Jonas, et al. "Flow Matching for Scalable Simulation-Based Inference." Advances in Neural Information Processing Systems, 2024.
     """
 
-    def __init__(self, model_fns, density_estimator):
+    def __init__(self, model_fns, density_estimator, sigma_min=0.01):
         super().__init__(model_fns, density_estimator)
+        self.sigma_min = 0.001
 
     def fit(
         self,
@@ -139,6 +111,35 @@ class FMPE(NE):
 
         return params, losses
 
+    # pylint: disable=too-many-locals
+    def get_loss_fn(self):
+        def fn(params, rng_key, apply_fn, is_training=True, **batch):
+            theta = batch["theta"]
+            n, _ = theta.shape
+
+            t_key, rng_key = jr.split(rng_key)
+            times = jr.uniform(t_key, shape=(n, 1))
+
+            theta_key, rng_key = jr.split(rng_key)
+            theta_t = _sample_theta_t(theta_key, times, theta, sigma_min)
+
+            train_rng, rng_key = jr.split(rng_key)
+            vs = apply_fn(
+                params,
+                train_rng,
+                method="vector_field",
+                theta=theta_t,
+                time=times,
+                context=batch["y"],
+                is_training=is_training,
+            )
+            uts = _ut(theta_t, theta, times, self.sigma_min)
+
+            loss = jnp.mean(jnp.square(vs - uts))
+            return loss
+
+        return fn
+
     def _fit_model_single_round(
         self,
         seed,
@@ -154,7 +155,9 @@ class FMPE(NE):
         state = optimizer.init(params)
 
         loss_fn = jax.jit(
-            partial(_cfm_loss, apply_fn=self.model.apply, is_training=True)
+            partial(
+                self.get_loss_fn(), apply_fn=self.model.apply, is_training=True
+            )
         )
 
         @jax.jit
@@ -210,7 +213,9 @@ class FMPE(NE):
 
     def _validation_loss(self, rng_key, params, val_iter):
         loss_fn = jax.jit(
-            partial(_cfm_loss, apply_fn=self.model.apply, is_training=False)
+            partial(
+                self.get_loss_fn(), apply_fn=self.model.apply, is_training=False
+            )
         )
 
         def body_fn(batch_key, **batch):
@@ -265,7 +270,6 @@ class FMPE(NE):
             else:
                 thetas = jnp.vstack([thetas, proposal_accepted])
             n_curr -= proposal_accepted.shape[0]
-        self.n_total_simulations += n_total_simulations_round
 
         ess = float(thetas.shape[0] / n_total_simulations_round)
 

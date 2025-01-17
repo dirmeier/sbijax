@@ -26,7 +26,7 @@ class NE(SBI, ABC):
         """
         super().__init__(model_fns)
         self.model = network
-        self.n_total_simulations = 0
+        self.round = 0
 
     def simulate_data_and_possibly_append(
         self,
