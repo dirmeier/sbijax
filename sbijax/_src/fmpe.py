@@ -121,7 +121,7 @@ class FMPE(NE):
             times = jr.uniform(t_key, shape=(n, 1))
 
             theta_key, rng_key = jr.split(rng_key)
-            theta_t = _sample_theta_t(theta_key, times, theta, sigma_min)
+            theta_t = _sample_theta_t(theta_key, times, theta, self.sigma_min)
 
             train_rng, rng_key = jr.split(rng_key)
             vs = apply_fn(
@@ -154,11 +154,7 @@ class FMPE(NE):
         params = self._init_params(init_key, **next(iter(train_iter)))
         state = optimizer.init(params)
 
-        loss_fn = jax.jit(
-            partial(
-                self.get_loss_fn(), apply_fn=self.model.apply, is_training=True
-            )
-        )
+        loss_fn = jax.jit(partial(self.get_loss_fn(), apply_fn=self.model.apply, is_training=True))
 
         @jax.jit
         def step(params, rng, state, **batch):
@@ -212,11 +208,7 @@ class FMPE(NE):
         return params
 
     def _validation_loss(self, rng_key, params, val_iter):
-        loss_fn = jax.jit(
-            partial(
-                self.get_loss_fn(), apply_fn=self.model.apply, is_training=False
-            )
-        )
+        loss_fn = jax.jit(partial(self.get_loss_fn(), apply_fn=self.model.apply, is_training=False))
 
         def body_fn(batch_key, **batch):
             loss = loss_fn(params, batch_key, **batch)

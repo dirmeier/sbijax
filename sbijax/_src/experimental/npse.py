@@ -6,28 +6,6 @@ from jax import random as jr
 from sbijax import FMPE
 
 
-def beta_fn(t, beta_max, beta_min):
-    return beta_min + t * (beta_max - beta_min)
-
-
-def integral(t, beta_max, beta_min):
-    return beta_min * t + 0.5 * (beta_max - beta_min) * t**2
-
-
-def _sde(x, t, beta_max, beta_min):
-    beta_t = beta_fn(t, beta_max, beta_min)
-    intr = integral(t, beta_max, beta_min)
-    drift = -0.5 * x * beta_t
-    diffusion = 1.0 - jnp.exp(-2.0 * intr)
-    diffusion = jnp.sqrt(beta_t * diffusion)
-    return drift, diffusion
-
-
-def _margprob_params(x, t, beta_max, beta_min):
-    intr = integral(t, beta_max, beta_min)
-    mean = x * jnp.exp(-0.5 * intr)[:, None]
-    std = 1.0 - jnp.exp(-intr)
-    return mean, std
 
 
 # ruff: noqa: PLR0913, E501
@@ -42,6 +20,13 @@ class NPSE(FMPE):
             function that constructs a tfd.JointDistributionNamed, the second
             element is a simulator function.
         density_estimator: a score estimator
+        sde: can be either of 'vp' and 've'. Defines the type of SDE to be used as a forward process.
+            See the original publication and references therein for details.
+        beta_min: beta min. Again, see the paper please.
+        beta_max: beta max. Again, see the paper please.
+        time_eps: some small number to use as minimum time point for the forward process. Used for numerical
+            stability.
+        time_max: maximum integration time. 1 is good, but so is 5 or 10.
 
     Examples:
         >>> from sbijax.experimental import NPSE
@@ -61,41 +46,40 @@ class NPSE(FMPE):
     """
 
     def __init__(
-        self, model_fns, density_estimator, beta_min=0.1, beta_max=10.0
+        self, model_fns, density_estimator, sde="vp", beta_min=0.1, beta_max=10.0, time_eps=0.001, time_max=1
     ):
         super().__init__(model_fns, density_estimator, beta_min)
+        self.sde = sde
         self.beta_min = super().sigma_min
         self.beta_max = beta_max
+        self.time_eps = time_eps
+        self.time_max = time_max
 
     def get_loss_fn(self):
-        p_marg_prob_fn = partial(
-            _margprob_params, beta_min=self.beta_min, beta_max=self.beta_max
+        marg_prob_params = get_margprob_params_fn(
+            self.sde, beta_min=self.beta_min, beta_max=self.beta_max
         )
-        sde_fn = partial(_sde, beta_min=self.beta_min, beta_max=self.beta_max)
 
-        def fn(params, rng_key, apply_fn, is_training=True, **batch):
-            theta = batch["theta"]
-            n, _ = theta.shape
+        def fn(params, rng_key, apply_fn, is_training, **batch):
+            theta, y = batch["theta"], batch["y"]
 
-            t_key, rng_key = jr.split(rng_key)
-            times = jr.uniform(t_key, shape=(n, 1))
+            time_key, noise_key, train_rng = jr.split(rng_key, 3)
+            time = jr.uniform(time_key, (theta.shape[0],), minval=self.time_eps, maxval=self.time_max)
 
-            theta_key, rng_key = jr.split(rng_key)
-            theta_t = _sample_theta_t(theta_key, times, theta, sigma_min)
-
-            train_rng, rng_key = jr.split(rng_key)
-            vs = apply_fn(
+            noise = jr.normal(noise_key, theta.shape)
+            mean, scale = marg_prob_params(theta, time)
+            theta_t = mean + noise * scale[:, None]
+            score = apply_fn(
                 params,
                 train_rng,
                 method="vector_field",
                 theta=theta_t,
-                time=times,
-                context=batch["y"],
-                is_training=is_training,
+                time=time,
+                context=y,
+                is_training=is_training
             )
-            uts = _ut(theta_t, theta, times, sigma_min)
 
-            loss = jnp.mean(jnp.square(vs - uts))
+            loss = jnp.sum((score * scale[:, None] + noise) ** 2, axis=-1)
             return loss
 
         return fn

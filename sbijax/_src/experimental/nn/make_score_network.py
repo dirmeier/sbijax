@@ -6,7 +6,7 @@ import jax
 from jax import numpy as jnp
 from scipy import integrate
 
-__all__ = ["make_scorenet"]
+__all__ = ["make_score_model"]
 
 
 def timestep_embedding(timesteps, embedding_dim: int, dtype=jnp.float32):
@@ -15,6 +15,43 @@ def timestep_embedding(timesteps, embedding_dim: int, dtype=jnp.float32):
     emb = timesteps.astype(dtype)[:, None] * freqs[None, ...]
     emb = jnp.concatenate([jnp.sin(emb), jnp.cos(emb)], axis=1)
     return emb
+
+
+def get_forward_drift_and_diffusion_fn(sde, beta_max, beta_min):
+    def ve(x, t):
+        sigma = beta_min * (beta_max / beta_min) ** t
+        drift = jnp.zeros_like(x)
+        diffusion = sigma * jnp.sqrt(2 * (jnp.log(beta_max) - jnp.log(beta_min)))
+        return drift, diffusion
+
+    def vp(x, t):
+        beta_t = beta_min + t * (beta_max - beta_min)
+        drift = -0.5 * beta_t * x
+        diffusion = jnp.sqrt(beta_t)
+        return drift, diffusion
+
+    match sde:
+        case "ve": return ve
+        case "vp": return vp
+        case _: raise ValueError("incorrect sde given: choose from ['ve', 'vp']")
+
+
+def get_margprob_params_fn(sde, beta_max, beta_min):
+    def ve(x, t):
+        mean = x
+        std = beta_min * (beta_max / beta_min) ** t
+        return mean, std
+
+    def vp(x, t):
+        beta = -0.25 * t ** 2 * (beta_max - beta_min) - 0.5 * t * beta_min
+        mean = jnp.exp(beta) * x
+        std = jnp.sqrt(1.0 - jnp.exp(2.0 * beta))
+        return mean, std
+
+    match sde:
+        case "ve": return ve
+        case "vp": return vp
+        case _: raise ValueError("incorrect sde given: choose from ['ve', 'vp']")
 
 
 # pylint: disable=too-many-arguments
@@ -121,7 +158,7 @@ class _ScoreModel(hk.Module):
         return ret
 
     def vector_field(self, theta, time, context, **kwargs):
-        """Compute the vector field.
+        """Compute the vector field (or the score).
 
         Args:
             theta: array of parameters
@@ -129,20 +166,21 @@ class _ScoreModel(hk.Module):
             context: array of conditioning variables
 
         Keyword Args:
-            keyword arguments that aer passed tothe neural network
+            keyword arguments that aer passed to the neural network
         """
         time = jnp.full((theta.shape[0], 1), time)
         return self._network(theta=theta, time=time, context=context, **kwargs)
 
 
 # ruff: noqa: PLR0913
-def make_scorenet(
+def make_score_model(
     n_dimension: int,
     hidden_sizes: Tuple[int] = (128, 128),
     data_embedding_layers: Tuple[int] = (128, 128),
     param_embedding_layers: Tuple[int] = (128, 128),
     time_embedding_layers: Callable = (128, 128),
     activation: Callable = jax.nn.relu,
+    sde="vp",
 ):
     """Create a score network for NPSE.
 
