@@ -15,22 +15,6 @@ from sbijax._src.util.early_stopping import EarlyStopping
 from sbijax._src.util.types import PyTree
 
 
-def _sample_theta_t(rng_key, times, theta, sigma_min):
-    mus = times * theta
-    sigmata = 1.0 - (1.0 - sigma_min) * times
-    sigmata = sigmata.reshape(times.shape[0], 1)
-
-    noise = jr.normal(rng_key, shape=(*theta.shape,))
-    theta_t = noise * sigmata + mus
-    return theta_t
-
-
-def _ut(theta_t, theta, times, sigma_min):
-    num = theta - (1.0 - sigma_min) * theta_t
-    denom = 1.0 - (1.0 - sigma_min) * times
-    return num / denom
-
-
 # ruff: noqa: PLR0913, E501
 class FMPE(NE):
     r"""Flow matching posterior estimation.
@@ -60,9 +44,8 @@ class FMPE(NE):
         Wildberger, Jonas, et al. "Flow Matching for Scalable Simulation-Based Inference." Advances in Neural Information Processing Systems, 2024.
     """
 
-    def __init__(self, model_fns, density_estimator, sigma_min=0.01):
+    def __init__(self, model_fns, density_estimator):
         super().__init__(model_fns, density_estimator)
-        self.sigma_min = 0.001
 
     def fit(
         self,
@@ -111,35 +94,6 @@ class FMPE(NE):
 
         return params, losses
 
-    # pylint: disable=too-many-locals
-    def get_loss_fn(self):
-        def fn(params, rng_key, apply_fn, is_training=True, **batch):
-            theta = batch["theta"]
-            n, _ = theta.shape
-
-            t_key, rng_key = jr.split(rng_key)
-            times = jr.uniform(t_key, shape=(n, 1))
-
-            theta_key, rng_key = jr.split(rng_key)
-            theta_t = _sample_theta_t(theta_key, times, theta, self.sigma_min)
-
-            train_rng, rng_key = jr.split(rng_key)
-            vs = apply_fn(
-                params,
-                train_rng,
-                method="vector_field",
-                theta=theta_t,
-                time=times,
-                context=batch["y"],
-                is_training=is_training,
-            )
-            uts = _ut(theta_t, theta, times, self.sigma_min)
-
-            loss = jnp.mean(jnp.square(vs - uts))
-            return loss
-
-        return fn
-
     def _fit_model_single_round(
         self,
         seed,
@@ -154,10 +108,18 @@ class FMPE(NE):
         params = self._init_params(init_key, **next(iter(train_iter)))
         state = optimizer.init(params)
 
-        loss_fn = jax.jit(partial(self.get_loss_fn(), apply_fn=self.model.apply, is_training=True))
-
         @jax.jit
         def step(params, rng, state, **batch):
+            def loss_fn(params, rng, **batch):
+                lp = self.model.apply(
+                    params,
+                    rng=rng,
+                    method="loss",
+                    inputs=batch["theta"],
+                    context=batch["context"],
+                )
+                return jnp.mean(lp)
+
             loss, grads = jax.value_and_grad(loss_fn)(params, rng, **batch)
             updates, new_state = optimizer.update(grads, state, params)
             new_params = optax.apply_updates(params, updates)
@@ -196,19 +158,21 @@ class FMPE(NE):
         return best_params, losses
 
     def _init_params(self, rng_key, **init_data):
-        times = jr.uniform(jr.PRNGKey(0), shape=(init_data["y"].shape[0], 1))
         params = self.model.init(
             rng_key,
-            method="vector_field",
+            method="loss",
             theta=init_data["theta"],
-            time=times,
             context=init_data["y"],
             is_training=False,
         )
         return params
 
     def _validation_loss(self, rng_key, params, val_iter):
-        loss_fn = jax.jit(partial(self.get_loss_fn(), apply_fn=self.model.apply, is_training=False))
+        loss_fn = jax.jit(
+            partial(
+                self.get_loss_fn(), apply_fn=self.model.apply, is_training=False
+            )
+        )
 
         def body_fn(batch_key, **batch):
             loss = loss_fn(params, batch_key, **batch)
