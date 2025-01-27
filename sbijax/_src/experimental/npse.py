@@ -19,7 +19,7 @@ class NPSE(FMPE):
 
     Examples:
         >>> from sbijax.experimental import NPSE
-        >>> from sbijax.experimental.nn import make_scorenet
+        >>> from sbijax.experimental.nn import make_score_model
         >>> from tensorflow_probability.substrates.jax import distributions as tfd
         ...
         >>> prior = lambda: tfd.JointDistributionNamed(
@@ -27,7 +27,7 @@ class NPSE(FMPE):
         ... )
         >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
         >>> fns = prior, s
-        >>> neural_network = make_scorenet(1)
+        >>> neural_network = make_score_model(1)
         >>> model = NPSE(fns, neural_network)
 
     References:
@@ -69,8 +69,7 @@ class NPSE(FMPE):
         )
 
         hypercube_min = jnp.concatenate(
-            [min_posterior[None, :], min_prior[None, :]], axis=0
-        ).max(axis=0)
+            [min_posterior[None, :], min_prior[None, :]], axis=0).max(axis=0)
         hypercube_max = jnp.concatenate(
             [max_posterior[None, :], max_prior[None, :]], axis=0
         ).min(axis=0)

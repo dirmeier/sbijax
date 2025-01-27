@@ -102,7 +102,6 @@ class NE(SBI, ABC):
         """
         if params is None or len(params) == 0:
             diagnostics = None
-            self.n_total_simulations += n_simulations
             new_thetas = self.prior_sampler_fn(
                 seed=rng_key,
                 sample_shape=(n_simulations,),

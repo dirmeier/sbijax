@@ -116,7 +116,8 @@ class FMPE(NE):
                     rng=rng,
                     method="loss",
                     inputs=batch["theta"],
-                    context=batch["context"],
+                    context=batch["y"],
+                    is_training=True
                 )
                 return jnp.mean(lp)
 
@@ -161,18 +162,22 @@ class FMPE(NE):
         params = self.model.init(
             rng_key,
             method="loss",
-            theta=init_data["theta"],
+            inputs=init_data["theta"],
             context=init_data["y"],
             is_training=False,
         )
         return params
 
     def _validation_loss(self, rng_key, params, val_iter):
-        loss_fn = jax.jit(
-            partial(
-                self.get_loss_fn(), apply_fn=self.model.apply, is_training=False
+        def loss_fn(params, rng, **batch):
+            lp = self.model.apply(
+                params, rng=rng,
+                method="loss",
+                inputs=batch["theta"],
+                context=batch["y"],
+                is_training=False
             )
-        )
+            return jnp.mean(lp)
 
         def body_fn(batch_key, **batch):
             loss = loss_fn(params, batch_key, **batch)

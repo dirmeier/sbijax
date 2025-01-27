@@ -3,6 +3,7 @@ from typing import Callable
 import distrax
 import haiku as hk
 import jax
+import numpy as np
 from jax import numpy as jnp
 from jax import random as jr
 from scipy import integrate
@@ -12,18 +13,25 @@ __all__ = ["CNF", "make_cnf"]
 from sbijax._src.nn.make_resnet import _ResnetBlock
 
 
-def sample_theta_t(rng_key, times, theta, sigma_min):
-    mus = times * theta
-    sigmata = 1.0 - (1.0 - sigma_min) * times
-    sigmata = sigmata.reshape(times.shape[0], 1)
+def to_output_shape(x, t):
+    new_shape = (-1,) + tuple(np.ones(x.ndim - 1, dtype=np.int32).tolist())
+    t = t.reshape(new_shape)
+    return t
 
-    noise = jr.normal(rng_key, shape=(*theta.shape,))
+
+def sample_theta_t(rng_key, x, times, sigma_min):
+    times =  to_output_shape(x, times)
+    mus = times * x
+    sigmata = 1.0 - (1.0 - sigma_min) * times
+
+    noise = jr.normal(rng_key, shape=x.shape)
     theta_t = noise * sigmata + mus
     return theta_t
 
 
-def ut(theta_t, theta, times, sigma_min):
-    num = theta - (1.0 - sigma_min) * theta_t
+def ut(x_t, x, times, sigma_min):
+    times = to_output_shape(x, times)
+    num = x - (1.0 - sigma_min) * x_t
     denom = 1.0 - (1.0 - sigma_min) * times
     return num / denom
 
@@ -81,7 +89,7 @@ class CNF(hk.Module):
             theta_t = theta_t.reshape(-1, self._n_dimension)
             time = jnp.repeat(time, theta_t.shape[0])
             ret = self._score_model(
-                theta=theta_t, time=time, context=context, **kwargs
+                inputs=theta_t, time=time, context=context, **kwargs
             )
             return ret.reshape(-1)
 
@@ -101,7 +109,7 @@ class CNF(hk.Module):
         n, _ = inputs.shape
         times = jr.uniform(hk.next_rng_key(), shape=(n,))
         theta_t = sample_theta_t(
-            hk.next_rng_key(), times, inputs, self.sigma_min
+            hk.next_rng_key(), inputs, times, self.sigma_min
         )
         vs = self._score_model(
             inputs=theta_t,
@@ -137,15 +145,16 @@ class _CNFResnet(hk.Module):
         self.dropout_rate = dropout_rate
         self.batch_norm_decay = batch_norm_decay
 
-    def __call__(self, theta, time, context, is_training=False, **kwargs):
+    def __call__(self, inputs, time, context, is_training=False, **kwargs):
         outputs = context
         # this is a bit weird, but what the paper suggests:
         # instead of using times and context (i.e., y) as conditioning variables
         # it suggests using times and theta and use y in the resnet blocks,
         # since theta is typically low-dim and y is typically high-dime
+        time = to_output_shape(inputs, time)
         t_theta_embedding = jnp.concatenate(
             [
-                hk.Linear(self.n_dimension)(theta),
+                hk.Linear(self.n_dimension)(inputs),
                 hk.Linear(self.n_dimension)(time),
             ],
             axis=-1,

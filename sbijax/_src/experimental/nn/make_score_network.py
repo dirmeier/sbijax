@@ -1,13 +1,21 @@
 from typing import Callable
 
+import chex
 import distrax
 import haiku as hk
 import jax
+import numpy as np
 from jax import numpy as jnp
 from jax import random as jr
 from scipy import integrate
 
 __all__ = ["make_score_model", "ScoreModel"]
+
+
+def to_output_shape(x, t):
+    new_shape = (-1,) + tuple(np.ones(x.ndim - 1, dtype=np.int32).tolist())
+    t = t.reshape(new_shape)
+    return t
 
 
 def timestep_embedding(timesteps, embedding_dim: int, dtype=jnp.float32):
@@ -20,6 +28,7 @@ def timestep_embedding(timesteps, embedding_dim: int, dtype=jnp.float32):
 
 def get_forward_drift_and_diffusion_fn(sde, beta_max, beta_min):
     def ve(x, t):
+        t = to_output_shape(x, t)
         sigma = beta_min * (beta_max / beta_min) ** t
         drift = jnp.zeros_like(x)
         diffusion = sigma * jnp.sqrt(
@@ -28,6 +37,7 @@ def get_forward_drift_and_diffusion_fn(sde, beta_max, beta_min):
         return drift, diffusion
 
     def vp(x, t):
+        t = to_output_shape(x, t)
         beta_t = beta_min + t * (beta_max - beta_min)
         drift = -0.5 * beta_t * x
         diffusion = jnp.sqrt(beta_t)
@@ -44,11 +54,13 @@ def get_forward_drift_and_diffusion_fn(sde, beta_max, beta_min):
 
 def get_margprob_params_fn(sde, beta_max, beta_min):
     def ve(x, t):
+        t = to_output_shape(x, t)
         mean = x
         std = beta_min * (beta_max / beta_min) ** t
         return mean, std
 
     def vp(x, t):
+        t = to_output_shape(x, t)
         beta = -0.25 * t**2 * (beta_max - beta_min) - 0.5 * t * beta_min
         mean = jnp.exp(beta) * x
         std = jnp.sqrt(1.0 - jnp.exp(2.0 * beta))
@@ -84,10 +96,10 @@ class _ScoreNet(hk.Module):
         self.time_embedding_layers = time_embedding_layers
         self.activation = activation
 
-    def __call__(self, theta, time, context, **kwargs):
-        theta = hk.nets.MLP(
+    def __call__(self, inputs, time, context, **kwargs):
+        inputs = hk.nets.MLP(
             self.param_embedding_layers, activation=self.activation
-        )(theta)
+        )(inputs)
         context = hk.nets.MLP(
             self.data_embedding_layers, activation=self.activation
         )(context)
@@ -100,10 +112,10 @@ class _ScoreNet(hk.Module):
             ]
         )(time)
 
-        inputs = jnp.concatenate([theta, context, time], axis=-1)
+        hidden = jnp.concatenate([inputs, context, time], axis=-1)
         outputs = hk.nets.MLP(
-            self.hidden_sizes + [self.n_dimension], activation=self.activation
-        )(inputs)
+            self.hidden_sizes + (self.n_dimension,), activation=self.activation
+        )(hidden)
         return outputs
 
 
@@ -206,12 +218,13 @@ class ScoreModel(hk.Module):
         )
 
         noise = jr.normal(hk.next_rng_key(), inputs.shape)
-        mean, scale = marg_prob_params(hk.next_rng_key(), time)
-        theta_t = mean + noise * scale[:, None]
+        mean, scale = marg_prob_params(inputs, time)
+        theta_t = mean + noise * scale
         score = self._score_net(
             inputs=theta_t, time=time, context=context, is_training=is_training
         )
-        loss = jnp.sum((score * scale[:, None] + noise) ** 2, axis=-1)
+        chex.assert_equal_shape([noise, score])
+        loss = jnp.sum((score * scale + noise) ** 2, axis=-1)
         return loss
 
 
