@@ -20,7 +20,7 @@ def to_output_shape(x, t):
 
 
 def sample_theta_t(rng_key, x, times, sigma_min):
-    times =  to_output_shape(x, times)
+    times = to_output_shape(x, times)
     mus = times * x
     sigmata = 1.0 - (1.0 - sigma_min) * times
 
@@ -34,6 +34,58 @@ def ut(x_t, x, times, sigma_min):
     num = x - (1.0 - sigma_min) * x_t
     denom = 1.0 - (1.0 - sigma_min) * times
     return num / denom
+
+
+# pylint: disable=too-many-arguments
+class _CNFResnet(hk.Module):
+    """A simplified 1-d residual network."""
+
+    def __init__(
+        self,
+        n_layers: int,
+        n_dimension: int,
+        hidden_size: int,
+        activation: Callable = jax.nn.relu,
+        dropout_rate: float = 0.2,
+        do_batch_norm: bool = True,
+        batch_norm_decay: float = 0.1,
+    ):
+        super().__init__()
+        self.n_layers = n_layers
+        self.n_dimension = n_dimension
+        self.hidden_size = hidden_size
+        self.activation = activation
+        self.do_batch_norm = do_batch_norm
+        self.dropout_rate = dropout_rate
+        self.batch_norm_decay = batch_norm_decay
+
+    def __call__(self, inputs, time, context, is_training=False, **kwargs):
+        outputs = context
+        # this is a bit weird, but what the paper suggests:
+        # instead of using times and context (i.e., y) as conditioning variables
+        # it suggests using times and theta and use y in the resnet blocks,
+        # since theta is typically low-dim and y is typically high-dime
+        time = to_output_shape(inputs, time)
+        t_theta_embedding = jnp.concatenate(
+            [
+                hk.Linear(self.n_dimension)(inputs),
+                hk.Linear(self.n_dimension)(time),
+            ],
+            axis=-1,
+        )
+        outputs = hk.Linear(self.hidden_size)(outputs)
+        outputs = self.activation(outputs)
+        for _ in range(self.n_layers):
+            outputs = _ResnetBlock(
+                hidden_size=self.hidden_size,
+                activation=self.activation,
+                dropout_rate=self.dropout_rate,
+                do_batch_norm=self.do_batch_norm,
+                batch_norm_decay=self.batch_norm_decay,
+            )(outputs, context=t_theta_embedding, is_training=is_training)
+        outputs = self.activation(outputs)
+        outputs = hk.Linear(self.n_dimension)(outputs)
+        return outputs
 
 
 # ruff: noqa: PLR0913,D417
@@ -120,58 +172,6 @@ class CNF(hk.Module):
         uts = ut(theta_t, inputs, times, self.sigma_min)
         loss = jnp.mean(jnp.square(vs - uts))
         return loss
-
-
-# pylint: disable=too-many-arguments
-class _CNFResnet(hk.Module):
-    """A simplified 1-d residual network."""
-
-    def __init__(
-        self,
-        n_layers: int,
-        n_dimension: int,
-        hidden_size: int,
-        activation: Callable = jax.nn.relu,
-        dropout_rate: float = 0.2,
-        do_batch_norm: bool = True,
-        batch_norm_decay: float = 0.1,
-    ):
-        super().__init__()
-        self.n_layers = n_layers
-        self.n_dimension = n_dimension
-        self.hidden_size = hidden_size
-        self.activation = activation
-        self.do_batch_norm = do_batch_norm
-        self.dropout_rate = dropout_rate
-        self.batch_norm_decay = batch_norm_decay
-
-    def __call__(self, inputs, time, context, is_training=False, **kwargs):
-        outputs = context
-        # this is a bit weird, but what the paper suggests:
-        # instead of using times and context (i.e., y) as conditioning variables
-        # it suggests using times and theta and use y in the resnet blocks,
-        # since theta is typically low-dim and y is typically high-dime
-        time = to_output_shape(inputs, time)
-        t_theta_embedding = jnp.concatenate(
-            [
-                hk.Linear(self.n_dimension)(inputs),
-                hk.Linear(self.n_dimension)(time),
-            ],
-            axis=-1,
-        )
-        outputs = hk.Linear(self.hidden_size)(outputs)
-        outputs = self.activation(outputs)
-        for _ in range(self.n_layers):
-            outputs = _ResnetBlock(
-                hidden_size=self.hidden_size,
-                activation=self.activation,
-                dropout_rate=self.dropout_rate,
-                do_batch_norm=self.do_batch_norm,
-                batch_norm_decay=self.batch_norm_decay,
-            )(outputs, context=t_theta_embedding, is_training=is_training)
-        outputs = self.activation(outputs)
-        outputs = hk.Linear(self.n_dimension)(outputs)
-        return outputs
 
 
 # ruff: noqa: PLR0913

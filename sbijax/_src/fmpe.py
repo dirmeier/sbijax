@@ -1,5 +1,3 @@
-from functools import partial
-
 import jax
 import numpy as np
 import optax
@@ -117,7 +115,7 @@ class FMPE(NE):
                     method="loss",
                     inputs=batch["theta"],
                     context=batch["y"],
-                    is_training=True
+                    is_training=True,
                 )
                 return jnp.mean(lp)
 
@@ -171,11 +169,12 @@ class FMPE(NE):
     def _validation_loss(self, rng_key, params, val_iter):
         def loss_fn(params, rng, **batch):
             lp = self.model.apply(
-                params, rng=rng,
+                params,
+                rng=rng,
                 method="loss",
                 inputs=batch["theta"],
                 context=batch["y"],
-                is_training=False
+                is_training=False,
             )
             return jnp.mean(lp)
 
@@ -212,7 +211,7 @@ class FMPE(NE):
         n_total_simulations_round = 0
         _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(1)))
         while n_curr > 0:
-            n_sim = jnp.minimum(200, jnp.maximum(200, n_curr))
+            n_sim = jnp.minimum(1024, jnp.maximum(1024, n_curr))
             n_total_simulations_round += n_sim
             sample_key, rng_key = jr.split(rng_key)
             proposal = self.model.apply(
@@ -243,3 +242,10 @@ class FMPE(NE):
         thetas = jax.tree_map(reshape, jax.vmap(unravel_fn)(thetas[:n_samples]))
         inference_data = as_inference_data(thetas, jnp.squeeze(observable))
         return inference_data, ess
+
+    def _simulate_parameters_with_model(
+        self, rng_key, params, observable, *, n_samples=4_000, **kwargs
+    ):
+        return self.sample_posterior(
+            rng_key, params, observable, n_samples=n_samples, **kwargs
+        )

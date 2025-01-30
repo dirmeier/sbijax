@@ -1,13 +1,15 @@
+from functools import partial
 from typing import Callable
 
 import chex
-import distrax
+import diffrax as dfx
 import haiku as hk
 import jax
 import numpy as np
 from jax import numpy as jnp
 from jax import random as jr
 from scipy import integrate
+from tensorflow_probability.substrates.jax import distributions as tfd
 
 __all__ = ["make_score_model", "ScoreModel"]
 
@@ -27,19 +29,19 @@ def timestep_embedding(timesteps, embedding_dim: int, dtype=jnp.float32):
 
 
 def get_forward_drift_and_diffusion_fn(sde, beta_max, beta_min):
-    def ve(x, t):
-        t = to_output_shape(x, t)
-        sigma = beta_min * (beta_max / beta_min) ** t
-        drift = jnp.zeros_like(x)
+    def ve(inputs, time):
+        time = to_output_shape(inputs, time)
+        sigma = beta_min * (beta_max / beta_min) ** time
+        drift = jnp.zeros_like(inputs)
         diffusion = sigma * jnp.sqrt(
             2 * (jnp.log(beta_max) - jnp.log(beta_min))
         )
         return drift, diffusion
 
-    def vp(x, t):
-        t = to_output_shape(x, t)
-        beta_t = beta_min + t * (beta_max - beta_min)
-        drift = -0.5 * beta_t * x
+    def vp(inputs, time):
+        time = to_output_shape(inputs, time)
+        beta_t = beta_min + time * (beta_max - beta_min)
+        drift = -0.5 * beta_t * inputs
         diffusion = jnp.sqrt(beta_t)
         return drift, diffusion
 
@@ -53,18 +55,70 @@ def get_forward_drift_and_diffusion_fn(sde, beta_max, beta_min):
 
 
 def get_margprob_params_fn(sde, beta_max, beta_min):
-    def ve(x, t):
-        t = to_output_shape(x, t)
-        mean = x
-        std = beta_min * (beta_max / beta_min) ** t
+    def ve(inputs, time):
+        time = to_output_shape(inputs, time)
+        mean = inputs
+        std = beta_min * (beta_max / beta_min) ** time
         return mean, std
 
-    def vp(x, t):
-        t = to_output_shape(x, t)
-        beta = -0.25 * t**2 * (beta_max - beta_min) - 0.5 * t * beta_min
-        mean = jnp.exp(beta) * x
+    def vp(inputs, time):
+        time = to_output_shape(inputs, time)
+        beta = -0.25 * time**2 * (beta_max - beta_min) - 0.5 * time * beta_min
+        mean = jnp.exp(beta) * inputs
         std = jnp.sqrt(1.0 - jnp.exp(2.0 * beta))
         return mean, std
+
+    match sde:
+        case "ve":
+            return ve
+        case "vp":
+            return vp
+        case _:
+            raise ValueError("incorrect sde given: choose from ['ve', 'vp']")
+
+
+def get_log_prob_fn(apply_fn, is_training, sde, beta_max, beta_min):
+    def ve(inputs, time, context):
+        drift_and_diffusion_fn = get_forward_drift_and_diffusion_fn(
+            sde, beta_max, beta_min
+        )
+
+        def drift_fn(inputs_t):
+            drift, diffusion = drift_and_diffusion_fn(inputs, time)
+            score = apply_fn(
+                inputs=inputs_t,
+                time=time,
+                context=context,
+                is_training=is_training,
+            )
+            ret = drift - 0.5 * diffusion**2 * score
+            return ret
+
+        drift, vjp_fn = jax.vjp(drift_fn, inputs)
+        (dfdtheta,) = jax.vmap(vjp_fn)(jnp.eye(inputs.shape[0]))
+        dlogp = jnp.trace(dfdtheta)
+        return drift, dlogp
+
+    def vp(inputs, time, context):
+        drift_and_diffusion_fn = get_forward_drift_and_diffusion_fn(
+            sde, beta_max, beta_min
+        )
+
+        def drift_fn(inputs_t):
+            drift, diffusion = drift_and_diffusion_fn(inputs, time)
+            score = apply_fn(
+                inputs=inputs_t,
+                time=time,
+                context=context,
+                is_training=is_training,
+            )
+            ret = drift - 0.5 * diffusion**2 * score
+            return ret
+
+        drift, vjp_fn = jax.vjp(drift_fn, inputs)
+        (dfdtheta,) = jax.vmap(vjp_fn)(jnp.eye(inputs.shape[0]))
+        dlogp = jnp.trace(dfdtheta)
+        return drift, dlogp
 
     match sde:
         case "ve":
@@ -140,6 +194,7 @@ class ScoreModel(hk.Module):
         beta_max,
         time_eps,
         time_max,
+        time_delta=0.1,
     ):
         super().__init__()
         self._n_dimension = n_dimension
@@ -149,7 +204,10 @@ class ScoreModel(hk.Module):
         self._beta_max = beta_max
         self._time_eps = time_eps
         self._time_max = time_max
-        self._base_distribution = distrax.Normal(jnp.zeros(n_dimension), 1.0)
+        self._time_delta = time_delta
+        self._base_distribution = tfd.Independent(
+            tfd.Normal(jnp.zeros(n_dimension), 1.0), 1
+        )
 
     def __call__(self, method, **kwargs):
         """Apply the model.
@@ -226,6 +284,61 @@ class ScoreModel(hk.Module):
         chex.assert_equal_shape([noise, score])
         loss = jnp.sum((score * scale + noise) ** 2, axis=-1)
         return loss
+
+    def log_prob(self, inputs, context, is_training, **kwargs):
+        """Compute the vector field (or the score).
+
+        Args:
+            inputs: array of inputs
+            context: array of conditioning variables
+
+        Keyword Args:
+            keyword arguments that aer passed to the neural network
+        """
+        fn = partial(self._log_prob, is_training=is_training)
+        ret = jax.vmap(fn)(inputs, context)
+        return ret
+
+    def _log_prob(self, inputs, context, is_training):
+        drift_and_diffusion_fn = get_forward_drift_and_diffusion_fn(
+            self._sde, self._beta_max, self._beta_min
+        )
+
+        def ode_lp_fn(time, inputs_t, args):
+            inputs_t, _ = inputs_t
+            time = jnp.atleast_1d(time)
+
+            def drift_fn(inputs):
+                drift, diffusion = drift_and_diffusion_fn(
+                    jnp.atleast_2d(inputs), time
+                )
+                score = self._score_net(
+                    inputs=jnp.atleast_2d(inputs),
+                    time=time,
+                    context=jnp.atleast_2d(context),
+                    is_training=is_training,
+                )
+                ret = drift - 0.5 * diffusion**2 * score
+                return ret.squeeze()
+
+            drift, vjp_fn = jax.vjp(drift_fn, inputs_t)
+            (dfdtheta,) = jax.vmap(vjp_fn)(jnp.eye(inputs_t.shape[0]))
+            dlogp = jnp.trace(dfdtheta)
+            return drift, dlogp
+
+        term = dfx.ODETerm(ode_lp_fn)
+        solver = dfx.Tsit5()
+        sol = dfx.diffeqsolve(
+            term,
+            solver,
+            self._time_eps,
+            self._time_max,
+            self._time_delta,
+            (inputs, 0.0),
+        )
+        (latents,), (delta_log_likelihood,) = sol.ys
+        lp = self._base_distribution.log_prob(latents)
+        return delta_log_likelihood + lp
 
 
 # ruff: noqa: PLR0913
