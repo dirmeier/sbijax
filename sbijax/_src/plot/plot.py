@@ -1,3 +1,5 @@
+from typing import Optional
+
 import arviz as az
 import jax
 import matplotlib.pyplot as plt
@@ -34,7 +36,9 @@ def plot_trace(
 
 
 def plot_posterior(
-    inference_data: az.InferenceData, axes: np.ndarray[pyplot.Axes] = None
+    inference_data: az.InferenceData,
+    axes: np.ndarray[pyplot.Axes] = None,
+    point_estimate: Optional[str] = None,
 ) -> np.ndarray[pyplot.Axes]:
     """Posterior histogram plot.
 
@@ -42,6 +46,7 @@ def plot_posterior(
         inference_data: an inference data object received from calling
             `sample_posterior` of an SBI algorithm
         axes: an array of matplotlib axes
+        point_estimate: median, mode, mean or None
 
     Returns:
         the same array of matplotlib axes with added plots
@@ -61,7 +66,7 @@ def plot_posterior(
         color=colors[2],
         kind="hist",
         hdi_prob="hide",
-        point_estimate=None,
+        point_estimate=point_estimate,
         edgecolor="black",
         ax=axes,
     )

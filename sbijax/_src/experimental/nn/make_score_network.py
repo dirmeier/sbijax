@@ -11,7 +11,7 @@ from jax import random as jr
 from scipy import integrate
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-__all__ = ["make_score_model", "ScoreModel"]
+__all__ = ["make_score_model", "ScoreModel", "timestep_embedding"]
 
 
 def to_output_shape(x, t):
@@ -194,7 +194,7 @@ class ScoreModel(hk.Module):
         beta_max,
         time_eps,
         time_max,
-        time_delta=0.1,
+        time_delta=0.01,
     ):
         super().__init__()
         self._n_dimension = n_dimension
@@ -221,7 +221,7 @@ class ScoreModel(hk.Module):
         return getattr(self, method)(**kwargs)
 
     def sample(self, context, **kwargs):
-        """Sample from the pushforward.
+        """Sample from the score model.
 
         Args:
             context: array of conditioning variables
@@ -256,7 +256,7 @@ class ScoreModel(hk.Module):
         return ret
 
     def loss(self, inputs, context, is_training, **kwargs):
-        """Compute the vector field (or the score).
+        """Loss function..
 
         Args:
             inputs: array of inputs
@@ -286,7 +286,7 @@ class ScoreModel(hk.Module):
         return loss
 
     def log_prob(self, inputs, context, is_training, **kwargs):
-        """Compute the vector field (or the score).
+        """Log-probability of an input.
 
         Args:
             inputs: array of inputs
@@ -333,7 +333,7 @@ class ScoreModel(hk.Module):
             solver,
             self._time_eps,
             self._time_max,
-            self._time_delta,
+            -self._time_delta,
             (inputs, 0.0),
         )
         (latents,), (delta_log_likelihood,) = sol.ys

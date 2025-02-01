@@ -16,8 +16,8 @@ def make_mdn(
 ):
     """Create a mixture density network.
 
-    The MDN uses `n_components` mixture components each modelling the distribution of
-    a `n_dimension`al data point.
+    The MDN uses `n_components` mixture components each modelling the
+    distribution of a `n_dimension`al data point.
 
     Args:
         n_dimension: dimensionality of data
@@ -54,6 +54,3 @@ def make_mdn(
             return mixture.log_prob(kwargs["y"])
 
     return mdn
-
-
-make_mdn(2, 2)
