@@ -21,6 +21,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "arviz>=0.17.1",
+    "diffrax>=0.6.1",
     "blackjax-nightly>=1.0.0.post17",
     "dm-haiku>=0.0.9",
     "matplotlib>=3.6.2",

@@ -130,6 +130,7 @@ License
     :hidden:
 
     sbijax
+    sbijax.experimental
     sbijax.mcmc
     sbijax.nn
     sbijax.util
