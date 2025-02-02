@@ -18,7 +18,7 @@ def test_nre(prior_simulator_tuple):
             observable=y_observed,
             data=data,
             n_simulations=100,
-            n_chains=2,
+            n_chains=4,
             n_samples=200,
             n_warmup=100,
         )
@@ -27,7 +27,7 @@ def test_nre(prior_simulator_tuple):
         jr.PRNGKey(3),
         params,
         y_observed,
-        n_chains=2,
+        n_chains=4,
         n_samples=200,
         n_warmup=100,
     )

@@ -112,9 +112,9 @@ class CNF(hk.Module):
         """
         super().__init__()
         self._n_dimension = n_dimension
-        self._score_model = transform
+        self._score_net = transform
         self._base_distribution = distrax.Normal(jnp.zeros(n_dimension), 1.0)
-        self.sigma_min = sigma_min
+        self._sigma_min = sigma_min
 
     def __call__(self, method, **kwargs):
         """Aplpy the flow.
@@ -140,7 +140,7 @@ class CNF(hk.Module):
         def ode_fn(time, theta_t):
             theta_t = theta_t.reshape(-1, self._n_dimension)
             time = jnp.repeat(time, theta_t.shape[0])
-            ret = self._score_model(
+            ret = self._score_net(
                 inputs=theta_t, time=time, context=context, **kwargs
             )
             return ret.reshape(-1)
@@ -161,15 +161,15 @@ class CNF(hk.Module):
         n, _ = inputs.shape
         times = jr.uniform(hk.next_rng_key(), shape=(n,))
         theta_t = sample_theta_t(
-            hk.next_rng_key(), inputs, times, self.sigma_min
+            hk.next_rng_key(), inputs, times, self._sigma_min
         )
-        vs = self._score_model(
+        vs = self._score_net(
             inputs=theta_t,
             time=times,
             context=context,
             is_training=is_training,
         )
-        uts = ut(theta_t, inputs, times, self.sigma_min)
+        uts = ut(theta_t, inputs, times, self._sigma_min)
         loss = jnp.mean(jnp.square(vs - uts))
         return loss
 

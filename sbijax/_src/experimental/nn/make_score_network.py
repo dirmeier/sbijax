@@ -333,7 +333,7 @@ class ScoreModel(hk.Module):
             solver,
             self._time_eps,
             self._time_max,
-            -self._time_delta,
+            self._time_delta,
             (inputs, 0.0),
         )
         (latents,), (delta_log_likelihood,) = sol.ys

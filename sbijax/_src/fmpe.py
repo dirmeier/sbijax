@@ -209,7 +209,7 @@ class FMPE(NE):
         thetas = None
         n_curr = n_samples
         n_total_simulations_round = 0
-        _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(1)))
+        _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
         while n_curr > 0:
             n_sim = jnp.minimum(1024, jnp.maximum(1024, n_curr))
             n_total_simulations_round += n_sim
@@ -221,9 +221,7 @@ class FMPE(NE):
                 context=jnp.tile(observable, [n_sim, 1]),
                 is_training=False,
             )
-            proposal_probs = self.prior_log_density_fn(
-                jax.vmap(unravel_fn)(proposal)
-            )
+            proposal_probs = self.prior.log_prob(jax.vmap(unravel_fn)(proposal))
             proposal_accepted = proposal[jnp.isfinite(proposal_probs)]
             if thetas is None:
                 thetas = proposal_accepted

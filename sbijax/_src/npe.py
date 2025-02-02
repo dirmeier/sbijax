@@ -144,7 +144,7 @@ class NPE(NE):
         state = optimizer.init(params)
 
         n_round = self.n_round
-        _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(1)))
+        _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
 
         if n_round == 0:
 
@@ -250,7 +250,7 @@ class NPE(NE):
             params, None, method="log_prob", y=atomic_theta, x=repeated_y
         )
         log_prob_posterior = log_prob_posterior.reshape(n, n_atoms)
-        log_prob_prior = self.prior_log_density_fn(atomic_theta)
+        log_prob_prior = self.prior.log_prob(atomic_theta)
         log_prob_prior = log_prob_prior.reshape(n, n_atoms)
 
         unnormalized_log_prob = log_prob_posterior - log_prob_prior
@@ -262,9 +262,7 @@ class NPE(NE):
 
     def _validation_loss(self, rng_key, params, val_iter, n_atoms):
         if self.n_round == 0:
-            _, unravel_fn = ravel_pytree(
-                self.prior_sampler_fn(seed=jr.PRNGKey(1))
-            )
+            _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
 
             def loss_fn(rng, **batch):
                 theta, y = batch["theta"], batch["y"]
@@ -336,7 +334,7 @@ class NPE(NE):
         thetas = None
         n_curr = n_samples
         n_total_simulations_round = 0
-        _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(1)))
+        _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
         while n_curr > 0:
             n_sim = jnp.minimum(200, jnp.maximum(200, n_curr))
             n_total_simulations_round += n_sim
@@ -351,7 +349,7 @@ class NPE(NE):
             if hasattr(self, "_prior_bijectors"):
                 proposal = jax.vmap(unravel_fn)(proposal)
                 proposal = self._prior_bijectors.forward(proposal)
-                proposal_probs = self.prior_log_density_fn(proposal)
+                proposal_probs = self.prior.log_prob(proposal)
                 proposal = jax.vmap(lambda x: ravel_pytree(x)[0])(proposal)
             else:
                 proposal_probs = self.prior_log_density_fn(
@@ -364,7 +362,6 @@ class NPE(NE):
             else:
                 thetas = jnp.vstack([thetas, proposal])
             n_curr -= proposal.shape[0]
-        self.n_total_simulations += n_total_simulations_round
 
         ess = float(thetas.shape[0] / n_total_simulations_round)
 
@@ -377,3 +374,22 @@ class NPE(NE):
         thetas = jax.tree_map(reshape, jax.vmap(unravel_fn)(thetas[:n_samples]))
         inference_data = as_inference_data(thetas, jnp.squeeze(observable))
         return inference_data, ess
+
+    def _simulate_parameters_with_model(
+        self,
+        rng_key,
+        params,
+        observable,
+        *,
+        n_samples=4_000,
+        check_proposal_probs=True,
+        **kwargs,
+    ):
+        return self.sample_posterior(
+            rng_key=rng_key,
+            params=params,
+            observable=observable,
+            n_samples=n_samples,
+            check_proposal_probs=check_proposal_probs,
+            **kwargs,
+        )

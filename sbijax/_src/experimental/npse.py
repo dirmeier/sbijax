@@ -59,7 +59,7 @@ class NPSE(FMPE):
         return params
 
     def get_truncated_prior(self, rng_key, params, observable, n_samples):
-        samp = self.prior_sampler_fn(seed=jr.PRNGKey(0), sample_shape=())
+        samp = self.prior.sample(seed=jr.PRNGKey(0), sample_shape=())
         _, unravel_fn = ravel_pytree(samp)
 
         sample_key, rng_key = jr.split(rng_key)
@@ -85,7 +85,7 @@ class NPSE(FMPE):
             jax.tree.map(lambda x: x.max(axis=0), posterior_samples),
         )
         sample_key, rng_key = jr.split(rng_key)
-        prior_samples = self.prior_sampler_fn(
+        prior_samples = self.prior.sample(
             seed=sample_key, sample_shape=(int(1e6),)
         )
         min_prior, max_prior = (
