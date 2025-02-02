@@ -373,31 +373,18 @@ class NRE(NE):
         part = partial(self.model.apply, params, is_training=False)
 
         def _joint_logdensity_fn(theta):
-            lp_prior = self.prior_log_density_fn(theta)
+            lp_prior = self.prior.log_prob(theta)
             theta, _ = ravel_pytree(theta)
             theta = theta.reshape(observable.shape[0], -1)
             lp = part(jnp.concatenate([observable, theta], axis=-1))
             return jnp.sum(lp_prior) + jnp.sum(lp)
 
-        if "sampler" in kwargs and kwargs["sampler"] == "slice":
-
-            def lp__(theta):
-                return jax.vmap(_joint_logdensity_fn)(theta)
-
-            sampler = kwargs.pop("sampler", None)
-        else:
-
-            def lp__(theta):
-                return _joint_logdensity_fn(theta)
-
-            # take whatever sampler is or per default nuts
-            sampler = kwargs.pop("sampler", "nuts")
-
+        sampler = kwargs.pop("sampler", "nuts")
         sampling_fn = getattr(mcmc, "sample_with_" + sampler)
         samples = sampling_fn(
             rng_key=rng_key,
-            lp=lp__,
-            prior=self.prior_sampler_fn,
+            lp=_joint_logdensity_fn,
+            prior=self.prior,
             n_chains=n_chains,
             n_samples=n_samples,
             n_warmup=n_warmup,
@@ -408,3 +395,24 @@ class NRE(NE):
         inference_data = as_inference_data(samples, jnp.squeeze(observable))
         diagnostics = mcmc_diagnostics(inference_data)
         return inference_data, diagnostics
+
+    def _simulate_parameters_with_model(
+        self,
+        rng_key,
+        params,
+        observable,
+        *,
+        n_chains=4,
+        n_samples=2_000,
+        n_warmup=1_000,
+        **kwargs,
+    ):
+        return self.sample_posterior(
+            rng_key=rng_key,
+            params=params,
+            observable=observable,
+            n_samples=n_samples,
+            n_warmup=n_warmup,
+            n_chains=n_chains,
+            **kwargs,
+        )

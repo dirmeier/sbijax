@@ -56,7 +56,7 @@ def as_batch_iterators(
 
 
 def as_batched_numpy_iterator_from_tf(
-    rng_key: Array, data: tf.data.Dataset, iter_size, batch_size, shuffle
+    rng_key: Array, data, iter_size, batch_size, shuffle
 ):
     """Create a data batch iterator from a tensorflow data set.
 

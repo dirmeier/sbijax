@@ -90,7 +90,7 @@ def make_resnet(
     do_batch_norm: bool = False,
     batch_norm_decay: float = 0.2,
 ):
-    """Create a resnet.
+    """Create a ResNet-based classifier network.
 
     Args:
         n_layers: number of normalizing flow layers

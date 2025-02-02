@@ -5,9 +5,9 @@ import jax
 from jax import numpy as jnp
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-__all__ = ["ConsistencyModel", "make_cm"]
-
 from sbijax._src.nn.make_resnet import _ResnetBlock
+
+__all__ = ["ConsistencyModel", "make_cm"]
 
 
 # ruff: noqa: PLR0913,D417

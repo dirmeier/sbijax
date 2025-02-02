@@ -320,30 +320,17 @@ class NLE(NE):
             theta = jnp.tile(theta, [observable.shape[0], 1])
             return part(x=theta)
 
-        def _joint_logdensity_fn(theta):
-            lp_prior = self.prior_log_density_fn(theta)
+        def _prop_posterior_density(theta):
+            lp_prior = self.prior.log_prob(theta)
             lp = _log_likelihood_fn(theta)
             return jnp.sum(lp) + jnp.sum(lp_prior)
 
-        if "sampler" in kwargs and kwargs["sampler"] == "slice":
-
-            def lp__(theta):
-                return jax.vmap(_joint_logdensity_fn)(theta)
-
-            sampler = kwargs.pop("sampler", None)
-        else:
-
-            def lp__(theta):
-                return _joint_logdensity_fn(theta)
-
-            # take whatever sampler is or per default nuts
-            sampler = kwargs.pop("sampler", "nuts")
-
+        sampler = kwargs.pop("sampler", "nuts")
         sampling_fn = getattr(mcmc, "sample_with_" + sampler)
         samples = sampling_fn(
             rng_key=rng_key,
-            lp=lp__,
-            prior=self.prior_sampler_fn,
+            lp=_prop_posterior_density,
+            prior=self.prior,
             n_chains=n_chains,
             n_samples=n_samples,
             n_warmup=n_warmup,
@@ -354,6 +341,27 @@ class NLE(NE):
         inference_data = as_inference_data(samples, jnp.squeeze(observable))
         diagnostics = mcmc_diagnostics(inference_data)
         return inference_data, diagnostics
+
+    def _simulate_parameters_with_model(
+        self,
+        rng_key,
+        params,
+        observable,
+        *,
+        n_chains=4,
+        n_samples=2_000,
+        n_warmup=1_000,
+        **kwargs,
+    ):
+        return self.sample_posterior(
+            rng_key=rng_key,
+            params=params,
+            observable=observable,
+            n_chains=n_chains,
+            n_samples=n_samples,
+            n_warmup=n_warmup,
+            **kwargs,
+        )
 
     @staticmethod
     def plot(inference_data: InferenceData):

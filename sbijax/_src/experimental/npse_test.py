@@ -3,13 +3,13 @@
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax import NRE
-from sbijax.nn import make_mlp
+from sbijax.experimental import NPSE
+from sbijax.experimental.nn import make_score_model
 
 
-def test_nre(prior_simulator_tuple):
+def test_npse(prior_simulator_tuple):
     y_observed = jnp.array([-1.0, 1.0])
-    estim = NRE(prior_simulator_tuple, make_mlp())
+    estim = NPSE(prior_simulator_tuple, make_score_model(2))
     data, params = None, {}
     for i in range(2):
         data, _ = estim.simulate_data_and_possibly_append(
@@ -18,16 +18,10 @@ def test_nre(prior_simulator_tuple):
             observable=y_observed,
             data=data,
             n_simulations=100,
-            n_chains=4,
-            n_samples=200,
-            n_warmup=100,
         )
         params, info = estim.fit(jr.PRNGKey(2), data=data, n_iter=2)
     _ = estim.sample_posterior(
         jr.PRNGKey(3),
         params,
         y_observed,
-        n_chains=4,
-        n_samples=200,
-        n_warmup=100,
     )

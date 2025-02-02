@@ -126,7 +126,7 @@ class SMCABC(SBI):
     def _init_particles(self, rng_key, observable, n_particles):
         self.n_total_simulations += n_particles
         init_key, rng_key = jr.split(rng_key)
-        particles = self.prior_sampler_fn(
+        particles = self.prior.sample(
             seed=init_key, sample_shape=(n_particles,)
         )
         simulator_key, rng_key = jr.split(rng_key)
@@ -157,7 +157,7 @@ class SMCABC(SBI):
         new_candidate_particles = self._perturb(
             perturb_key, new_candidate_particles, cov_chol_factor
         )
-        cand_lps = self.prior_log_density_fn(new_candidate_particles)
+        cand_lps = self.prior.log_prob(new_candidate_particles)
         is_finite = jnp.logical_not(jnp.isinf(cand_lps))
         new_candidate_particles = tree_map(
             lambda x: x[is_finite], new_candidate_particles
@@ -227,7 +227,7 @@ class SMCABC(SBI):
     def _new_log_weights(
         self, new_particles, old_particles, old_log_weights, cov_chol_factor
     ):
-        prior_log_density = self.prior_log_density_fn(new_particles)
+        prior_log_density = self.prior.log_prob(new_particles)
         K = self._kernel(old_particles, cov_chol_factor)
 
         def _particle_weight(partcl):
@@ -248,7 +248,7 @@ class SMCABC(SBI):
         return tfd.MultivariateNormalTriL(loc=mus, scale_tril=cov_chol_factor)
 
     def _perturb(self, rng_key, mus, cov_chol_factor):
-        _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(0)))
+        _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(0)))
         samples = self._kernel(mus, cov_chol_factor).sample(seed=rng_key)
         samples = jax.vmap(unravel_fn)(samples)
         return samples

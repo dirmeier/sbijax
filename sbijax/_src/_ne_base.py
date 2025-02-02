@@ -26,7 +26,7 @@ class NE(SBI, ABC):
         """
         super().__init__(model_fns)
         self.model = network
-        self.n_total_simulations = 0
+        self.round = 0
 
     def simulate_data_and_possibly_append(
         self,
@@ -76,6 +76,16 @@ class NE(SBI, ABC):
             **kwargs: keyword arguments
         """
 
+    @abc.abstractmethod
+    def _simulate_parameters_with_model(
+        self, rng_key, params, observable, *args, **kwargs
+    ):
+        """Simulates a new parameter set.
+
+        Simulates either from posterior, truncated prior, etc.
+        """
+        pass
+
     def simulate_parameters(
         self,
         rng_key,
@@ -102,8 +112,7 @@ class NE(SBI, ABC):
         """
         if params is None or len(params) == 0:
             diagnostics = None
-            self.n_total_simulations += n_simulations
-            new_thetas = self.prior_sampler_fn(
+            new_thetas = self.prior.sample(
                 seed=rng_key,
                 sample_shape=(n_simulations,),
             )
@@ -115,7 +124,7 @@ class NE(SBI, ABC):
                 )
             if "n_samples" not in kwargs:
                 kwargs["n_samples"] = n_simulations
-            inference_data, diagnostics = self.sample_posterior(
+            inference_data, diagnostics = self._simulate_parameters_with_model(
                 rng_key=rng_key,
                 params=params,
                 observable=jnp.atleast_2d(observable),

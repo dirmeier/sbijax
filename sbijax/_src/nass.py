@@ -64,9 +64,6 @@ class NASS(NE):
         Chen, Yanzhi et al. "Neural Approximate Sufficient Statistics for Implicit Models". ICLR, 2021
     """
 
-    def sample_posterior(self, rng_key, params, observable, *args, **kwargs):
-        raise NotImplementedError()
-
     def __init__(self, model_fns, summary_net):
         super().__init__(model_fns, summary_net)
 
@@ -220,3 +217,11 @@ class NASS(NE):
         return super().simulate_data(
             rng_key, n_simulations=n_simulations, **kwargs
         )
+
+    def _simulate_parameters_with_model(
+        self, rng_key, params, observable, *args, **kwargs
+    ):
+        raise NotImplementedError()
+
+    def sample_posterior(self, rng_key, params, observable, *args, **kwargs):
+        raise NotImplementedError()

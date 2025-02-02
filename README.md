@@ -89,6 +89,19 @@ In order to contribute:
 4) test it by calling `make tests`, `make lints` and `make format` on the (Unix) command line,
 5) submit a PR 🙂
 
+## Citing sbijax
+
+If you find our work relevant to your research, please consider citing:
+
+```
+@article{dirmeier2024simulation,
+  title={Simulation-based inference with the Python Package sbijax},
+  author={Dirmeier, Simon and Ulzega, Simone and Mira, Antonietta and Albert, Carlo},
+  journal={arXiv preprint arXiv:2409.19435},
+  year={2024}
+}
+```
+
 ## Acknowledgements
 
 > [!NOTE]
