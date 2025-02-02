@@ -11,13 +11,20 @@ class AiO(FMPE):
     """All-in-one simulation-based inference.
 
     Implements all-on-one posterior estimation as introduced
-    :cite:t:`gloeckler2024allinone`.
+    :cite:t:`gloeckler2024allinone`. In comparison to the original paper,
+    this implementation (so far) only infers the posterior distribution of
+    all latent variables, so no marginals or other conditional distributions.
+    As a consequence, when training the model, we use the same mask for all
+    latent/conditioning variables, and don't sample it every step. Hence,
+    this implementation is basically the same as NPSE only that we use a
+    transformer as score network and a mask to encode the conditional
+    dependencies.
 
     Args:
         model_fns: a tuple of callables. The first element needs to be a
             function that constructs a tfd.JointDistributionNamed, the second
             element is a simulator function.
-        density_estimator: a score estimator
+        score_estimator: a score estimator
 
     Examples:
         >>> from sbijax.experimental import AiO

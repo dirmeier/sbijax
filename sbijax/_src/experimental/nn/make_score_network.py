@@ -355,11 +355,11 @@ def make_score_model(
     time_eps=0.001,
     time_max=1,
 ):
-    """Create a score network for NPSE.
+    """Create a score model for NPSE.
 
-    The score network uses MLPs to embed the data, the parameters and the time
+    The score model uses MLPs to embed the data, the parameters and the time
     points (after projecting them with a sinusoidal embedding).
-    The score net itself is also a MLP.
+    The score net itself is also an MLP.
 
     Args:
         n_dimension: dimensionality of modelled space
@@ -381,7 +381,7 @@ def make_score_model(
         time_max: maximum integration time. 1 is good, but so is 5 or 10.
 
     Returns:
-        returns a conditional continuous normalizing flow
+        returns a score model that can be used for inference using NPSE.
     """
 
     @hk.transform

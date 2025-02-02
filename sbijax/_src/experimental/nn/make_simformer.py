@@ -116,31 +116,31 @@ class _SimFormer(hk.Module):
         return outputs
 
 
-# ruff: noqa: PLR0913
+# ruff: noqa: PLR0913,E501
 def make_simformer_based_score_model(
     n_dimension: int,
     mask: jax.Array,
-    n_heads=4,
-    n_layers=4,
+    n_heads: int = 4,
+    n_layers: int = 4,
     head_size: Optional[int] = None,
-    embedding_dim_values=32,
-    embedding_dim_ids=32,
-    embedding_dim_conditioning=8,
-    time_embedding_layers=(
+    embedding_dim_values: int = 32,
+    embedding_dim_ids: int = 32,
+    embedding_dim_conditioning: int = 8,
+    time_embedding_layers: tuple[int, ...] = (
         128,
         128,
     ),
-    dropout_rate=0.1,
-    activation=jax.nn.gelu,
-    sde="vp",
-    beta_min=0.1,
-    beta_max=10.0,
-    time_eps=0.001,
-    time_max=1,
+    dropout_rate: float = 0.1,
+    activation: Callable = jax.nn.gelu,
+    sde: str = "vp",
+    beta_min: float = 0.1,
+    beta_max: float = 10.0,
+    time_eps: float = 0.001,
+    time_max: float = 1,
 ):
     """Create a score network for AiO.
 
-    The score model uses a transformer a score estimator.
+    The score model uses a transformer as a score estimator.
 
     Args:
         n_dimension: dimensionality of modelled space
@@ -168,7 +168,11 @@ def make_simformer_based_score_model(
         time_max: maximum integration time. 1 is good, but so is 5 or 10.
 
     Returns:
-        returns a conditional continuous normalizing flow
+        returns a score model that can be used for posterior inference using
+        AiO.
+
+    References:
+        Gloeckler, Manuel, et al. "All-in-one simulation-based inference." International Conference on Machine Learning, 2024.
     """
 
     @hk.transform

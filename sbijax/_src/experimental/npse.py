@@ -17,7 +17,7 @@ class NPSE(FMPE):
         model_fns: a tuple of callables. The first element needs to be a
             function that constructs a tfd.JointDistributionNamed, the second
             element is a simulator function.
-        density_estimator: a score estimator
+        score_estimator: a score_estimator estimator
 
     Examples:
         >>> from sbijax.experimental import NPSE
@@ -36,6 +36,9 @@ class NPSE(FMPE):
         Sharrock, Louis, et al. "Sequential neural score estimation: likelihood-free inference with conditional score based diffusion models." International Conference on Machine Learning, 2025.
     """
 
+    def __init__(self, model_fns, score_estimator):
+        super().__init__(model_fns, score_estimator)
+
     def _simulate_parameters_with_model(
         self, rng_key, params, observable, *, n_samples=4_000, **kwargs
     ):
@@ -44,9 +47,6 @@ class NPSE(FMPE):
             prior_key, params, observable, n_samples=int(1e5)
         )
         return prior_fn(rng_key, n_samples)
-
-    def __init__(self, model_fns, density_estimator):
-        super().__init__(model_fns, density_estimator)
 
     def _init_params(self, rng_key, **init_data):
         params = self.model.init(
