@@ -126,7 +126,7 @@ class SMCABC(SBI):
     def _init_particles(self, rng_key, observable, n_particles):
         self.n_total_simulations += n_particles
         init_key, rng_key = jr.split(rng_key)
-        particles = self.prior_sampler_fn(
+        particles = self.prior.sample(
             seed=init_key, sample_shape=(n_particles,)
         )
         simulator_key, rng_key = jr.split(rng_key)
@@ -157,7 +157,7 @@ class SMCABC(SBI):
         new_candidate_particles = self._perturb(
             perturb_key, new_candidate_particles, cov_chol_factor
         )
-        cand_lps = self.prior_log_density_fn(new_candidate_particles)
+        cand_lps = self.prior.log_prob(new_candidate_particles)
         is_finite = jnp.logical_not(jnp.isinf(cand_lps))
         new_candidate_particles = tree_map(
             lambda x: x[is_finite], new_candidate_particles
