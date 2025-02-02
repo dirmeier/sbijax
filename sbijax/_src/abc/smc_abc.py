@@ -227,7 +227,7 @@ class SMCABC(SBI):
     def _new_log_weights(
         self, new_particles, old_particles, old_log_weights, cov_chol_factor
     ):
-        prior_log_density = self.prior_log_density_fn(new_particles)
+        prior_log_density = self.prior.log_prob(new_particles)
         K = self._kernel(old_particles, cov_chol_factor)
 
         def _particle_weight(partcl):
@@ -248,7 +248,7 @@ class SMCABC(SBI):
         return tfd.MultivariateNormalTriL(loc=mus, scale_tril=cov_chol_factor)
 
     def _perturb(self, rng_key, mus, cov_chol_factor):
-        _, unravel_fn = ravel_pytree(self.prior_sampler_fn(seed=jr.PRNGKey(0)))
+        _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(0)))
         samples = self._kernel(mus, cov_chol_factor).sample(seed=rng_key)
         samples = jax.vmap(unravel_fn)(samples)
         return samples
