@@ -352,7 +352,7 @@ class NPE(NE):
                 proposal_probs = self.prior.log_prob(proposal)
                 proposal = jax.vmap(lambda x: ravel_pytree(x)[0])(proposal)
             else:
-                proposal_probs = self.prior_log_density_fn(
+                proposal_probs = self.prior.log_prob(
                     jax.vmap(unravel_fn)(proposal)
                 )
             if check_proposal_probs:

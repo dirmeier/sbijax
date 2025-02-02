@@ -8,7 +8,7 @@ description = " Simulation-based inference in JAX"
 authors = [{name = "Simon Dirmeier", email = "sfyrbnd@pm.me"}]
 readme = "README.md"
 license = "Apache-2.0"
-keywords = [ "sbi", "abc", "simulation-based inference", "approximate Bayesian computation"]
+keywords = ["sbi", "abc", "simulation-based inference", "approximate Bayesian computation"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
