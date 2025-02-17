@@ -66,7 +66,7 @@ jedi==0.19.2
 Jinja2==3.1.5
 jmp==0.0.4
 joblib==1.4.2
-jrnmm @ git+https://github.com/dirmeier/jrnmm@9489dc72e2ac8f3a82db3fa12ae179fb161f744c
+jrnmm==0.1.1.post2
 json5==0.10.0
 jsonpointer==3.0.0
 jsonschema==4.23.0
@@ -142,7 +142,7 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rich==13.9.4
 rpds-py==0.22.3
-sbijax @ git+https://github.com/dirmeier/sbijax@708ebb69e9e7271ffa946e468e6e209ac9cc215d
+sbijax==0.3.4
 scikit-learn==1.6.0
 scipy==1.15.0
 seaborn==0.12.2

@@ -95,7 +95,7 @@ class CMPE(FMPE):
     :cite:t:`schmitt2023con`.
 
     Args:
-       model_fns: a tuple of callables. The first element needs to be a
+        model_fns: a tuple of callables. The first element needs to be a
             function that constructs a tfd.JointDistributionNamed, the second
             element is a simulator function.
         network: a consistency model

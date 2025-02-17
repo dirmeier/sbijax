@@ -46,7 +46,6 @@ exclude_patterns = [
 autodoc_typehints = "both"
 
 html_theme = "sphinx_book_theme"
-
 html_theme_options = {
     "repository_url": "https://github.com/dirmeier/sbijax",
     "use_repository_button": True,
