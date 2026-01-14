@@ -7,8 +7,8 @@ from blackjax.smc.ess import ess
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
-from jax.tree_util import tree_map
 from jax._src.flatten_util import ravel_pytree
+from jax.tree_util import tree_map
 from tensorflow_probability.substrates.jax import distributions as tfd
 from tqdm import tqdm
 

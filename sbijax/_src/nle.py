@@ -150,7 +150,10 @@ class NLE(NE):
             validation_loss = self._validation_loss(params, val_iter)
             losses[i] = jnp.array([train_loss, validation_loss])
 
-            if checkpoint_callback is not None and (i + 1) % checkpoint_every == 0:
+            if (
+                checkpoint_callback is not None
+                and (i + 1) % checkpoint_every == 0
+            ):
                 checkpoint_callback(
                     iteration=i + 1,
                     params=params,
