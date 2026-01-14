@@ -59,6 +59,8 @@ class NLE(NE):
         batch_size=100,
         percentage_data_as_validation_set=0.1,
         n_early_stopping_patience=10,
+        checkpoint_callback=None,
+        checkpoint_every=100,
         **kwargs,
     ):
         """Fit the model.
@@ -74,6 +76,10 @@ class NLE(NE):
                 that is used for valitation and early stopping
             n_early_stopping_patience: number of iterations of no improvement of
                 training the flow before stopping optimisation
+            checkpoint_callback: optional callable with signature
+            (iteration, params, train_loss, val_loss, state) that is called
+            every checkpoint_every iterations
+            checkpoint_every: how often to call checkpoint_callback (default: 100)
             **kwargs: additional keyword arguments (not used for NLE)
 
         Returns:
@@ -91,6 +97,8 @@ class NLE(NE):
             optimizer=optimizer,
             n_iter=n_iter,
             n_early_stopping_patience=n_early_stopping_patience,
+            checkpoint_callback=checkpoint_callback,
+            checkpoint_every=checkpoint_every,
         )
 
         return params, losses
@@ -104,6 +112,8 @@ class NLE(NE):
         optimizer,
         n_iter,
         n_early_stopping_patience,
+        checkpoint_callback=None,
+        checkpoint_every=100,
     ):
         init_key, seed = jr.split(seed)
         params = self._init_params(init_key, **next(iter(train_iter)))
@@ -139,6 +149,15 @@ class NLE(NE):
                 )
             validation_loss = self._validation_loss(params, val_iter)
             losses[i] = jnp.array([train_loss, validation_loss])
+
+            if checkpoint_callback is not None and (i + 1) % checkpoint_every == 0:
+                checkpoint_callback(
+                    iteration=i + 1,
+                    params=params,
+                    train_loss=float(train_loss),
+                    val_loss=float(validation_loss),
+                    state=state,
+                )
 
             _, early_stop = early_stop.update(validation_loss)
             if early_stop.should_stop:
