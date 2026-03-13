@@ -155,7 +155,7 @@ class AiO(FMPE):
                 return p
 
             ess = n_curr / (cnt * n_samples)
-            thetas = jax.tree_map(
+            thetas = jax.tree_util.tree_map(
                 reshape, jax.vmap(unravel_fn)(thetas[:n_samples])
             )
             inference_data = as_inference_data(thetas, jnp.squeeze(observable))

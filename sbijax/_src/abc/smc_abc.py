@@ -7,8 +7,8 @@ from blackjax.smc.ess import ess
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
-from jax.tree_util import tree_map
 from jax._src.flatten_util import ravel_pytree
+from jax.tree_util import tree_map
 from tensorflow_probability.substrates.jax import distributions as tfd
 from tqdm import tqdm
 
@@ -113,7 +113,9 @@ class SMCABC(SBI):
             all_particles.append(particles.copy())
             all_n_simulations.append(self.n_total_simulations)
 
-        thetas = jax.tree_map(lambda x: x.reshape(1, *x.shape), particles)
+        thetas = jax.tree_util.tree_map(
+            lambda x: x.reshape(1, *x.shape), particles
+        )
         inference_data = as_inference_data(thetas, jnp.squeeze(observable))
         smc_info = namedtuple("smc_info", "particles n_simulations")
         return inference_data, smc_info(all_particles, all_n_simulations)
@@ -138,7 +140,9 @@ class SMCABC(SBI):
         )
 
         sort_idx = jnp.argsort(distances)
-        particles = jax.tree_map(lambda x: x[sort_idx][:n_particles], particles)
+        particles = jax.tree_util.tree_map(
+            lambda x: x[sort_idx][:n_particles], particles
+        )
         log_weights = -jnp.log(jnp.full(n_particles, n_particles))
         initial_epsilon = distances[-1]
 
