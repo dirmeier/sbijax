@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "sbijax"
 description = " Simulation-based inference in JAX"
-authors = [{name = "Simon Dirmeier", email = "sfyrbnd@pm.me"}]
+authors = [{name = "Simon Dirmeier", email = "simd23@pm.me"}]
 readme = "README.md"
 license = "Apache-2.0"
 keywords = ["sbi", "abc", "simulation-based inference", "approximate Bayesian computation"]
@@ -25,6 +25,7 @@ dependencies = [
     "blackjax-nightly>=1.0.0.post17",
     "dm-haiku>=0.0.9",
     "einops>=0.8.0",
+    "jrnmm==0.1.1.post2",
     "matplotlib>=3.6.2",
     "optax>=0.1.3",
     "seaborn>=0.12.2",
@@ -37,9 +38,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-examples = [
-  "jrnmm==0.1.1.post2",
-]
+
 [project.urls]
 Homepage = "https://github.com/dirmeier/sbijax"
 Documentation = "https://sbijax.readthedocs.io"
@@ -97,7 +96,7 @@ select = ["E", "F"]
 extend-select = [
   "UP", "D", "I", "PL", "S"
 ]
-ignore=["S101"]
+ignore=["S101", "F841", "PLR2004"]
 
 [tool.ruff.lint.pydocstyle]
 convention= 'google'
