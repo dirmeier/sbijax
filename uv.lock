@@ -2928,9 +2928,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
-examples = [
-    { name = "matplotlib" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -2961,7 +2958,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.15.6" },
 ]
-examples = [{ name = "matplotlib", specifier = ">=3.10.8" }]
+examples = []
 
 [[package]]
 name = "scipy"
