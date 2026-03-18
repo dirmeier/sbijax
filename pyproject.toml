@@ -29,7 +29,6 @@ dependencies = [
     "optax>=0.2.7",
     "seaborn>=0.13.2",
     "surjectors>=0.3.3",
-    "tensorflow-datasets>=4.9.3",
     "tqdm>=4.64.1",
     "ipython>=9.11.0",
     "jaxlib==0.8.1",

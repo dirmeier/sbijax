@@ -103,7 +103,6 @@ License
     :hidden:
 
     🏡 Home <self>
-    📰 News <news>
     📚 References <references>
 
 ..  toctree::
