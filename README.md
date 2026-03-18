@@ -106,7 +106,3 @@ If you find our work relevant to your research, please consider citing:
 
 > [!NOTE]
 > 📝 The API of the package is heavily inspired by the excellent Pytorch-based [`sbi`](https://github.com/sbi-dev/sbi) package.
-
-## Author
-
-Simon Dirmeier <a href="mailto:sfyrbnd @ pm me">sfyrbnd @ pm me</a>
