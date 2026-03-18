@@ -61,6 +61,16 @@ version = {attr = "sbijax.__init__.__version__"}
 [tool.bandit]
 skips = ["B101"]
 
+[tool.mypy]
+show_error_codes = true
+no_implicit_optional = true
+
+[tool.pytest]
+addopts = "-v --doctest-modules --cov=./sbijax --cov-report=xml"
+testpaths = [
+    "sbijax"
+]
+
 [tool.ruff]
 indent-width = 2
 line-length = 80

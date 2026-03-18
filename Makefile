@@ -1,7 +1,7 @@
 .PHONY: tests, lints, docs, format
 
 tests:
-	uv run pytest -v --doctest-modules --cov=./sbijax --cov-report=xml sbijax
+	uv run pytest
 
 lints:
 	uv run ruff check sbijax examples
