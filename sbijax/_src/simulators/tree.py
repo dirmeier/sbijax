@@ -3,7 +3,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 
 
 # ruff: noqa: PLR0913, E501
-def tree_model():
+def tree():
     """Tree model.
 
     Constructs prior, simulator and likelihood functions.
@@ -64,6 +64,6 @@ def tree_model():
             ),
             reinterpreted_batch_ndims=1,
         )
-        return sim_fn.sample(seed=seed)
+        return sim_fn.sample(seed=seed).reshape(-1, 4)
 
     return prior_fn(), simulator, likelihood

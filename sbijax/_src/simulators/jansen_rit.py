@@ -5,7 +5,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 
 
 # ruff: noqa: PLR0913, E501
-def jansen_rit_model(summarize_data=False):
+def jansen_rit(summarize_data=False):
     """Stochastic Jansen-Rit neural mass model.
 
     Constructs prior and simulator functions.

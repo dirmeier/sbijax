@@ -73,7 +73,7 @@ def hyperboloid():
         return y.reshape(-1, 10)
 
     def likelihood(y, theta):
-        theta = theta.reshape(-1, 2)
+        theta = theta["theta"].reshape(-1, 2)
         d1 = dists_1_fn(theta).reshape(-1, 10)
         d2 = dists_2_fn(theta).reshape(-1, 10)
         scales = scale * jnp.eye(10)

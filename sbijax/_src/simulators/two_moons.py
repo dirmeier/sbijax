@@ -3,6 +3,7 @@
 Adopted from https://github.com/sbi-benchmark/sbibm/blob/main/sbibm/tasks/two_moons/task.py.
 """
 
+import jax
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
@@ -31,7 +32,7 @@ def _map_fun_(theta, p):
     return p + jnp.concatenate([-jnp.abs(z0), z1], axis=1)
 
 
-def two_moons_model():
+def two_moons():
     def prior_fn():
         prior = tfd.JointDistributionNamed(
             dict(
@@ -72,21 +73,31 @@ def two_moons_model():
         return ret
 
     def likelihood(y, theta):
-        theta, y = theta.reshape(-1, 2), y.reshape(-1, 2)
-        p = _map_fun_inv(theta, y).reshape(1, -1)
-        u = p[:, [0]] - simulator_params["base_offset"]
-        v = p[:, [1]]
+        def fn(y, theta):
+            theta, y = theta.reshape(-1, 2), y.reshape(-1, 2)
+            p = _map_fun_inv(theta, y).reshape(1, -1)
+            u = p[:, [0]] - simulator_params["base_offset"]
+            v = p[:, [1]]
 
-        r = jnp.sqrt(u**2 + v**2)
-        ll = (
-            -0.5
-            * ((r - simulator_params["r_loc"]) / simulator_params["r_scale"])
-            ** 2
-        )
-        ll = ll - 0.5 * jnp.log(2 * jnp.pi * simulator_params["r_scale"] ** 2)
+            r = jnp.sqrt(u**2 + v**2)
+            ll = (
+                -0.5
+                * (
+                    (r - simulator_params["r_loc"])
+                    / simulator_params["r_scale"]
+                )
+                ** 2
+            )
+            ll = ll - 0.5 * jnp.log(
+                2 * jnp.pi * simulator_params["r_scale"] ** 2
+            )
 
-        # I think this (isntead if -inf) is necessary for slice sampling
-        ll = jnp.where(u < 0.0, -100_000.0, ll)
-        return ll
+            # I think this (isntead if -inf) is necessary for slice sampling
+            ll = jnp.where(u < 0.0, -100_000.0, ll)
+            return jnp.squeeze(ll)
+
+        theta, y = theta["theta"].reshape(-1, 2), y.reshape(-1, 2)
+        log_lik = jax.vmap(fn)(y, theta)
+        return log_lik
 
     return prior_fn(), simulator, likelihood

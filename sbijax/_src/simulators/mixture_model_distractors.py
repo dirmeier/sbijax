@@ -60,10 +60,11 @@ def mixture_model_with_distractors():
     def likelihood(y, theta):
         y = y.reshape(-1, 10)[:, :2]
         theta = theta["theta"].reshape(-1, 1)
-        theta = jnp.concatenate([theta, theta], axis=-1)
+        theta = jnp.broadcast_to(theta, y.shape)
         lp1 = tfd.Normal(loc=theta, scale=1.0).log_prob(y)
         lp2 = tfd.Normal(loc=-theta, scale=sigma).log_prob(y)
         lp = jnp.logaddexp(jnp.log(alpha) + lp1, jnp.log(1 - alpha) + lp2)
+        lp = lp.sum(axis=1)
         return lp
 
     return prior_fn(), simulator, likelihood

@@ -5,7 +5,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 
 
 # ruff: noqa: PLR0913, E501
-def sir_model(
+def sir(
     population_size=1_000_000,
     binomial_count=1_000,
     initial_conditions=(1_000_000 - 1, 1, 0),
@@ -99,7 +99,7 @@ def sir_model(
         return ys
 
     def likelihood(y, theta):
-        _, infections = _solve_ode(theta)
+        infections = _solve_ode(theta)
         probs = jnp.clip(infections / population_size, 0, 1)
         lik_fn = tfd.Independent(
             tfd.Binomial(total_count=binomial_count, probs=probs),
