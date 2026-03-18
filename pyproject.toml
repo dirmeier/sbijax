@@ -66,7 +66,7 @@ show_error_codes = true
 no_implicit_optional = true
 
 [tool.pytest]
-addopts = "-v --doctest-modules --cov=./sbijax --cov-report=xml"
+addopts = ["-v", "--doctest-modules", "--cov=./sbijax", "--cov-report=xml"]
 testpaths = [
     "sbijax"
 ]
