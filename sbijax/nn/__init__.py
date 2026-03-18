@@ -9,13 +9,13 @@ from sbijax._src.nn.make_nass_network import make_nass_net, make_nasss_net
 from sbijax._src.nn.make_resnet import make_resnet
 
 __all__ = [
-    "make_mdn",
-    "make_maf",
-    "make_spf",
-    "make_cnf",
-    "make_mlp",
-    "make_resnet",
-    "make_cm",
-    "make_nass_net",
-    "make_nasss_net",
+  "make_mdn",
+  "make_maf",
+  "make_spf",
+  "make_cnf",
+  "make_mlp",
+  "make_resnet",
+  "make_cm",
+  "make_nass_net",
+  "make_nasss_net",
 ]
