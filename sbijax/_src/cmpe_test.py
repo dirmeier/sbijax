@@ -1,7 +1,5 @@
 # pylint: skip-file
 
-import distrax
-import haiku as hk
 from jax import numpy as jnp
 from jax import random as jr
 

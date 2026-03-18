@@ -133,4 +133,5 @@ License
     sbijax.experimental
     sbijax.mcmc
     sbijax.nn
+    sbijax.simulators
     sbijax.util
