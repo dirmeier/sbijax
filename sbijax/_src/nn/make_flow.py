@@ -1,5 +1,4 @@
-from collections.abc import Iterable
-from typing import Callable, Optional
+from collections.abc import Callable, Iterable
 
 import distrax
 import haiku as hk
@@ -24,8 +23,8 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 # ruff: noqa: PLR0913, E501
 def make_maf(
     n_dimension: int,
-    n_layers: Optional[int] = 5,
-    n_layer_dimensions: Optional[Iterable[int]] = None,
+    n_layers: int | None = 5,
+    n_layer_dimensions: Iterable[int] | None = None,
     hidden_sizes: Iterable[int] = (64, 64),
     activation: Callable = jax.nn.tanh,
 ) -> hk.Transformed:
@@ -152,8 +151,8 @@ def make_spf(
     n_dimension: int,
     range_min: float,
     range_max: float,
-    n_layers: Optional[int] = 5,
-    n_layer_dimensions: Optional[Iterable[int]] = None,
+    n_layers: int | None = 5,
+    n_layer_dimensions: Iterable[int] | None = None,
     hidden_sizes: Iterable[int] = (64, 64),
     n_params: int = 10,
     activation: Callable = jax.nn.tanh,

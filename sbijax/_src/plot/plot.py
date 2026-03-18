@@ -1,5 +1,3 @@
-from typing import Optional
-
 import arviz as az
 import jax
 import matplotlib.pyplot as plt
@@ -38,7 +36,7 @@ def plot_trace(
 def plot_posterior(
     inference_data: az.InferenceData,
     axes: np.ndarray[pyplot.Axes] = None,
-    point_estimate: Optional[str] = None,
+    point_estimate: str | None = None,
 ) -> np.ndarray[pyplot.Axes]:
     """Posterior histogram plot.
 

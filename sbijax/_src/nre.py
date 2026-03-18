@@ -1,6 +1,7 @@
 # Parts of this codebase have been adopted from https://github.com/bkmi/cnre
+from collections.abc import Callable
 from functools import partial
-from typing import Callable, NamedTuple, Optional
+from typing import NamedTuple
 
 import chex
 import jax
@@ -264,9 +265,9 @@ class NRE(NE):
     def simulate_data_and_possibly_append(
         self,
         rng_key: Array,
-        params: Optional[Params] = None,
+        params: Params | None = None,
         observable: Array = None,
-        data: Optional[NamedTuple] = None,
+        data: NamedTuple | None = None,
         n_simulations: int = 1_000,
         n_chains: int = 4,
         n_samples: int = 2_000,

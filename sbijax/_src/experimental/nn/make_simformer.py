@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import haiku as hk
 import jax
@@ -62,7 +62,7 @@ class _SimFormer(hk.Module):
     mask: jax.Array
     n_heads: int = 4
     n_layers: int = 4
-    head_size: Optional[int] = None
+    head_size: int | None = None
     embedding_dim_values: int = 32
     embedding_dim_ids: int = 32
     embedding_dim_conditioning: int = 10
@@ -122,7 +122,7 @@ def make_simformer_based_score_model(
     mask: jax.Array,
     n_heads: int = 4,
     n_layers: int = 4,
-    head_size: Optional[int] = None,
+    head_size: int | None = None,
     embedding_dim_values: int = 32,
     embedding_dim_ids: int = 32,
     embedding_dim_conditioning: int = 8,

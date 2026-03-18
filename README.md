@@ -83,11 +83,12 @@ Contributions in the form of pull requests are more than welcome. A good way to 
 
 In order to contribute:
 
-1) Clone `sbijax` and install `hatch` via `pip install hatch`,
-2) create a new branch locally `git checkout -b feature/my-new-feature` or `git checkout -b issue/fixes-bug`,
-3) implement your contribution and ideally a test case,
-4) test it by calling `make tests`, `make lints` and `make format` on the (Unix) command line,
-5) submit a PR 🙂
+1) Clone `sbijax` and install `uv` from [here](https://docs.astral.sh/uv/getting-started/installation/),
+2) install all dependencies using `uv sync`,
+3) create a new branch locally `git checkout -b feature/my-new-feature` or `git checkout -b issue/fixes-bug`,
+4) implement your contribution and ideally a test case,
+5) test it by calling `make tests`, `make lints` and `make format` on the (Unix) command line,
+6) submit a PR 🙂
 
 ## Citing sbijax
 

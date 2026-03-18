@@ -19,20 +19,19 @@ jobs:
       - precommit
     strategy:
       matrix:
-        python-version: [3.11]
+        python-version: [ 3.12, 3.13 ]
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
       - name: Install dependencies
         run: |
-          pip install hatch matplotlib
-      - name: Build package
-        run: |
-          pip install jaxlib jax
-          pip install .
+          uv sync
       - name: Run tests
         run: |
             python examples/gaussian_linear-aio.py --n-iter 10

@@ -1,5 +1,4 @@
-from collections.abc import Iterable
-from typing import Callable
+from collections.abc import Callable, Iterable
 
 import haiku as hk
 import jax
