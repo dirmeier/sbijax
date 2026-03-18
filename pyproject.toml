@@ -62,6 +62,7 @@ version = {attr = "sbijax.__init__.__version__"}
 skips = ["B101"]
 
 [tool.ruff]
+indent-width = 2
 line-length = 80
 exclude = ["*_test.py", "docs/**", "examples/**", "manuscript+supplement/**"]
 
