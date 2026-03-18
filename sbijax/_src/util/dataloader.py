@@ -1,5 +1,5 @@
+import grain
 import jax.tree_util
-import tensorflow as tf
 from jax import Array
 from jax import numpy as jnp
 from jax import random as jr
@@ -17,7 +17,7 @@ class DataLoader:
 
   def __iter__(self):
     """Iterate over the data set."""
-    yield from self._itr.as_numpy_iterator()
+    yield from self._itr
 
 
 # pylint: disable=missing-function-docstring
@@ -55,8 +55,32 @@ def as_batch_iterators(
   return train_itr, val_itr
 
 
-def as_batched_numpy_iterator_from_tf(
-  rng_key: Array, data, iter_size, batch_size, shuffle
+# pylint: disable=missing-function-docstring
+def as_batch_iterator(rng_key: Array, data: PyTree, batch_size, shuffle):
+  """Create a data batch iterator from a data set.
+
+  Args:
+      rng_key: a jax random key
+      data: a named tuple with elements 'y' and 'theta' all data
+      batch_size: size of each batch
+      shuffle: shuffle the data set or no
+
+  Returns:
+      a tensorflow iterator
+  """
+  n = data["y"].shape[0]
+  data = [
+    {"y": y, "theta": theta}
+    for y, theta in zip(
+      data["y"], jax.vmap(lambda x: ravel_pytree(x)[0])(data["theta"])
+    )
+  ]
+  itr = grain.MapDataset.source(data)
+  return as_batched_numpy_iterator(rng_key, itr, n, batch_size, shuffle)
+
+
+def as_batched_numpy_iterator(
+  rng_key: Array, data: grain.MapDataset, iter_size, batch_size, shuffle
 ):
   """Create a data batch iterator from a tensorflow data set.
 
@@ -73,44 +97,24 @@ def as_batched_numpy_iterator_from_tf(
   # hack, cause the tf stuff doesn't support jax keys :)
   max_int32 = jnp.iinfo(jnp.int32).max
   seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
-
-  data = (
-    data.shuffle(
-      10 * batch_size,
-      seed=int(seed),
-      reshuffle_each_iteration=shuffle,
-    )
-    .batch(batch_size)
-    .prefetch(buffer_size=batch_size)
-  )
+  data = data.shuffle(seed=int(seed)).batch(batch_size).to_iter_dataset()
   return DataLoader(data, iter_size)
 
 
-# pylint: disable=missing-function-docstring
-def as_batch_iterator(rng_key: Array, data: PyTree, batch_size, shuffle):
-  """Create a data batch iterator from a data set.
-
-  Args:
-      rng_key: a jax random key
-      data: a named tuple with elements 'y' and 'theta' all data
-      batch_size: size of each batch
-      shuffle: shuffle the data set or no
-
-  Returns:
-      a tensorflow iterator
-  """
-  data = {
-    "y": data["y"],
-    "theta": jax.vmap(lambda x: ravel_pytree(x)[0])(data["theta"]),
-  }
-  itr = tf.data.Dataset.from_tensor_slices(data)
-  return as_batched_numpy_iterator_from_tf(
-    rng_key, itr, data["y"].shape[0], batch_size, shuffle
-  )
-
-
 def as_numpy_iterator_from_slices(data: PyTree, batch_size):
-  itr = tf.data.Dataset.from_tensor_slices(data)
-  itr = itr.batch(batch_size).prefetch(buffer_size=batch_size)
-  itr = itr.as_numpy_iterator()
+  if "theta" in data:
+    datalist = [
+      {"y": y, "theta": theta}
+      for y, theta in zip(
+        data["y"], jax.vmap(lambda x: ravel_pytree(x)[0])(data["theta"])
+      )
+    ]
+  else:
+    datalist = [{"y": y} for y in data["y"]]
+
+  itr = (
+    grain.MapDataset.source(datalist)
+    .batch(batch_size=batch_size)
+    .to_iter_dataset()
+  )
   return itr

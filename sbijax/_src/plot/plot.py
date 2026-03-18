@@ -1,14 +1,16 @@
 import arviz as az
+import arviz_plots
 import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import xarray
 from matplotlib import pyplot
 from matplotlib.ticker import AutoLocator, MaxNLocator
 
 
 def plot_trace(
-  inference_data: az.InferenceData,
+  inference_data: xarray.DataTree,
   axes: np.ndarray[pyplot.Axes] = None,
   **kwargs,
 ) -> np.ndarray[pyplot.Axes]:
@@ -34,7 +36,7 @@ def plot_trace(
 
 
 def plot_posterior(
-  inference_data: az.InferenceData,
+  inference_data: xarray.DataTree,
   axes: np.ndarray[pyplot.Axes] = None,
   point_estimate: str | None = None,
 ) -> np.ndarray[pyplot.Axes]:
@@ -49,7 +51,6 @@ def plot_posterior(
   Returns:
       the same array of matplotlib axes with added plots
   """
-  colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
   if axes is None:
     n_dim = np.sum(
       [
@@ -59,14 +60,8 @@ def plot_posterior(
       ]
     )
     _, axes = pyplot.subplots(ncols=n_dim, sharey=False, sharex=False)
-  axes = az.plot_posterior(
+  axes = arviz_plots.plot_dist(
     inference_data,
-    color=colors[2],
-    kind="hist",
-    hdi_prob="hide",
-    point_estimate=point_estimate,
-    edgecolor="black",
-    ax=axes,
   )
   return axes
 
@@ -93,7 +88,7 @@ def plot_loss_profile(
 
 
 def plot_rank(
-  inference_data: az.InferenceData, axes: np.ndarray[pyplot.Axes] = None
+  inference_data: xarray.DataTree, axes: np.ndarray[pyplot.Axes] = None
 ) -> np.ndarray[pyplot.Axes]:
   """Rank statistics plots.
 
@@ -125,7 +120,7 @@ def plot_rank(
 
 # ruff: noqa: PLR2004
 def plot_ess(
-  inference_data: az.InferenceData, axes: np.ndarray[pyplot.Axes] = None
+  inference_data: xarray.DataTree, axes: np.ndarray[pyplot.Axes] = None
 ) -> np.ndarray[pyplot.Axes]:
   """Effective sample size plot.
 
@@ -163,7 +158,7 @@ def plot_ess(
 
 
 def plot_rhat_and_ress(
-  inference_data: az.InferenceData, axes: np.ndarray[pyplot.Axes] = None
+  inference_data: xarray.DataTree, axes: np.ndarray[pyplot.Axes] = None
 ) -> np.ndarray[pyplot.Axes]:
   r"""Split-$\hat{R}$ and relative effective sample size plot.
 

@@ -1,6 +1,7 @@
 import arviz as az
 import jax
 import numpy as np
+import xarray
 from jax import numpy as jnp
 from jax.tree_util import tree_flatten
 
@@ -38,7 +39,7 @@ def stack_data(data: PyTree, also_data: PyTree) -> PyTree:
   return stacked
 
 
-def as_inference_data(samples: PyTree, observed: jax.Array) -> az.InferenceData:
+def as_inference_data(samples: PyTree, observed: jax.Array) -> xarray.DataTree:
   """Convert a PyTree to an inference data object.
 
   Args:
@@ -48,29 +49,29 @@ def as_inference_data(samples: PyTree, observed: jax.Array) -> az.InferenceData:
   Returns:
       an inference data object
   """
-  inf = az.InferenceData(
-    posterior=az.dict_to_dataset(
-      samples,
-      coords={f"{k}_dim": np.arange(v.shape[-1]) for k, v in samples.items()},
-      dims={k: [f"{k}_dim"] for k in samples.keys()},
-    ),
-    observed_data=az.dict_to_dataset({"y": observed}, default_dims=[]),
+  d_ds = {}
+  d_ds["posterior"] = az.dict_to_dataset(
+    samples,
+    coords={f"{k}_dim": np.arange(v.shape[-1]) for k, v in samples.items()},
+    dims={k: [f"{k}_dim"] for k in samples.keys()},
   )
-  return inf
+  d_ds["observed_data"] = az.dict_to_dataset(
+    {"y": observed}, skip_event_dims=True
+  )
+  dt = xarray.DataTree.from_dict(d_ds, name=None)
+  return dt
 
 
-def inference_data_as_dictionary(posterior: az.InferenceData) -> PyTree:
+def inference_data_as_dictionary(inference_data: xarray.DataTree) -> PyTree:
   """Convert inference data to a PyTree.
 
   Args:
-      posterior: the `posterior` variable of an inference data object
+      inference_data: the `posterior` variable of an inference data object
 
   Returns:
       a PyTree
   """
-  posterior = posterior.to_dict()
-  posterior = {
-    k: jnp.array(v["data"]) for k, v in posterior["data_vars"].items()
-  }
+  posterior = inference_data["/posterior"]
+  posterior = {k: v.data for k, v in posterior.data_vars.items()}
   posterior = {k: v.reshape(-1, v.shape[-1]) for k, v in posterior.items()}
   return posterior

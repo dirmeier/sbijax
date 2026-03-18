@@ -5,8 +5,8 @@ import chex
 import jax
 import numpy as np
 import optax
+import xarray
 from absl import logging
-from arviz import InferenceData
 from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
@@ -364,5 +364,5 @@ class NLE(NE):
     )
 
   @staticmethod
-  def plot(inference_data: InferenceData):
+  def plot(inference_data: xarray.DataTree):
     arviz.plot_trace(inference_data)

@@ -2,9 +2,10 @@ from collections import namedtuple
 
 import arviz as az
 import jax
+import xarray
 
 
-def mcmc_diagnostics(samples: az.InferenceData):
+def mcmc_diagnostics(samples: xarray.DataTree):
   MCMCDiagnostics = namedtuple("MCMCDiagnostics", "rhat ess")
   return MCMCDiagnostics(az.rhat(samples), az.ess(samples))
 
