@@ -31,7 +31,7 @@ jobs:
           version: "latest"
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --all-groups
       - name: Run tests
         run: |
             python examples/gaussian_linear-aio.py --n-iter 10

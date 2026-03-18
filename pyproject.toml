@@ -47,6 +47,9 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.15.6",
 ]
+examples = [
+    "matplotlib>=3.10.8",
+]
 
 [project.urls]
 Homepage = "https://github.com/dirmeier/sbijax"

@@ -84,7 +84,7 @@ Contributions in the form of pull requests are more than welcome. A good way to 
 In order to contribute:
 
 1) Clone `sbijax` and install `uv` from [here](https://docs.astral.sh/uv/getting-started/installation/).
-2) Install all dependencies using `uv sync`.
+2) Install all dependencies using `uv sync --all-groups`.
 3) Install `pre-commit` and `gitlint` via:
 
    ```shell
