@@ -43,9 +43,15 @@ data and then numerically constructing an appropriate approximation to this pseu
 On the one hand, this family of methods has been shown to be more computationally efficient and often more accurate than ABC methods, in particular for smaller simulation budgets. On the other hand,
 SBI allows to easily amortize inference, i.e., to infer the posterior distribution for multiple different observations once a neural model has been trained.
 
-::: {#tbl-methods}
+Here we propose `sbijax`, a Python package implementing state-of-the-art methodology of neural simulation-based inference.
+While the main focus of the package is the implementation of recent algorithms to make them available to practitioners, e.g., @wildberger2023flow or @schmitt2023consistency,
+`sbijax` also implements common methods from approximate Bayesian computation, e.g., SMC-ABC [@beaumont2009adaptive], to have the entire SBI toolbox in one efficient package (see Table 1 for an overview).
+In addition, `sbijax` provides functionality for model diagnostics, posterior visualization and Markov Chain Monte Carlo (MCMC) sampling.
+The package uses the high-performance computing framework `JAX` as a backend [@jax2018github].
+Using `JAX` has several advantages, including a) that it uses the same syntax as `numpy` [@harris2020array] which enables a seamless transition for applied scientists who already are familiar with it,
+and b) that empirical evaluations have shown that `JAX` can be significantly faster than `PyTorch` (see, e.g., @phan2019composable).
 
-| Model                                          | Class name | Reference                   |
+| **Model**                                      | **Class name** | **Reference**           |
 |------------------------------------------------|------------|-----------------------------|
 | Sequential Monte Carlo ABC                     | `SMCABC`   | @beaumont2009adaptive       |
 | Neural likelihood estimation                   | `NLE`      | @papamakarios2019sequential  |
@@ -60,14 +66,6 @@ SBI allows to easily amortize inference, i.e., to infer the posterior distributi
 | Neural approximate slice sufficient statistics | `NASSS`    | @chen2023learning           |
 
 :Implemented SBI methods in `sbijax`.
-
-Here we propose `sbijax`, a Python package implementing state-of-the-art methodology of neural simulation-based inference.
-While the main focus of the package is the implementation of recent algorithms to make them available to practitioners, e.g., @wildberger2023flow or @schmitt2023consistency,
-`sbijax` also implements common methods from approximate Bayesian computation, e.g., SMC-ABC [@beaumont2009adaptive], to have the entire SBI toolbox in one efficient package (see @tbl-methods for an overview).
-In addition, `sbijax` provides functionality for model diagnostics, posterior visualization and Markov Chain Monte Carlo (MCMC) sampling.
-The package uses the high-performance computing framework `JAX` as a backend [@jax2018github].
-Using `JAX` has several advantages, including a) that it uses the same syntax as `numpy` [@harris2020array] which enables a seamless transition for applied scientists who already are familiar with it,
-and b) that empirical evaluations have shown that `JAX` can be significantly faster than `PyTorch` (see, e.g., @phan2019composable).
 
 # State of the field
 
