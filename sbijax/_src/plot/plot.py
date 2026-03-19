@@ -1,19 +1,13 @@
 import arviz as az
 import arviz_plots
 import jax
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import xarray
 from matplotlib import pyplot
-from matplotlib.ticker import AutoLocator, MaxNLocator
+from matplotlib.ticker import MaxNLocator
 
 
-def plot_trace(
-  inference_data: xarray.DataTree,
-  axes: np.ndarray[pyplot.Axes] = None,
-  **kwargs,
-) -> np.ndarray[pyplot.Axes]:
+def plot_trace(inference_data: xarray.DataTree):
   """MCMC trace plot.
 
   Args:
@@ -25,45 +19,23 @@ def plot_trace(
   Returns:
       the same array of matplotlib axes with added plots
   """
-  n_dim = len(inference_data.posterior.data_vars)
-  if axes is None:
-    _, axes = pyplot.subplots(nrows=n_dim, ncols=2)
-  axes = az.plot_trace(inference_data, axes=axes.reshape(n_dim, 2), **kwargs)
-  for ax in axes.flatten():
-    ax.yaxis.set_major_locator(MaxNLocator(5))
-  plt.tight_layout()
-  return axes
+  pl = az.plot_trace(inference_data)
+  return pl
 
 
-def plot_posterior(
-  inference_data: xarray.DataTree,
-  axes: np.ndarray[pyplot.Axes] = None,
-  point_estimate: str | None = None,
-) -> np.ndarray[pyplot.Axes]:
+def plot_posterior(inference_data: xarray.DataTree):
   """Posterior histogram plot.
 
   Args:
       inference_data: an inference data object received from calling
           `sample_posterior` of an SBI algorithm
       axes: an array of matplotlib axes
-      point_estimate: median, mode, mean or None
 
   Returns:
       the same array of matplotlib axes with added plots
   """
-  if axes is None:
-    n_dim = np.sum(
-      [
-        v
-        for k, v in dict(inference_data.posterior.sizes).items()
-        if k not in ["chain", "draw"]
-      ]
-    )
-    _, axes = pyplot.subplots(ncols=n_dim, sharey=False, sharex=False)
-  axes = arviz_plots.plot_dist(
-    inference_data,
-  )
-  return axes
+  pl = arviz_plots.plot_dist(inference_data)
+  return pl
 
 
 def plot_loss_profile(
@@ -79,7 +51,7 @@ def plot_loss_profile(
       the same array of matplotlib axes with added plots
   """
   if axes is None:
-    _, axes = pyplot.subplots(sharey=False, sharex=False)
+    _, axes = pyplot.subplots(figsize=(5, 3), sharey=False, sharex=False)
   axes.plot(losses[:, 0], label="Training loss", linestyle=(0, (3, 1, 1, 1)))
   axes.plot(losses[:, 1], label="Validation loss", linestyle=(0, (5, 1)))
   axes.yaxis.set_major_locator(MaxNLocator(5))
@@ -87,74 +59,33 @@ def plot_loss_profile(
   return axes
 
 
-def plot_rank(
-  inference_data: xarray.DataTree, axes: np.ndarray[pyplot.Axes] = None
-) -> np.ndarray[pyplot.Axes]:
+def plot_rank(inference_data: xarray.DataTree):
   """Rank statistics plots.
 
   Args:
       inference_data: an inference data object received from calling
           `sample_posterior` of an SBI algorithm
-      axes: an array of matplotlib axes
 
   Returns:
       the same array of matplotlib axes with added plots
   """
-  colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-  n_chains = inference_data.posterior.sizes["chain"]
-  colors = sns.blend_palette([colors[1], colors[4]], n_colors=n_chains)
-  if axes is None:
-    var_sizes = inference_data.posterior.sizes
-    max_dim = np.max(
-      [v for k, v in dict(var_sizes).items() if k not in ["chain", "draw"]]
-    )
-    _, axes = pyplot.subplots(nrows=1, ncols=max_dim)
-  az.plot_rank(inference_data, colors=colors, ax=axes)
-  for i, ax in enumerate(axes.flatten()):
-    ax.spines[["left"]].set_visible(False)
-    ax.yaxis.set_major_locator(AutoLocator())
-    if i > 0:
-      ax.set_ylabel(None)
-  return axes
+  pl = az.plot_rank(inference_data)
+  return pl
 
 
 # ruff: noqa: PLR2004
-def plot_ess(
-  inference_data: xarray.DataTree, axes: np.ndarray[pyplot.Axes] = None
-) -> np.ndarray[pyplot.Axes]:
+def plot_ess(inference_data: xarray.DataTree):
   """Effective sample size plot.
 
   Args:
       inference_data: an inference data object received from calling
           `sample_posterior` of an SBI algorithm
-      axes: an array of matplotlib axes
 
   Returns:
       the same array of matplotlib axes with added plots
   """
-  if axes is None:
-    var_sizes = inference_data.posterior.sizes
-    max_dim = np.max(
-      [v for k, v in dict(var_sizes).items() if k not in ["chain", "draw"]]
-    )
-    _, axes = pyplot.subplots(nrows=1, ncols=max_dim)
-
-  az.plot_ess(
-    inference_data,
-    ax=axes,
-    kind="evolution",
-  )
-  for i, ax in enumerate(axes.flatten()):
-    ax.yaxis.set_major_locator(MaxNLocator(5))
-    ax.spines[["left"]].set_visible(False)
-    if i > 0:
-      ax.set_ylabel(None)
-    if i < 2:
-      ax.get_legend().remove()
-    else:
-      ax.get_legend()
-      ax.legend(bbox_to_anchor=(0.95, 0.7), frameon=False)
-  return axes
+  pl = az.plot_ess(inference_data)
+  return pl
 
 
 def plot_rhat_and_ress(

@@ -110,12 +110,10 @@ License
     :maxdepth: 1
     :hidden:
 
-    Getting started <notebooks/introduction>
-    SBI with sbijax <notebooks/sbi_with_sbijax>
-    Neural networks <notebooks/neural_networks>
-    Density estimators <notebooks/density_estimators>
-    High-dimensional inference <notebooks/high_dimensional_inference>
-    Figure styling <notebooks/figure_styling>
+    Getting started <notebooks/getting_started>
+    A more detailed intro  <notebooks/more_detailed_intro>
+    Examples <notebooks/examples>
+    Inference using EEG data  <notebooks/eeg_data_example>
 
 ..  toctree::
     :caption: 🚀 Examples
