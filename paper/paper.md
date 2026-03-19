@@ -90,6 +90,6 @@ No GenAI or other AI tools have been used in writing the software or this manusc
 
 # Acknowledgements
 
-This research was supported by the Swiss National Science Foundation (Grant No. $200021_208249$).
+This research was supported by the Swiss National Science Foundation (Grant No. $200021\_208249$).
 
 # References
