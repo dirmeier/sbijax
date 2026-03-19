@@ -1,5 +1,5 @@
 ---
-title: 'Simulation-based inference with the Python Package sbijax'
+title: 'Simulation-based Inference with the Python Package sbijax'
 tags:
   - Python
   - Simulation-based Inference
@@ -47,15 +47,18 @@ Here we propose `sbijax`, a Python package implementing state-of-the-art methodo
 While the main focus of the package is the implementation of recent algorithms to make them available to practitioners, e.g., @wildberger2023flow or @schmitt2023consistency,
 `sbijax` also implements common methods from approximate Bayesian computation, e.g., SMC-ABC [@beaumont2009adaptive], to have the entire SBI toolbox in one efficient package (see Table 1 for an overview).
 In addition, `sbijax` provides functionality for model diagnostics, posterior visualization and Markov Chain Monte Carlo (MCMC) sampling.
+
 The package uses the high-performance computing framework `JAX` as a backend [@jax2018github].
 Using `JAX` has several advantages, including a) that it uses the same syntax as `numpy` [@harris2020array] which enables a seamless transition for applied scientists who already are familiar with it,
-and b) that empirical evaluations have shown that `JAX` can be significantly faster than `PyTorch` (see, e.g., @phan2019composable).
+and b) that empirical evaluations have shown that `JAX` can be significantly faster than `PyTorch` (see, e.g., @phan2019composable). Our package heavily builds on libraries from
+the `JAX`-verse and common Bayesian inference tools. Specifically, we use `Haiku` [@haiku2020github] to construct and train neural networks, `ArviZ` [@kumar2019arviz] for various model visualizations, `surjectors` for normalizing-flow based
+density estimation, TensorFlow Probability [@dillon2017tensorflow] to define statistical distributions, and `BlackJAX` [@cabezas2024blackjax] for posterior sampling using Markov Chain Monte Carlo.
 
 | **Model**                                      | **Class name** | **Reference**           |
 |------------------------------------------------|------------|-----------------------------|
 | Sequential Monte Carlo ABC                     | `SMCABC`   | @beaumont2009adaptive       |
 | Neural likelihood estimation                   | `NLE`      | @papamakarios2019sequential  |
-| Surjective neural likelihood estimation        | `SNLE`     | @dirmeier2023simulation     |
+| Surjective neural likelihood estimation        | `SNLE`     | @dirmeier2025simulationbased     |
 | Automatic posterior transformation             | `NPE`      | @greenberg2019automatic     |
 | Contrastive neural ratio estimation            | `NRE`      | @miller2022contrastive      |
 | Flow matching posterior estimation             | `FMPE`     | @wildberger2023flow         |
@@ -73,14 +76,14 @@ While a plethora of different models has been proposed in the recent literature,
 and only few packages exist that allow modelers to use these methods. Most prominently, the Python package `sbi` [@tejero-cantero2020sbi]
 implements several approaches for neural simulation-based inference, such as a neural posterior, likelihood-ratio, and likelihood estimation [@cranmer2020frontier] utilizing a `PyTorch` backend [@paszke2019pytorch].
 The package additionally provides an API for model diagnostics, such as posterior predictive checks, effective sample size computations and simulation-based calibration.
-However, the package lacks implementations of recent developments which pose the state-of-the-art in the field, such as by @chen2023learning, @dirmeier2023simulation or @schmitt2023consistency.
+However, the package lacks implementations of recent developments which pose the state-of-the-art in the field, such as by @chen2023learning, @dirmeier2025simulationbased or @schmitt2023consistency.
 Also, by virtue of being developed in `PyTorch` it is potentially restrictive to practitioners that do not have experience with it.
 For approximate Bayesian computation, several `Python` packages are available. In particular `abcpy` [@dutta2021abcpy] implements a multitude of different ABC algorithms.
 However, none of these packages implement modern (neural) SBI methods.
 
 # Research impact statement
 
-`sbijax` has already been used extensively in the Machine Learning literature. @dirmeier2023simulation have proposed a novel method for simulation-based inference using dimensionality reduction. They use `sbijax` for their experimental section.
+`sbijax` has already been used extensively in the Machine Learning literature. @dirmeier2025simulationbased have proposed a novel method for simulation-based inference using dimensionality reduction. They use `sbijax` for their experimental section.
 are using `sbijax` for their experiments. @dirmeier2025causal proposed a novel for *causal* posterior estimation where they used `sbijax` for their experimental evaluations.
 @albert2025simulated developed a novel ABC method that uses `sbijax` for model evaluation.
 
