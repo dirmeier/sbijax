@@ -789,7 +789,7 @@ wheels = [
 
 [[package]]
 name = "distrax"
-version = "0.1.5"
+version = "0.1.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -797,12 +797,11 @@ dependencies = [
     { name = "jax" },
     { name = "jaxlib" },
     { name = "numpy" },
-    { name = "setuptools" },
-    { name = "tensorflow-probability" },
+    { name = "tfp-nightly" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/a7/d87f5c5caf2ae9e28a9f506274870c25eb7e38c1ce0a1b7b3696afc73ac9/distrax-0.1.5.tar.gz", hash = "sha256:ec41522d389af69efedc8d475a7e6d8f229429c00f2140dcd641feacf7e21948", size = 190162, upload-time = "2023-11-22T12:53:44.836Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/21/a1/eb2086d2fc27ddf627f47af392d67e7e023a153d1b00087d3d12eab0465a/distrax-0.1.7.tar.gz", hash = "sha256:78deec181894e811d416b34e6b500f5e8f6d39bc850bd6f3152ee9e2164c9bef", size = 183672, upload-time = "2025-09-01T23:06:00.108Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/42/efa7985eefd516f273bc5557550539ebd687cc6a3a2a176d5e1f5b0398ca/distrax-0.1.5-py3-none-any.whl", hash = "sha256:5020f4b53a9a480d019c12e44292fbacb7de857cce478bc594dacf29519c61b7", size = 319716, upload-time = "2023-11-22T12:53:42.449Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/3e/e67008a232c37f98f1563469e206b1f2820f01c9cce1118c02215f1bf361/distrax-0.1.7-py3-none-any.whl", hash = "sha256:cf502d64022c7a682882ae6f07aea35206c6a3d8ddfb1e3beb006723baf283fd", size = 312680, upload-time = "2025-09-01T23:05:58.175Z" },
 ]
 
 [[package]]
@@ -3570,24 +3569,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/46/58/8c37dea7bbf769b20d58e7ace7e5edfe65b849442b00ffcdd56be88697c6/tabulate-0.10.0.tar.gz", hash = "sha256:e2cfde8f79420f6deeffdeda9aaec3b6bc5abce947655d17ac662b126e48a60d", size = 91754, upload-time = "2026-03-04T18:55:34.402Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/99/55/db07de81b5c630da5cbf5c7df646580ca26dfaefa593667fc6f2fe016d2e/tabulate-0.10.0-py3-none-any.whl", hash = "sha256:f0b0622e567335c8fabaaa659f1b33bcb6ddfe2e496071b743aa113f8774f2d3", size = 39814, upload-time = "2026-03-04T18:55:31.284Z" },
-]
-
-[[package]]
-name = "tensorflow-probability"
-version = "0.23.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "absl-py" },
-    { name = "cloudpickle" },
-    { name = "decorator" },
-    { name = "dm-tree", version = "0.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
-    { name = "dm-tree", version = "0.1.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
-    { name = "gast" },
-    { name = "numpy" },
-    { name = "six" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1e/90/4e8c686f2e691f48e40e16a539c61a6e9880743733d8c4dc3f275d12268e/tensorflow_probability-0.23.0-py2.py3-none-any.whl", hash = "sha256:dda5cacfe50cb19ecd96f3ce81e6ff8680d84213bcfe94ca0aaf6e5f51c88061", size = 6915575, upload-time = "2023-11-20T23:21:06.624Z" },
 ]
 
 [[package]]
