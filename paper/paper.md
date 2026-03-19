@@ -52,7 +52,7 @@ The package uses the high-performance computing framework `JAX` as a backend [@j
 Using `JAX` has several advantages, including a) that it uses the same syntax as `numpy` [@harris2020array] which enables a seamless transition for applied scientists who already are familiar with it,
 and b) that empirical evaluations have shown that `JAX` can be significantly faster than `PyTorch` (see, e.g., @phan2019composable). Our package heavily builds on libraries from
 the `JAX`-verse and common Bayesian inference tools. Specifically, we use `Haiku` [@haiku2020github] to construct and train neural networks, `ArviZ` [@kumar2019arviz] for various model visualizations, `surjectors` for normalizing-flow based
-density estimation, TensorFlow Probability [@dillon2017tensorflow] to define statistical distributions, and `BlackJAX` [@cabezas2024blackjax] for posterior sampling using Markov Chain Monte Carlo.
+density estimation [@dirmeier2024surjectors], TensorFlow Probability [@dillon2017tensorflow] to define statistical distributions, and `BlackJAX` [@cabezas2024blackjax] for posterior sampling using Markov Chain Monte Carlo.
 
 | **Model**                                      | **Class name** | **Reference**           |
 |------------------------------------------------|------------|-----------------------------|
@@ -83,8 +83,9 @@ However, none of these packages implement modern (neural) SBI methods.
 
 # Research impact statement
 
-`sbijax` has already been used extensively in the Machine Learning literature. @dirmeier2025simulationbased have proposed a novel method for simulation-based inference using dimensionality reduction. They use `sbijax` for their experimental section.
-are using `sbijax` for their experiments. @dirmeier2025causal proposed a novel for *causal* posterior estimation where they used `sbijax` for their experimental evaluations.
+`sbijax` has already been used extensively in the Machine Learning literature. @dirmeier2025simulationbased and @dirmeier2025causal proposed novel SBI methods for
+surjective neural likelihood estimation and posterior estimation using causal constraints, respectively, where they used `sbijax` heavily for their experimental evaluations.
+@ulzega2025shedding used `sbijax` to infer the posterior distribution of a complicated Bayesian model from the astrophysics literature.
 @albert2025simulated developed a novel ABC method that uses `sbijax` for model evaluation.
 
 # AI usage disclosure
