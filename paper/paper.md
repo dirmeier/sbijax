@@ -49,7 +49,7 @@ While the main focus of the package is the implementation of recent algorithms t
 In addition, `sbijax` provides functionality for model diagnostics, posterior visualization and Markov Chain Monte Carlo (MCMC) sampling.
 The package uses the high-performance computing framework `JAX` as a backend [@jax2018github].
 Using `JAX` has several advantages, including a) that it uses the same syntax as `numpy` [@harris2020array] which enables a seamless transition for applied scientists who already are familiar with it,
-and b) that empirical evaluations have shown that `JAX` can be significantly faster than `PyTorch1 (see, e.g., @phan2019composable).
+and b) that empirical evaluations have shown that `JAX` can be significantly faster than `PyTorch` (see, e.g., @phan2019composable).
 
 | Model                                          | Class name | Reference                   |
 |------------------------------------------------|------------|-----------------------------|
@@ -87,5 +87,9 @@ are using `sbijax` for their experiments. @dirmeier2025causal proposed a novel f
 # AI usage disclosure
 
 No GenAI or other AI tools have been used in writing the software or this manuscript.
+
+# Acknowledgements
+
+This research was supported by the Swiss National Science Foundation (Grant No. $200021_208249$).
 
 # References
