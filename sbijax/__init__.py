@@ -15,37 +15,37 @@ from sbijax._src.nle import NLE
 from sbijax._src.npe import NPE
 from sbijax._src.nre import NRE
 from sbijax._src.plot.plot import (
-    plot_ess,
-    plot_loss_profile,
-    plot_posterior,
-    plot_rank,
-    plot_rhat_and_ress,
-    plot_trace,
+  plot_ess,
+  plot_loss_profile,
+  plot_posterior,
+  plot_rank,
+  plot_rhat_and_ress,
+  plot_trace,
 )
 from sbijax._src.snle import SNLE
 from sbijax._src.util.data import (
-    as_inference_data,
-    inference_data_as_dictionary,
+  as_inference_data,
+  inference_data_as_dictionary,
 )
 
 __all__ = [
-    "SMCABC",
-    "CMPE",
-    "FMPE",
-    "NASS",
-    "NASSS",
-    "NLE",
-    "SNLE",
-    "NPE",
-    "NRE",
-    "plot_ess",
-    "plot_rank",
-    "plot_rhat_and_ress",
-    "plot_loss_profile",
-    "plot_posterior",
-    "plot_trace",
-    "as_inference_data",
-    "inference_data_as_dictionary",
+  "SMCABC",
+  "CMPE",
+  "FMPE",
+  "NASS",
+  "NASSS",
+  "NLE",
+  "SNLE",
+  "NPE",
+  "NRE",
+  "plot_ess",
+  "plot_rank",
+  "plot_rhat_and_ress",
+  "plot_loss_profile",
+  "plot_posterior",
+  "plot_trace",
+  "as_inference_data",
+  "inference_data_as_dictionary",
 ]
 
 style_path = os.path.join(os.path.dirname(__file__), "_src", "plot", "styles")

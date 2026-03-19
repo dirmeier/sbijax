@@ -1,20 +1,14 @@
-.PHONY: tag
-.PHONY: tests
-.PHONY: lints
-.PHONY: docs
-.PHONY: format
-
-PKG_VERSION=`hatch version`
-
-tag:
-	 git tag -a v${PKG_VERSION} -m v${PKG_VERSION}
-	 git push --tag
+.PHONY: tests, lints, docs, format
 
 tests:
-	hatch run test:test
+	uv run pytest
 
 lints:
-	hatch run test:lint
+	uv run ruff check sbijax examples
 
 format:
-	hatch run test:format
+	uv run ruff check --fix sbijax examples
+	uv run ruff format sbijax examples
+
+docs:
+	cd docs && make html

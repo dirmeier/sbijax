@@ -14,7 +14,7 @@ from sbijax.nn import make_cm
 
 def prior_fn():
     prior = tfd.JointDistributionNamed(dict(
-        theta=tfd.Normal(jnp.zeros(2), 1)
+        theta=tfd.Normal(jnp.zeros(2), jnp.array(1.0))
     ), batch_ndims=0)
     return prior
 

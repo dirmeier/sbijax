@@ -1,4 +1,3 @@
-# pylint: skip-file
 import chex
 from jax import random as jr
 
@@ -7,7 +6,7 @@ from sbijax._src.mcmc import sample_with_slice
 
 def test_slice_sampler(prior_log_prob_tuple):
     samples = sample_with_slice(
-        jr.PRNGKey(1),
+        jr.key(1),
         prior_log_prob_tuple[1],
         prior_log_prob_tuple[0](),
         n_chains=10,

@@ -7,9 +7,9 @@ from sbijax._src.mcmc.rmh import sample_with_rmh
 from sbijax._src.mcmc.slice import sample_with_slice
 
 __all__ = [
-    "sample_with_imh",
-    "sample_with_mala",
-    "sample_with_rmh",
-    "sample_with_nuts",
-    "sample_with_slice",
+  "sample_with_imh",
+  "sample_with_mala",
+  "sample_with_rmh",
+  "sample_with_nuts",
+  "sample_with_slice",
 ]
