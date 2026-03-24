@@ -45,7 +45,7 @@ SBI allows to easily amortize inference, i.e., to infer the posterior distributi
 
 Here we propose `sbijax`, a Python package implementing state-of-the-art methodology of neural simulation-based inference.
 While the main focus of the package is the implementation of recent algorithms to make them available to practitioners, e.g., @wildberger2023flow or @schmitt2023consistency,
-`sbijax` also implements common methods from approximate Bayesian computation, e.g., SMC-ABC [@beaumont2009adaptive], to have the entire SBI toolbox in one efficient package (see Table 1 for an overview).
+`sbijax` also implements common methods from approximate Bayesian computation, e.g., SMC-ABC [@beaumont2009adaptive], to have the entire SBI toolbox in one efficient package (see Table \ref{tbl-methods} for an overview).
 In addition, `sbijax` provides functionality for model diagnostics, posterior visualization and Markov Chain Monte Carlo (MCMC) sampling.
 
 The package uses the high-performance computing framework `JAX` as a backend [@jax2018github].
@@ -68,7 +68,7 @@ density estimation [@dirmeier2024surjectors], TensorFlow Probability [@dillon201
 | Neural approximate sufficient statistics       | `NASS`     | @chen2021neural             |
 | Neural approximate slice sufficient statistics | `NASSS`    | @chen2023learning           |
 
-:Implemented SBI methods in `sbijax`.
+:Implemented SBI methods in `sbijax` \label{tbl-methods}.
 
 # State of the field
 
@@ -80,6 +80,32 @@ However, the package lacks implementations of recent developments which pose the
 Also, by virtue of being developed in `PyTorch` it is potentially restrictive to practitioners that do not have experience with it.
 For approximate Bayesian computation, several `Python` packages are available. In particular `abcpy` [@dutta2021abcpy] implements a multitude of different ABC algorithms.
 However, none of these packages implement modern (neural) SBI methods.
+
+# Software design
+
+`Sbijax` is designed as a modular and extensible toolbox for SBI in `JAX`,
+combining a functional programming philosophy with a flexible interface for both
+expert users and domain scientists. Its design is guided by the following principles:
+
+1) Faithful alignment with `JAX`’s functional paradigm.
+Sbijax adheres closely to the low-level, functional programming model of `JAX`.
+While SBI methods are implemented using an object-oriented structure, all member functions return
+immutable objects rather than modifying internal state.
+This avoids hidden side effects, facilitates composability, and ensures compatibility with `JAX` transformations such as `jit`, `vmap`, and `pmap`.
+
+2) Separation of inference methods and neural network implementations.
+Sbijax focuses on implementing SBI algorithms, while neural network components are defined using `Haiku`.
+This allows users to construct models directly with `Haiku`, and to incorporate probabilistic building blocks from `Distrax`
+ [@deepmind2020jax] and `surjectors` [@dirmeier2024surjectors].
+ As a result, model definitions remain flexible and low-level, while seamlessly interoperating with the broader `JAX` ecosystem.
+
+3) Support for extensibility and research.
+Sbijax is structured to facilitate experimentation with new SBI methods.
+Its modular design allows components such as neural architectures, training objectives, and sampling strategies to be easily replaced or extended, making it suitable as both a research framework and a practical toolbox.
+
+4) Accessibility for domain scientists.
+In addition to its flexibility, Sbijax includes pre-implemented models with sensible defaults, enabling use without in-depth expertise in deep learning.
+In the simplest case, users only need to define a prior and a simulator to run inference workflows—often in as few as five lines of code.
 
 # Research impact statement
 
