@@ -15,6 +15,7 @@ functionality for visualization and other utility.
     SNLE
     NRE
     SMCABC
+    SABC
     NASS
     NASSS
     plot_ess
@@ -58,6 +59,9 @@ Approximate Bayesian computation
 --------------------------------
 
 ..  autoclass:: SMCABC
+    :members: sample_posterior
+
+..  autoclass:: SABC
     :members: sample_posterior
 
 Summary statistics
