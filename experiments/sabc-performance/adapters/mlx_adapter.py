@@ -44,12 +44,20 @@ def _simulate_mlx(theta: mx.array) -> mx.array:
   return mx.stack([r, peak_i, t_peak], axis=-1)
 
 
+# Compile the 250-event loop once into a fused kernel (MLX's analogue of
+# jax.jit). The global RNG state must be threaded as a captured input/output,
+# otherwise mx.compile freezes the random draws and every batch is identical.
+_simulate_compiled = mx.compile(
+  _simulate_mlx, inputs=mx.random.state, outputs=mx.random.state
+)
+
+
 def run(seed: int, budget: dict, out: str) -> None:
   mx.random.seed(seed)
   observed = mx.array(spec.make_observed().astype(np.float64))
 
   def f_dist(theta: mx.array, obs: mx.array) -> mx.array:
-    return mx.abs(_simulate_mlx(theta) - obs)
+    return mx.abs(_simulate_compiled(theta) - obs)
 
   prior = dist.JointDistributionNamed(
     {
