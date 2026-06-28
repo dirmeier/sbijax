@@ -1,0 +1,6 @@
+.venv/
+results/*.npy
+results/*.json
+results/*.png
+results/table.md
+__pycache__/
