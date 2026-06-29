@@ -205,25 +205,8 @@ def _benchmark_task(name, n_reps, quick):
       w1=float(np.mean([_per_dim(wasserstein_distance, s, ref) for s in samples[label]])),
       energy=float(np.mean([_per_dim(energy_distance, s, ref) for s in samples[label]])),
     ))
-  _write_table(name, rows, n_reps, ref.shape[0])
   _plot_posteriors(name, samples, ref, true)
   return rows
-
-
-def _write_table(name, rows, n_reps, n_ref):
-  lines = [
-    f"# {name} ({n_reps} seeds/algo, ref N={n_ref})", "",
-    "| algorithm | wall s (mean±se) | compile s | peak RSS MB | "
-    "bias L2 | W1 vs ref | energy vs ref |",
-    "|---|---|---|---|---|---|---|",
-  ]
-  for r in rows:
-    lines.append(
-      f"| {r['label']} | {r['wall_mean']:.2f}±{r['wall_se']:.2f} | "
-      f"{r['compile_mean']:.2f} | {r['rss_mean']:.0f} | {r['bias']:.4f} | "
-      f"{r['w1']:.4f} | {r['energy']:.4f} |"
-    )
-  (tasks.RESULTS / f"table_{name}.md").write_text("\n".join(lines) + "\n")
 
 
 def _plot_posteriors(name, samples, ref, true):
@@ -248,7 +231,7 @@ def run(quick=False, task=None):
     rows = _benchmark_task(name, n_reps, quick)
     all_rows.extend(rows)
     if rows:
-      print(f"wrote results/table_{name}.md and results/posterior_{name}.png")
+      print(f"wrote results/posterior_{name}.png")
   (tasks.RESULTS / "metrics.json").write_text(json.dumps(all_rows, indent=2))
   _write_combined(all_rows)
   print("wrote results/table.md (combined)")
