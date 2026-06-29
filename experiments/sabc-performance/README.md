@@ -1,55 +1,49 @@
 # SABC performance benchmark
 
-Compares four Simulated Annealing ABC configurations on one identical
-stochastic SIR problem:
+Compares four SABC implementations — `sbijax` (JAX), `sabc-mlx` (MLX),
+`sabc-numpy`, `sabc-numba` — on three SBI tasks (`gaussian_mixture`,
+`mixture_distractors`, `two_moons`), scored against an MCMC reference posterior
+(TFP slice sampler on each task's tractable likelihood).
 
-| label | library | backend |
-|---|---|---|
-| `sbijax` | sbijax `SABC` | JAX |
-| `sabc-mlx` | sabc | MLX (Apple Silicon) |
-| `sabc-numpy` | simulated_annealing_abc | NumPy/SciPy |
-| `sabc-numba` | simulated_annealing_abc | Numba |
-
-Measures speed (wall-clock mean ± standard error over 5 reps, JIT/compile
-reported separately), peak host RSS, posterior-recovery bias vs the known true
-`(beta, gamma)`, and distributional distance (Wasserstein-1 + energy) vs the
-`sabc-numpy` reference. Every tool is allowed all the threads/cores it can use.
-
-Each configuration runs in its own subprocess for clean per-config timing and
-peak-memory readings (JAX and MLX both grab global/device resources).
-
-## Setup
+## Usage
 
 ```bash
-bash setup.sh            # builds .venv (Python 3.12 via uv)
+bash setup.sh
+source .venv/bin/activate
+
+python main.py references
+python main.py run
 ```
 
-`sbijax` is installed editable from this repo (`-e ../..`) because the SABC
-under test lives on this repo's local `sabc` branch. The two comparison
-libraries are installed from GitHub:
+`run` executes each algorithm once per task (seed 0), scoring wall time
+(JIT/compile excluded), peak RSS, and Wasserstein/energy distance to the
+reference.
 
-- `sabc` — https://github.com/dirmeier/sabc (triggers a C++ build via
-  scikit-build-core / cmake / nanobind; Apple Silicon only)
-- `simulated_annealing_abc[numba]` — https://github.com/ulzegasi/SimulatedAnnealingABC
+## Results
 
-## Run
+### gaussian_mixture
 
-```bash
-.venv/bin/python main.py --quick   # smoke test (1 rep, 500 particles, 20k sims)
-.venv/bin/python main.py           # full: 10k particles, 1M sims, 5 reps
-```
+| algorithm | wall s (mean±se) | compile s | peak RSS MB | bias L2 | W1 vs ref | energy vs ref |
+|---|---|---|---|---|---|---|
+| sbijax | 0.35±0.00 | 1.88 | 551 | 0.4210 | 0.1891 | 0.1237 |
+| sabc-mlx | 1.98±0.00 | 0.00 | 52 | 0.3991 | 0.1901 | 0.1234 |
+| sabc-numpy | 0.50±0.00 | 0.00 | 138 | 0.4208 | 0.1956 | 0.1275 |
+| sabc-numba | 0.38±0.00 | 0.46 | 185 | 0.4121 | 0.1907 | 0.1234 |
 
-Outputs land in `results/`: `table.md`, `posterior.png`, `metrics.json`, and
-per-run `<label>_rep<k>.{npy,json}` (all gitignored).
+### mixture_distractors
 
-## Layout
+| algorithm | wall s (mean±se) | compile s | peak RSS MB | bias L2 | W1 vs ref | energy vs ref |
+|---|---|---|---|---|---|---|
+| sbijax | 0.58±0.00 | 2.01 | 568 | 1.1650 | 0.3003 | 0.2265 |
+| sabc-mlx | 3.60±0.00 | 0.00 | 51 | 1.0791 | 0.3261 | 0.2223 |
+| sabc-numpy | 1.07±0.00 | 0.00 | 146 | 1.1544 | 0.3093 | 0.2162 |
+| sabc-numba | 0.95±0.00 | 0.49 | 194 | 1.1258 | 0.2934 | 0.2066 |
 
-```
-sir_spec.py             shared constants, prior, true theta, observed generator
-adapters/
-  _bench.py             timing, peak-RSS, result IO
-  sbijax_adapter.py     JAX SIR sim + sbijax.SABC
-  mlx_adapter.py        MLX SIR sim + sabc.run
-  numpy_adapter.py      NumPy/Numba SIR sim + simulated_annealing_abc.sabc
-main.py                 orchestrator: runs all configs, aggregates, reports
-```
+### two_moons
+
+| algorithm | wall s (mean±se) | compile s | peak RSS MB | bias L2 | W1 vs ref | energy vs ref |
+|---|---|---|---|---|---|---|
+| sbijax | 0.32±0.00 | 1.54 | 546 | 0.0085 | 0.0189 | 0.0354 |
+| sabc-mlx | 1.40±0.00 | 0.00 | 52 | 0.0049 | 0.0206 | 0.0387 |
+| sabc-numpy | 0.50±0.00 | 0.00 | 137 | 0.0012 | 0.0242 | 0.0456 |
+| sabc-numba | 0.39±0.00 | 0.45 | 186 | 0.0030 | 0.0212 | 0.0398 |

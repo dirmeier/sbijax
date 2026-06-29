@@ -1,6 +1,5 @@
 .venv/
-results/*.npy
-results/*.json
-results/*.png
-results/table.md
 __pycache__/
+reference_posteriors/
+results/*
+!results/posterior_*.png
