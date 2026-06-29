@@ -1,18 +1,4 @@
-"""Benchmark tasks: every model definition lives here.
-
-For each task this module provides the prior + simulator in all four backends so
-the adapters stay pure backend glue:
-
-  * ``build_jax_task``   -> (prior, simulator, likelihood)   [sbijax / reference]
-  * ``build_mlx_task``   -> (prior, simulate)                [sabc-mlx]
-  * ``build_numpy_task`` -> (prior, np_sim, nb_sim, stats_np, stats_nb)
-
-plus shared constants, the fixed observed data, and small timing/IO helpers.
-
-Tasks: gaussian_mixture (Gaussian Mixture 2, 6-D), mixture_distractors (1-D
-parameter, 10-D obs), two_moons (2-D); all with tractable likelihoods. Heavy
-backend imports (jax / mlx / numba) are local so an adapter only loads its own.
-"""
+"""Benchmark tasks."""
 
 from __future__ import annotations
 
@@ -37,16 +23,12 @@ OBSERVED_SEED = 23
 TASK_NPARA = {"gaussian_mixture": 6, "mixture_distractors": 1, "two_moons": 2}
 TASK_NAMES = tuple(TASK_NPARA)
 
-# --- model constants ---
 TM_ANG = -math.pi / 4.0
 TM_COS, TM_SIN = math.cos(TM_ANG), math.sin(TM_ANG)
 TM_BASE, TM_RLOC, TM_RSCALE = 0.25, 0.1, 0.01
 TM_ALOW, TM_AHIGH = -math.pi / 2.0, math.pi / 2.0
 
 MD_ALPHA, MD_SIGMA, MD_NDIS = 0.3, 0.3, 8
-
-# Gaussian Mixture 2 (Vargas et al. 2024). The paper prints component-3's cov as
-# [[0.1,0.95],[0.95,1]] (indefinite); [0,0] is set to 1.0 so it is a valid cov.
 GM2_MEAN = np.array([-1.0, -1.0, 0.0, 0.0, 1.0, 1.0])
 GM2_COVS = np.array([
   [[0.7, 0.0], [0.0, 0.05]],
@@ -60,11 +42,6 @@ TRUE_THETA = {
   "mixture_distractors": np.array([[1.5]]),
   "two_moons": np.array([[0.0, 0.0]]),
 }
-
-# Tasks whose observation is a fixed canonical point rather than simulated from
-# the true theta. two_moons conditions on x_o = origin, which gives the two
-# separated crescents; simulating from theta=0 lands x near (0.3, 0) where the
-# crescents collapse into a ring.
 FIXED_OBSERVED = {"two_moons": np.zeros(2)}
 
 
@@ -73,13 +50,9 @@ def true_theta_flat(name: str) -> np.ndarray:
 
 
 def load_observed(name: str) -> np.ndarray:
-  """The fixed observation, written by ``main.py references`` to disk."""
   return np.load(REF_DIR / f"{name}_observed.npy").astype(np.float64)
 
 
-# ==========================================================================
-# Timing / memory / IO helpers (shared by the adapters)
-# ==========================================================================
 def peak_rss_mb() -> float:
   rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
   return rss / (1024 * 1024) if sys.platform == "darwin" else rss / 1024
@@ -105,9 +78,6 @@ def save_result(out, label, seed, samples, wall_s, compile_s) -> None:
   ), indent=2))
 
 
-# ==========================================================================
-# JAX backend (sbijax simulators + Gaussian Mixture 2); reference + sbijax
-# ==========================================================================
 def build_jax_task(name: str):
   """Return ``(prior, simulator, likelihood)`` in JAX for ``name``."""
   import jax
@@ -125,8 +95,6 @@ def build_jax_task(name: str):
     )
 
     _, simulator, likelihood = mixture_model_with_distractors()
-    # The shipped prior is a bare Uniform of event shape (1,), so its log_prob
-    # is (N, 1); SABC's core needs (N,). Wrap in Independent to reduce it.
     prior = tfd.JointDistributionNamed(
       dict(theta=tfd.Independent(
         tfd.Uniform(jnp.array([-10.0]), jnp.array([10.0])), 1
@@ -169,7 +137,6 @@ def build_jax_task(name: str):
 
 
 def jax_observed(name: str) -> np.ndarray:
-  """The fixed observation: a canonical point if set, else simulated at true theta."""
   if name in FIXED_OBSERVED:
     return FIXED_OBSERVED[name].astype(np.float64)
   from jax import numpy as jnp
@@ -180,11 +147,7 @@ def jax_observed(name: str) -> np.ndarray:
   return np.asarray(simulator(jr.PRNGKey(OBSERVED_SEED), true)).reshape(-1)
 
 
-# ==========================================================================
-# MLX backend
-# ==========================================================================
 def build_mlx_task(name: str):
-  """Return ``(prior, simulate)`` in MLX for ``name``."""
   import mlx.core as mx
   from sabc import distributions as dist
 
@@ -241,9 +204,6 @@ def build_mlx_task(name: str):
   return prior, sim
 
 
-# ==========================================================================
-# NumPy / Numba backend
-# ==========================================================================
 class UniformPrior:
   def __init__(self, low, high):
     self.low, self.high = np.asarray(low, float), np.asarray(high, float)
@@ -317,11 +277,6 @@ _NP_SIMS = {"gaussian_mixture": _gm2_np, "mixture_distractors": _distractors_np,
 
 
 def build_numpy_task(name: str):
-  """Return ``(prior, np_sim, nb_sim, stats_np, stats_nb)`` for ``name``.
-
-  ``nb_sim``/``stats_nb`` are single-particle ``@njit`` kernels (numba imported
-  lazily); ``np_sim``/``stats_np`` are the batched NumPy forms.
-  """
   import numba as nb
 
   @nb.njit(cache=True)

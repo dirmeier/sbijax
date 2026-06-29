@@ -1,18 +1,4 @@
-"""Compute MCMC reference posteriors (with plots) and run the task inference.
-
-Phase 1 - reference posteriors (true posterior via the TFP slice sampler on each
-task's tractable likelihood), stored + plotted:
-
-    python main.py references
-
-Phase 2 - run every task with all 4 SABC algorithms x 5 seeds (20 runs/task),
-scored against the stored reference:
-
-    python main.py run [--quick] [--task TASK]
-
-Task definitions live in ``tasks.py``; the four algorithms live in
-``adapters/`` and each runs in its own subprocess (clean timing / peak RSS).
-"""
+"""Compute MCMC reference posteriors and run the task inference."""
 
 from __future__ import annotations
 
@@ -28,7 +14,6 @@ import tasks
 HERE = Path(__file__).parent
 PY = HERE / ".venv" / "bin" / "python"
 
-# (label, adapter module, extra CLI args)
 CONFIGS = [
   ("sbijax", "adapters.sbijax_adapter", []),
   ("sabc-mlx", "adapters.mlx_adapter", []),
@@ -38,16 +23,12 @@ CONFIGS = [
 
 
 def _no_latex():
-  """sbijax's import enables text.usetex; force it off (no latex installed)."""
   import matplotlib
 
   matplotlib.use("Agg")
   matplotlib.rcParams["text.usetex"] = False
 
 
-# ==========================================================================
-# Phase 1: reference posteriors
-# ==========================================================================
 def _reference_by_chain(name, seed=0, n_chains=4, n_samples=2000, n_warmup=1000):
   from jax import numpy as jnp
   from jax import random as jr
@@ -78,11 +59,6 @@ def _rhat(chains):
 
 
 def _corner(datasets, true, out, title, diag_titles=None):
-  """Corner plot: diagonal = 1D KDE, lower triangle = 2D KDE contours.
-
-  ``datasets`` is a list of ``(label, samples, color, fill)``; filled datasets
-  (e.g. the reference) are drawn as shaded KDEs, the rest as lines/contours.
-  """
   _no_latex()
   import matplotlib.pyplot as plt
   import seaborn as sns
@@ -119,7 +95,6 @@ def _corner(datasets, true, out, title, diag_titles=None):
 
 
 def _plot_reference(name, ch, true, out):
-  """Reference posterior as a 2D-KDE corner; R-hat per dim in the titles."""
   flat = ch.reshape(-1, ch.shape[-1])
   titles = [f"theta[{d}]  Rhat={_rhat(ch[:, :, d]):.3f}"
             for d in range(ch.shape[-1])]
@@ -138,10 +113,6 @@ def compute_references(seed=0):
                     tasks.REF_DIR / f"{name}.png")
     print(f"{name:20s} ref {flat.shape} -> {tasks.REF_DIR / (name + '.npy')} (+png)")
 
-
-# ==========================================================================
-# Phase 2: orchestration + scoring
-# ==========================================================================
 def _spawn(module, extra, name, seed, quick, out):
   cmd = [str(PY), "-m", module, "--task", name, "--seed", str(seed),
          "--out", out, *extra]
