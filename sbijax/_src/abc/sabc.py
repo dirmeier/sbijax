@@ -11,6 +11,7 @@ References:
 # ruff: noqa: PLR0913
 from collections import namedtuple
 from dataclasses import dataclass
+from functools import partial
 
 import jax
 from jax import lax
@@ -198,7 +199,7 @@ def _cdf_eval(tables, rho):
   values, probs = tables
 
   def _interp(xs, ys, q):
-    idx = jnp.sum(xs[None, :] <= q[:, None], axis=1)
+    idx = jnp.searchsorted(xs, q, side="right")
     idx = jnp.clip(idx, 1, xs.shape[0] - 1)
     x0, x1 = xs[idx - 1], xs[idx]
     y0, y1 = ys[idx - 1], ys[idx]
@@ -215,9 +216,17 @@ def _resample_weights(u, delta):
 
 
 def _resample_indices(u, delta, size, key):
-  """Draw ``size`` resampling indices ~ Categorical(weights)."""
-  logits = jnp.log(_resample_weights(u, delta))
-  return jr.categorical(key, logits, shape=(size,))
+  """Draw ``size`` resampling indices ~ Categorical(weights).
+
+  Inverse-CDF sampling (cumsum + searchsorted), O(N log N). Avoids
+  ``jr.categorical``, which is Gumbel-max: it materializes a
+  ``(size, n_categories)`` array (O(N^2) time and memory when ``size == N``).
+  """
+  w = _resample_weights(u, delta)
+  cdf = jnp.cumsum(w)
+  unif = jr.uniform(key, (size,)) * cdf[-1]
+  idx = jnp.searchsorted(cdf, unif, side="right")
+  return jnp.minimum(idx, size - 1)
 
 
 def _de_propose(theta, donors, gamma0, sigma_gamma, key):
@@ -262,9 +271,10 @@ def _update_half(
   u = u.at[lo:hi].set(jnp.where(col, u_prop, u_cur))
   rho = rho.at[lo:hi].set(jnp.where(col, rho_prop, rho_cur))
   logprior = logprior.at[lo:hi].set(jnp.where(accept, lp_prop, lp_cur))
-  return population, u, rho, logprior
+  return (population, u, rho, logprior), jnp.sum(accept)
 
 
+@partial(jax.jit, static_argnums=(1, 2, 3, 4, 5, 7, 8))
 def _sabc_core(
   key,
   rvs,
@@ -279,6 +289,9 @@ def _sabc_core(
   delta,
 ):
   """Run the SABC annealing loop on raveled arrays.
+
+  JIT-compiled so the whole annealing loop runs as one fused executable;
+  ``rvs``/``logpdf``/``sim`` and the sizes/flags are static.
 
   Args:
       key: PRNG key.
@@ -318,13 +331,14 @@ def _sabc_core(
   epsilon = _epsilon(u, v, is_multi)
   mid = n_particles // 2
   n_updates = n_simulation // n_particles
+  resample_interval = 2 * n_particles
 
   def step(carry, it):
-    population, u, rho, logprior, epsilon, key = carry
+    population, u, rho, logprior, epsilon, n_acc, n_rs, key = carry
     inv_eps = 1.0 / epsilon
     k1, k2, k_rs, key = jr.split(key, 4)
     state = (population, u, rho, logprior)
-    state = _update_half(
+    state, a1 = _update_half(
       state,
       0,
       mid,
@@ -337,7 +351,7 @@ def _sabc_core(
       sigma_gamma,
       k1,
     )
-    state = _update_half(
+    state, a2 = _update_half(
       state,
       mid,
       n_particles,
@@ -350,8 +364,10 @@ def _sabc_core(
       sigma_gamma,
       k2,
     )
-    # reference resampling cadence: every 2 iterations starting at it == 3.
-    do_rs = jnp.logical_and(jnp.mod(it, 2) == 1, it >= 3)
+    # Resample each time the cumulative number of accepted proposals crosses
+    # the next ``2 * n_particles`` threshold (the reference SABC cadence).
+    n_acc = n_acc + a1 + a2
+    do_rs = n_acc >= (n_rs + 1) * resample_interval
     ridx = _resample_indices(state[1], delta, n_particles, k_rs)
     state = lax.cond(
       do_rs,
@@ -359,12 +375,22 @@ def _sabc_core(
       lambda s: s,
       state,
     )
+    n_rs = n_rs + do_rs.astype(n_rs.dtype)
     population, u, rho, logprior = state
     epsilon = _epsilon(u, v, is_multi)
-    carry = (population, u, rho, logprior, epsilon, key)
+    carry = (population, u, rho, logprior, epsilon, n_acc, n_rs, key)
     return carry, (epsilon, jnp.mean(u, axis=0))
 
-  init = (population, u, rho, logprior, epsilon, key)
+  init = (
+    population,
+    u,
+    rho,
+    logprior,
+    epsilon,
+    jnp.zeros((), jnp.int32),
+    jnp.zeros((), jnp.int32),
+    key,
+  )
   final, (eps_hist, u_hist) = lax.scan(
     f=step, init=init, xs=jnp.arange(n_updates)
   )
@@ -417,6 +443,48 @@ class SABC(SBI):
     super().__init__(model_fns)
     self.summary_fn = summary_fn
     self.distance_fn = distance_fn
+    self._rvs = None
+    self._logpdf = None
+    self._unravel = None
+    self._sim = None
+    self._sim_obs_id = None
+
+  def _build_fns(self, observable):
+    r"""Build and cache the raveled prior/simulator closures.
+
+    Reusing the same callable objects across calls lets the jitted
+    ``_sabc_core`` hit its trace cache instead of re-tracing the whole scan
+    every call. ``rvs``/``logpdf`` depend only on the prior; ``sim`` is
+    rebuilt only when the observation changes.
+    """
+    if self._rvs is None:
+      probe = self.prior.sample(seed=jr.PRNGKey(0))
+      _, unravel = ravel_pytree(probe)
+      self._unravel = unravel
+
+      def rvs(key, size):
+        sample = self.prior.sample(seed=key, sample_shape=(size,))
+        return jax.vmap(lambda x: ravel_pytree(x)[0])(sample)
+
+      def logpdf(theta_flat):
+        return self.prior.log_prob(jax.vmap(unravel)(theta_flat))
+
+      self._rvs, self._logpdf = rvs, logpdf
+
+    if self._sim_obs_id != id(observable):
+      unravel = self._unravel
+      ss_obs = self.summary_fn(observable)
+
+      def sim(key, theta_flat):
+        theta = jax.vmap(unravel)(theta_flat)
+        y = self.simulator_fn(seed=key, theta=theta)
+        d = self.distance_fn(self.summary_fn(y), ss_obs)
+        # scalar ((B,)/(B,1)) or per-dimension ((B, n_stats)) distances.
+        return jnp.reshape(d, (theta_flat.shape[0], -1))
+
+      self._sim, self._sim_obs_id = sim, id(observable)
+
+    return self._rvs, self._logpdf, self._sim, self._unravel
 
   def sample_posterior(
     self,
@@ -446,24 +514,7 @@ class SABC(SBI):
     proposal = proposal or DiffEvolution()
     is_multi = isinstance(schedule, MultiEps)
 
-    probe = self.prior.sample(seed=jr.PRNGKey(0))
-    _, unravel = ravel_pytree(probe)
-
-    def rvs(key, size):
-      sample = self.prior.sample(seed=key, sample_shape=(size,))
-      return jax.vmap(lambda x: ravel_pytree(x)[0])(sample)
-
-    def logpdf(theta_flat):
-      return self.prior.log_prob(jax.vmap(unravel)(theta_flat))
-
-    ss_obs = self.summary_fn(observable)
-
-    def sim(key, theta_flat):
-      theta = jax.vmap(unravel)(theta_flat)
-      y = self.simulator_fn(seed=key, theta=theta)
-      d = self.distance_fn(self.summary_fn(y), ss_obs)
-      # accept scalar ((B,) or (B,1)) or per-dimension ((B, n_stats)) distances.
-      return jnp.reshape(d, (theta_flat.shape[0], -1))
+    rvs, logpdf, sim, unravel = self._build_fns(observable)
 
     population, u, rho, eps_hist, u_hist = _sabc_core(
       rng_key,
