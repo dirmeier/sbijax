@@ -10,8 +10,7 @@ from sbijax._src.util.types import PyTree
 
 # pylint: disable=missing-class-docstring,too-few-public-methods
 class DataLoader:
-  # noqa: D101
-  def __init__(self, itr, num_samples):  # noqa: D107
+  def __init__(self, itr, num_samples):
     self._itr = itr
     self.num_samples = num_samples
 
@@ -72,7 +71,9 @@ def as_batch_iterator(rng_key: Array, data: PyTree, batch_size, shuffle):
   data = [
     {"y": y, "theta": theta}
     for y, theta in zip(
-      data["y"], jax.vmap(lambda x: ravel_pytree(x)[0])(data["theta"])
+      data["y"],
+      jax.vmap(lambda x: ravel_pytree(x)[0])(data["theta"]),
+      strict=False,
     )
   ]
   itr = grain.MapDataset.source(data)
@@ -94,10 +95,12 @@ def as_batched_numpy_iterator(
   Returns:
       a tensorflow iterator
   """
-  # hack, cause the tf stuff doesn't support jax keys :)
-  max_int32 = jnp.iinfo(jnp.int32).max
-  seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
-  data = data.shuffle(seed=int(seed)).batch(batch_size).to_iter_dataset()
+  if shuffle:
+    # hack, cause the tf stuff doesn't support jax keys :)
+    max_int32 = jnp.iinfo(jnp.int32).max
+    seed = jr.randint(rng_key, shape=(), minval=0, maxval=max_int32)
+    data = data.shuffle(seed=int(seed))
+  data = data.batch(batch_size).to_iter_dataset()
   return DataLoader(data, iter_size)
 
 
@@ -106,7 +109,9 @@ def as_numpy_iterator_from_slices(data: PyTree, batch_size):
     datalist = [
       {"y": y, "theta": theta}
       for y, theta in zip(
-        data["y"], jax.vmap(lambda x: ravel_pytree(x)[0])(data["theta"])
+        data["y"],
+        jax.vmap(lambda x: ravel_pytree(x)[0])(data["theta"]),
+        strict=False,
       )
     ]
   else:
