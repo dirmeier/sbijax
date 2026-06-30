@@ -45,7 +45,7 @@ def run(n_iter):
     jr.PRNGKey(3), params, y_observed
   )
 
-  plot_posterior(inference_result, point_estimate="mean")
+  plot_posterior(inference_result)
   plt.show()
 
 
