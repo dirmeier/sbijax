@@ -16,7 +16,6 @@ main code base or possibly deleted again.
 ..  autoclass:: NPSE
     :members: fit, simulate_data, simulate_data_and_possibly_append, sample_posterior
 
-
 .. currentmodule:: sbijax.experimental.nn
 
 .. autosummary::
