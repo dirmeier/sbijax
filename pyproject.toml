@@ -21,6 +21,7 @@ requires-python = ">=3.12"
 dependencies = [
     "arviz==1.0.0",
     "diffrax>=0.7.2",
+    "distrax>=0.1.9",
     "blackjax>=1.3",
     "dm-haiku>=0.0.16",
     "einops>=0.8.2",
@@ -31,8 +32,8 @@ dependencies = [
     "surjectors>=0.3.3",
     "tqdm>=4.64.1",
     "ipython>=9.11.0",
-    "jaxlib==0.8.1",
-    "jax==0.8.1",
+    "jaxlib>=0.8.1",
+    "jax>=0.8.1",
     "grain>=0.2.16",
     "tfp-nightly[jax]>=0.26.0.dev20260318",
 ]
@@ -45,11 +46,11 @@ all = []
 dev = [
     "gitlint>=0.19.1",
     "jupyter>=1.1.1",
-    "mypy>=2.1.0",
+    "mypy==2.1.0",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
-    "ruff>=0.15.6",
+    "ruff==0.15.20",
 ]
 docs = [
     "ipykernel>=7.2.0",
@@ -141,7 +142,7 @@ ignore-variadic-names = true
 "**/*_test.py" = ["D103", "B007", "B023", "ARG001", "ARG002"]
 "**/conftest.py" = ["ARG001"]
 "examples/**" = ["D103", "B007", "ARG001"]
-"experiments/**" = ["D103", "PLR0913", "PLC0415", "S603", "PLC0206"]
+"experiments/**" = ["D103", "PLR0913", "PLC0415", "S603"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
