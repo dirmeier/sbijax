@@ -1,11 +1,11 @@
 from collections.abc import Callable, Iterable
+from typing import Any
 
 import haiku as hk
 import jax
 from jax import numpy as jnp
 
 
-# ruff: noqa: PLR0913,S101
 class NASSNet(hk.Module):
   """A network for NASS."""
 
@@ -13,8 +13,8 @@ class NASSNet(hk.Module):
     self,
     summary_net_dimensions: Iterable[int] | None = None,
     critic_net_dimensions: Iterable[int] | None = None,
-    summary_net: Callable | None = None,
-    critic_net: Callable | None = None,
+    summary_net: Callable[..., Any] | None = None,
+    critic_net: Callable[..., Any] | None = None,
   ):
     """Constructs a NASSNet.
 
@@ -36,10 +36,10 @@ class NASSNet(hk.Module):
       assert critic_net_dimensions is not None
       assert summary_net is None
       assert critic_net is None
-      self._summary_net = hk.nets.MLP(
+      self._summary_net: Callable[..., Any] = hk.nets.MLP(
         output_sizes=summary_net_dimensions, activation=jax.nn.relu
       )
-      self._critic_net = hk.nets.MLP(
+      self._critic_net: Callable[..., Any] = hk.nets.MLP(
         output_sizes=critic_net_dimensions, activation=jax.nn.relu
       )
     else:

@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 import haiku as hk
 import jax
@@ -27,7 +28,7 @@ class ConsistencyModel(hk.Module):
   def __init__(
     self,
     n_dimension: int,
-    transform: Callable,
+    transform: Callable[..., Any],
     t_min: float = 0.001,
     t_max: float = 50.0,
   ):
@@ -106,7 +107,7 @@ class _CMResnet(hk.Module):
     n_layers: int,
     n_dimension: int,
     hidden_size: int,
-    activation: Callable = jax.nn.relu,
+    activation: Callable[..., Any] = jax.nn.relu,
     dropout_rate: float = 0.0,
     do_batch_norm: bool = False,
     batch_norm_decay: float = 0.1,
@@ -165,7 +166,7 @@ def make_cm(
   n_dimension: int,
   n_layers: int = 2,
   hidden_size: int = 64,
-  activation: Callable = jax.nn.tanh,
+  activation: Callable[..., Any] = jax.nn.tanh,
   dropout_rate: float = 0.2,
   do_batch_norm: bool = False,
   batch_norm_decay: float = 0.2,

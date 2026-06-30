@@ -52,7 +52,7 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
   return -mi
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 class NASSS(NASS):
   """Neural approximate slice sufficient statistics.
 
@@ -142,8 +142,8 @@ class NASSS(NASS):
         best_loss = validation_loss
         best_params = params.copy()
 
-    losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, losses
+    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
+    return best_params, stacked_losses
 
   def _summary_validation_loss(self, params, rng_key, val_iter):
     loss_fn = jax.jit(partial(_jsd_summary_loss, apply_fn=self.model.apply))

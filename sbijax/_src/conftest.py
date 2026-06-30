@@ -7,9 +7,9 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 
 def prior_fn():
   prior = tfd.JointDistributionNamed(
-    dict(
-      theta=tfd.Normal(jnp.zeros(2), 1.0),
-    ),
+    {
+      "theta": tfd.Normal(jnp.zeros(2), 1.0),
+    },
     batch_ndims=0,
   )
   return prior

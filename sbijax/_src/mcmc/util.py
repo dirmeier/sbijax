@@ -10,7 +10,7 @@ def mcmc_diagnostics(samples: xarray.DataTree):
   return MCMCDiagnostics(az.rhat(samples), az.ess(samples))
 
 
-# ruff: noqa: PLR0913,D417,E501
+# ruff: noqa: PLR0913
 def sample_and_post_process_from_blackjax_samples(
   rng_key,
   inf_fn,

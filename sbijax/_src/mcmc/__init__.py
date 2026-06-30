@@ -7,9 +7,9 @@ from sbijax._src.mcmc.util import mcmc_diagnostics
 
 __all__ = [
   "mcmc_diagnostics",
-  "sample_with_slice",
-  "sample_with_nuts",
-  "sample_with_mala",
-  "sample_with_rmh",
   "sample_with_imh",
+  "sample_with_mala",
+  "sample_with_nuts",
+  "sample_with_rmh",
+  "sample_with_slice",
 ]

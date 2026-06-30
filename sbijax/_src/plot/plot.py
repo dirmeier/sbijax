@@ -1,9 +1,12 @@
+from typing import Any
+
 import arviz as az
 import arviz_plots
 import jax
 import numpy as np
 import xarray
 from matplotlib import pyplot
+from matplotlib.axes import Axes
 from matplotlib.ticker import MaxNLocator
 
 
@@ -38,9 +41,7 @@ def plot_posterior(inference_data: xarray.DataTree):
   return pl
 
 
-def plot_loss_profile(
-  losses: jax.Array, axes: pyplot.Axes = None
-) -> pyplot.Axes:
+def plot_loss_profile(losses: jax.Array, axes: Axes | None = None) -> Axes:
   """Visualize the training and validation loss profile.
 
   Args:
@@ -73,7 +74,6 @@ def plot_rank(inference_data: xarray.DataTree):
   return pl
 
 
-# ruff: noqa: PLR2004
 def plot_ess(inference_data: xarray.DataTree):
   """Effective sample size plot.
 
@@ -89,8 +89,9 @@ def plot_ess(inference_data: xarray.DataTree):
 
 
 def plot_rhat_and_ress(
-  inference_data: xarray.DataTree, axes: np.ndarray[pyplot.Axes] = None
-) -> np.ndarray[pyplot.Axes]:
+  inference_data: xarray.DataTree,
+  axes: np.typing.NDArray[Any] | None = None,
+) -> np.typing.NDArray[Any]:
   r"""Split-$\hat{R}$ and relative effective sample size plot.
 
   Args:

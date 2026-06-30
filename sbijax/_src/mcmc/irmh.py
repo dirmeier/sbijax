@@ -5,7 +5,7 @@ from jax import random as jr
 from sbijax._src.mcmc.util import sample_and_post_process_from_blackjax_samples
 
 
-# ruff: noqa: PLR0913,D417,E501
+# ruff: noqa: PLR0913, D417
 def sample_with_imh(
   rng_key, lp, prior, *, n_chains=4, n_samples=2_000, n_warmup=1_000, **kwargs
 ):

@@ -3,7 +3,6 @@ from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 
-# ruff: noqa: PLR0913, E501
 def mixture_model_with_distractors():
   """Mixture model with distractors.
 
@@ -23,7 +22,7 @@ def mixture_model_with_distractors():
 
   def prior_fn():
     return tfd.JointDistributionNamed(
-      dict(theta=tfd.Uniform(jnp.array([-10.0]), jnp.array([10.0])))
+      {"theta": tfd.Uniform(jnp.array([-10.0]), jnp.array([10.0]))}
     )
 
   def simulator(seed, theta):

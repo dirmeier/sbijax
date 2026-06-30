@@ -35,15 +35,15 @@ def _map_fun_(theta, p):
 def two_moons():
   def prior_fn():
     prior = tfd.JointDistributionNamed(
-      dict(
-        theta=tfd.Independent(
+      {
+        "theta": tfd.Independent(
           tfd.Uniform(
             -jnp.ones(2),
             jnp.ones(2),
           ),
           reinterpreted_batch_ndims=1,
         )
-      )
+      }
     )
     return prior
 

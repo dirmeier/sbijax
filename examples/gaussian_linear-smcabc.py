@@ -2,6 +2,7 @@
 
 Demonstrates sequential Monte Carlo ABC on a simple bivariate Gaussian example.
 """
+
 import argparse
 
 import jax
@@ -14,43 +15,48 @@ from sbijax import SMCABC, plot_posterior
 
 
 def prior_fn():
-    prior = tfd.JointDistributionNamed(dict(
-        theta=tfd.Normal(jnp.zeros(2), jnp.ones(2))
-    ), batch_ndims=0)
-    return prior
+  prior = tfd.JointDistributionNamed(
+    {"theta": tfd.Normal(jnp.zeros(2), jnp.ones(2))}, batch_ndims=0
+  )
+  return prior
 
 
 def simulator_fn(seed, theta):
-    p = tfd.Normal(jnp.zeros_like(theta["theta"]), 0.1)
-    y = theta["theta"] + p.sample(seed=seed)
-    return y
+  p = tfd.Normal(jnp.zeros_like(theta["theta"]), 0.1)
+  y = theta["theta"] + p.sample(seed=seed)
+  return y
 
 
 def summary_fn(y):
-    return y
+  return y
 
 
 def distance_fn(y_simulated, y_observed):
-    diff = y_simulated - y_observed
-    dist = jax.vmap(lambda el: jnp.linalg.norm(el))(diff)
-    return dist
+  diff = y_simulated - y_observed
+  dist = jax.vmap(jnp.linalg.norm)(diff)
+  return dist
 
 
 def run(n_rounds):
-    y_observed = jnp.array([-1.0, 1.0])
+  y_observed = jnp.array([-1.0, 1.0])
 
-    fns = prior_fn, simulator_fn
+  fns = prior_fn, simulator_fn
 
-    smc = SMCABC(fns, summary_fn, distance_fn)
-    smc_samples, _ = smc.sample_posterior(
-        jr.PRNGKey(1), y_observed, n_rounds=1, n_particles=1000, ess_min=500, eps_step=0.9
-    )
-    plot_posterior(smc_samples)
-    plt.show()
+  smc = SMCABC(fns, summary_fn, distance_fn)
+  smc_samples, _ = smc.sample_posterior(
+    jr.PRNGKey(1),
+    y_observed,
+    n_rounds=1,
+    n_particles=1000,
+    ess_min=500,
+    eps_step=0.9,
+  )
+  plot_posterior(smc_samples)
+  plt.show()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n-rounds", type=int, default=10)
-    args = parser.parse_args()
-    run(args.n_rounds)
+  parser = argparse.ArgumentParser()
+  parser.add_argument("--n-rounds", type=int, default=10)
+  args = parser.parse_args()
+  run(args.n_rounds)

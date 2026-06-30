@@ -6,7 +6,6 @@ from jax._src.flatten_util import ravel_pytree
 from sbijax import FMPE, as_inference_data, inference_data_as_dictionary
 
 
-# ruff: noqa: PLR0913, E501
 class AiO(FMPE):
   """All-in-one simulation-based inference.
 
@@ -66,7 +65,7 @@ class AiO(FMPE):
     return params
 
   def get_truncated_prior(self, rng_key, params, observable, n_samples):
-    samp = self.prior_sampler_fn(seed=jr.PRNGKey(0), sample_shape=())
+    samp = self.prior.sample(seed=jr.PRNGKey(0), sample_shape=())
     _, unravel_fn = ravel_pytree(samp)
 
     sample_key, rng_key = jr.split(rng_key)
@@ -92,9 +91,7 @@ class AiO(FMPE):
       jax.tree.map(lambda x: x.max(axis=0), posterior_samples),
     )
     sample_key, rng_key = jr.split(rng_key)
-    prior_samples = self.prior_sampler_fn(
-      seed=sample_key, sample_shape=(int(1e6),)
-    )
+    prior_samples = self.prior.sample(seed=sample_key, sample_shape=(int(1e6),))
     min_prior, max_prior = (
       jax.tree.map(lambda x: x.min(axis=0), prior_samples),
       jax.tree.map(lambda x: x.max(axis=0), prior_samples),

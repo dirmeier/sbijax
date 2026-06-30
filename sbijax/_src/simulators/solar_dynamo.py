@@ -59,7 +59,7 @@ def _simulate(seed, theta):
   return y
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 def solar_dynamo(summarize_data=False):
   """Solar dynamo model.
 
@@ -78,15 +78,15 @@ def solar_dynamo(summarize_data=False):
 
   def prior_fn():
     return tfd.JointDistributionNamed(
-      dict(
-        theta=tfd.Independent(
+      {
+        "theta": tfd.Independent(
           tfd.Uniform(
             jnp.array([0.9, 0.05, 0.02]),
             jnp.array([1.4, 0.25, 0.15]),
           ),
           reinterpreted_batch_ndims=1,
         )
-      )
+      }
     )
 
   def summarize(ys):

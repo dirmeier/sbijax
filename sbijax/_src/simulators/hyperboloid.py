@@ -25,7 +25,6 @@ dists_1_fn = jax.vmap(partial(_eudclidean, m1=m11, m2=m12))
 dists_2_fn = jax.vmap(partial(_eudclidean, m1=m21, m2=m22))
 
 
-# ruff: noqa: PLR0913, E501
 def hyperboloid():
   """Hyperboloid model.
 
@@ -43,11 +42,11 @@ def hyperboloid():
 
   def prior_fn():
     return tfd.JointDistributionNamed(
-      dict(
-        theta=tfd.Independent(
+      {
+        "theta": tfd.Independent(
           tfd.Uniform(jnp.full(2, -2.0), jnp.full(2, 2.0)), 1
         )
-      )
+      }
     )
 
   def simulator(seed, theta):

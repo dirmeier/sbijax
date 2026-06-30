@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable
+from typing import Any
 
 import haiku as hk
 import jax
@@ -7,7 +8,7 @@ from jax import numpy as jnp
 from sbijax._src.nn.nass_net import NASSNet
 
 
-# ruff: noqa: PLR0913,S101
+# ruff: noqa: PLR0913
 class NASSSNet(NASSNet):
   """A network for NASSS."""
 
@@ -16,9 +17,9 @@ class NASSSNet(NASSNet):
     summary_net_dimensions: Iterable[int] | None = None,
     sec_summary_net_dimensions: Iterable[int] | None = None,
     critic_net_dimensions: Iterable[int] | None = None,
-    summary_net: Callable | None = None,
-    sec_summary_net: Callable | None = None,
-    critic_net: Callable | None = None,
+    summary_net: Callable[..., Any] | None = None,
+    sec_summary_net: Callable[..., Any] | None = None,
+    critic_net: Callable[..., Any] | None = None,
   ):
     """Constructs a SNASSSNet.
 
@@ -47,7 +48,7 @@ class NASSSNet(NASSNet):
     )
     if sec_summary_net_dimensions is not None:
       assert sec_summary_net is None
-      self._sec_summary_net = hk.nets.MLP(
+      self._sec_summary_net: Callable[..., Any] | None = hk.nets.MLP(
         output_sizes=sec_summary_net_dimensions, activation=jax.nn.relu
       )
     else:

@@ -4,7 +4,6 @@ from jrnmm import simulate as simulate_jrnmm
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 
-# ruff: noqa: PLR0913, E501
 def jansen_rit(summarize_data=False):
   """Stochastic Jansen-Rit neural mass model.
 
@@ -27,15 +26,15 @@ def jansen_rit(summarize_data=False):
 
   def prior_fn():
     prior = tfd.JointDistributionNamed(
-      dict(
-        theta=tfd.Independent(
+      {
+        "theta": tfd.Independent(
           tfd.Uniform(
             jnp.array([10.0, 50.0, 100.0, -20.0]),
             jnp.array([250.0, 500.0, 5000.0, 20.0]),
           ),
           1,
         )
-      )
+      }
     )
     return prior
 

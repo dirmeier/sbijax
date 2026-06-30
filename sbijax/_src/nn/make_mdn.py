@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable
+from typing import Any
 
 import haiku as hk
 import jax
@@ -11,7 +12,7 @@ def make_mdn(
   n_dimension: int,
   n_components: int,
   hidden_sizes: Iterable[int] = (64, 64),
-  activation: Callable = jax.nn.relu,
+  activation: Callable[..., Any] = jax.nn.relu,
 ):
   """Create a mixture density network.
 
@@ -49,7 +50,6 @@ def make_mdn(
     )
     if method == "sample":
       return mixture.sample(seed=hk.next_rng_key())
-    else:
-      return mixture.log_prob(kwargs["y"])
+    return mixture.log_prob(kwargs["y"])
 
   return mdn

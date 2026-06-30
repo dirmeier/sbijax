@@ -5,7 +5,7 @@ from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
 
-# ruff: noqa: PLR0913,D417,E501
+# ruff: noqa: PLR0913, D417
 def sample_with_slice(
   rng_key,
   lp,

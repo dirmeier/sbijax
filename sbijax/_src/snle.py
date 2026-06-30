@@ -1,7 +1,6 @@
 from sbijax._src.nle import NLE
 
 
-# ruff: noqa: PLR0913, E501
 class SNLE(NLE):
   """Surjective neural likelihood estimation.
 
