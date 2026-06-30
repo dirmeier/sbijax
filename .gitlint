@@ -1,8 +1,15 @@
 [general]
 ignore=body-is-missing
+contrib=contrib-title-conventional-commits
 
 [title-min-length]
 min-length=10
+
+[title-max-length]
+line-length=72
+
+[body-max-line-length]
+line-length=72
 
 [title-must-not-contain-word]
 words=wip,todo

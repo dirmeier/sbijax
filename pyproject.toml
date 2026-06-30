@@ -38,10 +38,14 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+all = []
+
 [dependency-groups]
 dev = [
     "gitlint>=0.19.1",
     "jupyter>=1.1.1",
+    "mypy>=2.1.0",
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
@@ -82,10 +86,23 @@ skips = ["B101"]
 
 [tool.mypy]
 show_error_codes = true
+warn_unused_configs = true
 no_implicit_optional = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+disallow_untyped_calls = false
 
-[tool.pytest]
-addopts = ["-v", "--doctest-modules", "--cov=./sbijax", "--cov-report=xml"]
+
+[tool.pytest.ini_options]
+addopts = [
+    "-v",
+    "--doctest-modules",
+    "--cov=sabc",
+    "--cov-report=xml",
+    "--strict-markers",
+    "--strict-config",
+    "-ra"
+]
 testpaths = [
     "sbijax"
 ]
@@ -93,17 +110,41 @@ testpaths = [
 [tool.ruff]
 indent-width = 2
 line-length = 80
-exclude = ["*_test.py", "docs/**", "examples/**", "manuscript+supplement/**"]
+exclude = ["docs/**"]
 
 [tool.ruff.lint]
-select = ["E", "F"]
 extend-select = [
-  "UP", "D", "I", "PL", "S"
+    "A",    # Builtins shadowing
+    "ARG",  # Unused arguments (New)
+    #"ANN",  # Type annotations
+    "B",    # Bugbear (common bugs)
+    "C4",   # List/dict/set comprehensions
+    "D",    # Docstrings
+    "I",    # Isort (import sorting)
+    # "N",    # PEP8 Naming conventions
+    "PL",   # Pylint rules
+    # "PTH",  # Pathlib usage (New)
+    #"RET",  # Return statements (New)
+    # "RUF",  # Ruff-specific checks (New)
+    "S",    # Security checks
+    "SIM",  # Code simplification
+    "TCH",  # Type-checking blocks
+    "UP",   # Pyupgrade (modern syntax)
 ]
 ignore=["S101", "F841", "PLR2004"]
 
+[tool.ruff.lint.flake8-unused-arguments]
+# *args/**kwargs only exist to satisfy uniform module/callback signatures.
+ignore-variadic-names = true
+
+[tool.ruff.lint.per-file-ignores]
+"**/*_test.py" = ["D103", "B007", "B023", "ARG001", "ARG002"]
+"**/conftest.py" = ["ARG001"]
+"examples/**" = ["D103", "B007", "ARG001"]
+"experiments/**" = ["D103", "PLR0913", "PLC0415", "S603", "PLC0206"]
+
 [tool.ruff.lint.pydocstyle]
-convention= 'google'
+convention = "google"
 
 [tool.uv]
 upgrade-package = ["jax", "jaxlib", "dm-haiku"]
