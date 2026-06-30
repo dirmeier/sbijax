@@ -1,12 +1,12 @@
 # sbijax itself: the SABC under test lives in this repo, so install the
 # checked-out source editable (relative to this file, repo root is ../..).
 -e ../..
-
-# The two libraries we compare against, straight from GitHub:
-sabc @ git+https://github.com/dirmeier/sabc.git
-simulated_annealing_abc[numba] @ git+https://github.com/ulzegasi/SimulatedAnnealingABC.git
-
-scipy
 # arviz 1.0.0 (pulled in by sbijax) breaks on matplotlib 3.11 (removed
 # matplotlib.style.core), so cap below it.
 matplotlib<3.11
+
+# The two libraries we compare against, straight from GitHub:
+sabc @ git+https://github.com/dirmeier/sabc.git
+
+scipy
+simulated_annealing_abc[numba] @ git+https://github.com/ulzegasi/SimulatedAnnealingABC.git
