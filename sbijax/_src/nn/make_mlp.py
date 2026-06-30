@@ -7,7 +7,7 @@ def make_mlp(
   n_layers: int = 2,
   hidden_size: int = 64,
   activation=jax.nn.gelu,
-  w_init=hk.initializers.TruncatedNormal(stddev=0.01),
+  w_init=None,
   b_init=jnp.zeros,
 ):
   """Create a MLP-based classifier network.
@@ -22,6 +22,8 @@ def make_mlp(
   Returns:
       a transformable haiku neural network module
   """
+  if w_init is None:
+    w_init = hk.initializers.TruncatedNormal(stddev=0.01)
 
   @hk.without_apply_rng
   @hk.transform

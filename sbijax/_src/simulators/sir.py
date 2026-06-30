@@ -4,7 +4,6 @@ from jax import numpy as jnp
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 
-# ruff: noqa: PLR0913, E501
 def sir(
   population_size=1_000_000,
   binomial_count=1_000,
@@ -39,15 +38,15 @@ def sir(
 
   def prior_fn():
     prior = tfd.JointDistributionNamed(
-      dict(
-        beta=tfd.LogNormal(jnp.log(jnp.array([0.4])), 0.5),
-        gamma=tfd.LogNormal(jnp.log(jnp.array([0.125])), 0.2),
-      )
+      {
+        "beta": tfd.LogNormal(jnp.log(jnp.array([0.4])), 0.5),
+        "gamma": tfd.LogNormal(jnp.log(jnp.array([0.125])), 0.2),
+      }
     )
     return prior
 
   def _solve_ode(theta):
-    def f(t, y, args):
+    def f(_t, y, args):
       susceptible, infected, _ = y
       beta, gamma = jnp.squeeze(args["beta"]), jnp.squeeze(args["gamma"])
       d_s = -beta * susceptible * infected / population_size

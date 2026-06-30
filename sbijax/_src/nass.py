@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Any
 
 import jax
 import numpy as np
@@ -30,7 +31,7 @@ def _jsd_summary_loss(params, rng, apply_fn, **batch):
   return -mi
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 class NASS(NE):
   """Neural approximate summary statistics.
 
@@ -72,7 +73,7 @@ class NASS(NE):
     self,
     rng_key,
     data,
-    optimizer=optax.adam(0.0003),
+    optimizer=None,
     n_iter=1000,
     batch_size=128,
     percentage_data_as_validation_set=0.1,
@@ -97,6 +98,8 @@ class NASS(NE):
     Returns:
         tuple of parameters and a tuple of the training information
     """
+    if optimizer is None:
+      optimizer = optax.adam(0.0003)
     itr_key, rng_key = jr.split(rng_key)
     train_iter, val_iter = self.as_iterators(
       itr_key, data, batch_size, percentage_data_as_validation_set
@@ -126,7 +129,7 @@ class NASS(NE):
     summaries = jnp.concatenate([_summarize(batch) for batch in itr], axis=0)
 
     if isinstance(data, dict):
-      ret_summaries = data.copy()
+      ret_summaries: Any = data.copy()
       ret_summaries["y"] = summaries
     else:
       ret_summaries = summaries
@@ -181,8 +184,8 @@ class NASS(NE):
         best_loss = validation_loss
         best_params = params.copy()
 
-    losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, losses
+    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
+    return best_params, stacked_losses
 
   def _init_summary_net_params(self, rng_key, **init_data):
     params = self.model.init(rng_key, method="forward", **init_data)

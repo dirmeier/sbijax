@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from functools import partial
+from typing import Any
 
 import chex
 import diffrax as dfx
@@ -11,7 +12,7 @@ from jax import random as jr
 from scipy import integrate
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-__all__ = ["make_score_model", "ScoreModel", "timestep_embedding"]
+__all__ = ["ScoreModel", "make_score_model", "timestep_embedding"]
 
 
 def to_output_shape(x, t):
@@ -184,7 +185,7 @@ class ScoreModel(hk.Module):
   def __init__(
     self,
     n_dimension: int,
-    transform: Callable,
+    transform: Callable[..., Any],
     sde,
     beta_min,
     beta_max,
@@ -300,7 +301,7 @@ class ScoreModel(hk.Module):
       self._sde, self._beta_max, self._beta_min
     )
 
-    def ode_lp_fn(time, inputs_t, args):
+    def ode_lp_fn(time, inputs_t, _args):
       inputs_t, _ = inputs_t
       time = jnp.atleast_1d(time)
 
@@ -342,7 +343,7 @@ def make_score_model(
   data_embedding_layers: tuple[int, ...] = (128, 128),
   param_embedding_layers: tuple[int, ...] = (128, 128),
   time_embedding_layers: tuple[int, ...] = (128, 128),
-  activation: Callable = jax.nn.relu,
+  activation: Callable[..., Any] = jax.nn.relu,
   sde="vp",
   beta_min=0.1,
   beta_max=10.0,

@@ -2,6 +2,7 @@ import jax
 import numpy as np
 import optax
 from absl import logging
+from jax import Array
 from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
@@ -13,7 +14,7 @@ from sbijax._src.util.early_stopping import EarlyStopping
 from sbijax._src.util.types import PyTree
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 class FMPE(NE):
   r"""Flow matching posterior estimation.
 
@@ -47,10 +48,10 @@ class FMPE(NE):
 
   def fit(
     self,
-    rng_key: jr.PRNGKey,
+    rng_key: Array,
     data: PyTree,
     *,
-    optimizer: optax.GradientTransformation = optax.adam(0.0003),
+    optimizer: optax.GradientTransformation | None = None,
     n_iter: int = 1000,
     batch_size: int = 100,
     percentage_data_as_validation_set: float = 0.1,
@@ -76,6 +77,8 @@ class FMPE(NE):
     Returns:
         a tuple of parameters and a tuple of the training information
     """
+    if optimizer is None:
+      optimizer = optax.adam(0.0003)
     itr_key, rng_key = jr.split(rng_key)
     train_iter, val_iter = self.as_iterators(
       itr_key, data, batch_size, percentage_data_as_validation_set
@@ -151,8 +154,8 @@ class FMPE(NE):
         best_loss = validation_loss
         best_params = params.copy()
 
-    losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, losses
+    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
+    return best_params, stacked_losses
 
   def _init_params(self, rng_key, **init_data):
     params = self.model.init(
@@ -206,7 +209,7 @@ class FMPE(NE):
 
     thetas = None
     n_curr = n_samples
-    n_total_simulations_round = 0
+    n_total_simulations_round = jnp.asarray(0)
     _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
     while n_curr > 0:
       n_sim = jnp.minimum(1024, jnp.maximum(1024, n_curr))
@@ -227,6 +230,7 @@ class FMPE(NE):
         thetas = jnp.vstack([thetas, proposal_accepted])
       n_curr -= proposal_accepted.shape[0]
 
+    assert thetas is not None
     ess = float(thetas.shape[0] / n_total_simulations_round)
 
     def reshape(p):

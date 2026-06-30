@@ -333,7 +333,7 @@ def _sabc_core(
   n_updates = n_simulation // n_particles
   resample_interval = 2 * n_particles
 
-  def step(carry, it):
+  def step(carry, _it):
     population, u, rho, logprior, epsilon, n_acc, n_rs, key = carry
     inv_eps = 1.0 / epsilon
     k1, k2, k_rs, key = jr.split(key, 4)

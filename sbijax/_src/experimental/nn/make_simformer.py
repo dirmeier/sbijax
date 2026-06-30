@@ -1,5 +1,6 @@
 import dataclasses
 from collections.abc import Callable
+from typing import Any
 
 import haiku as hk
 import jax
@@ -18,13 +19,13 @@ from sbijax._src.experimental.nn.make_score_network import (
 class _Encoder(hk.Module):
   num_heads: int
   num_layers: int
-  head_size: int
+  head_size: int | None
   dropout_rate: float
   widening_factor: int = 4
-  initializer: Callable = hk.initializers.TruncatedNormal(stddev=0.01)
-  activation: Callable = jax.nn.gelu
+  initializer: Callable[..., Any] = hk.initializers.TruncatedNormal(stddev=0.01)
+  activation: Callable[..., Any] = jax.nn.gelu
 
-  def __call__(self, inputs, time, mask, *, is_training):
+  def __call__(self, inputs, _time, mask, *, is_training):
     dropout_rate = self.dropout_rate if is_training else 0.0
     mask = mask[None, None, ...] if mask is not None else None
     hidden = inputs
@@ -68,7 +69,7 @@ class _SimFormer(hk.Module):
   embedding_dim_conditioning: int = 10
   time_embedding_layers: tuple[int, ...] = (128, 128)
   dropout_rate: float = 0.1
-  activation: Callable = jax.nn.relu
+  activation: Callable[..., Any] = jax.nn.relu
 
   def __call__(self, inputs, time, context, *, is_training=True):
     n_inputs, n_context = inputs.shape[-1], context.shape[-1]
@@ -114,7 +115,7 @@ class _SimFormer(hk.Module):
     return outputs
 
 
-# ruff: noqa: PLR0913,E501
+# ruff: noqa: PLR0913
 def make_simformer_based_score_model(
   n_dimension: int,
   mask: jax.Array,
@@ -129,7 +130,7 @@ def make_simformer_based_score_model(
     128,
   ),
   dropout_rate: float = 0.1,
-  activation: Callable = jax.nn.gelu,
+  activation: Callable[..., Any] = jax.nn.gelu,
   sde: str = "vp",
   beta_min: float = 0.1,
   beta_max: float = 10.0,

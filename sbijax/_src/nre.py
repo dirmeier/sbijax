@@ -1,7 +1,7 @@
 # Parts of this codebase have been adopted from https://github.com/bkmi/cnre
 from collections.abc import Callable
 from functools import partial
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import chex
 import jax
@@ -89,7 +89,7 @@ def _loss(params, rng_key, model, gamma, num_classes, **batch):
   return -jnp.mean(loss)
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 class NRE(NE):
   r"""Neural ratio estimation.
 
@@ -124,7 +124,7 @@ class NRE(NE):
 
   def __init__(
     self,
-    model_fns: tuple[Callable, Callable],
+    model_fns: tuple[Callable[..., Any], Callable[..., Any]],
     classifier: Transformed,
     num_classes: int = 10,
     gamma: float = 1.0,
@@ -139,7 +139,7 @@ class NRE(NE):
     rng_key: Array,
     data: NamedTuple,
     *,
-    optimizer: optax.GradientTransformation = optax.adam(0.003),
+    optimizer: optax.GradientTransformation | None = None,
     n_iter: int = 1000,
     batch_size: int = 100,
     percentage_data_as_validation_set: float = 0.1,
@@ -166,6 +166,8 @@ class NRE(NE):
     Returns:
         a tuple of parameters and a tuple of the training information
     """
+    if optimizer is None:
+      optimizer = optax.adam(0.003)
     itr_key, rng_key = jr.split(rng_key)
     train_iter, val_iter = self.as_iterators(
       itr_key, data, batch_size, percentage_data_as_validation_set
@@ -235,9 +237,9 @@ class NRE(NE):
         best_loss = validation_loss
         best_params = params.copy()
 
-    losses = jnp.vstack(losses)[: (i + 1), :]
+    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
 
-    return best_params, losses
+    return best_params, stacked_losses
 
   def _init_params(self, rng_key, **init_data):
     params = self.model.init(
@@ -264,8 +266,8 @@ class NRE(NE):
     self,
     rng_key: Array,
     params: Params | None = None,
-    observable: Array = None,
-    data: tuple | None = None,
+    observable: Array | None = None,
+    data: tuple[Any, ...] | None = None,
     n_simulations: int = 1_000,
     n_chains: int = 4,
     n_samples: int = 2_000,
