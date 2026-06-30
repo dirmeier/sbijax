@@ -210,7 +210,7 @@ def _benchmark_task(name, n_reps, quick):
     return []
 
   rows = []
-  for label in samples:
+  for label, label_samples in samples.items():
     walls = [m["wall_time_s"] for m in runs[label]]
     rows.append(
       {
@@ -223,15 +223,15 @@ def _benchmark_task(name, n_reps, quick):
         ),
         "rss_mean": float(np.mean([m["peak_rss_mb"] for m in runs[label]])),
         "bias": float(
-          np.mean([np.linalg.norm(s.mean(0) - true) for s in samples[label]])
+          np.mean([np.linalg.norm(s.mean(0) - true) for s in label_samples])
         ),
         "w1": float(
           np.mean(
-            [_per_dim(wasserstein_distance, s, ref) for s in samples[label]]
+            [_per_dim(wasserstein_distance, s, ref) for s in label_samples]
           )
         ),
         "energy": float(
-          np.mean([_per_dim(energy_distance, s, ref) for s in samples[label]])
+          np.mean([_per_dim(energy_distance, s, ref) for s in label_samples])
         ),
       }
     )

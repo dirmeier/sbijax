@@ -148,7 +148,7 @@ class NPE(NE):
 
     if n_round == 0:
 
-      def loss_fn(params, _rng, **batch):
+      def loss_fn(params, rng, **batch):  # noqa: ARG001
         theta, y = batch["theta"], batch["y"]
         log_det = 0
         if hasattr(self, "_prior_bijectors"):
@@ -260,7 +260,7 @@ class NPE(NE):
     if self.n_round == 0:
       _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
 
-      def loss_fn(_rng, **batch):
+      def loss_fn(rng, **batch):  # noqa: ARG001
         theta, y = batch["theta"], batch["y"]
         log_det = 0
         if hasattr(self, "_prior_bijectors"):

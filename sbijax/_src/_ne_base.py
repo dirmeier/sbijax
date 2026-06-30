@@ -27,7 +27,7 @@ class NE(SBI, ABC):
     self.model = network
     self.round = 0
 
-  def simulate_data_and_possibly_append(
+  def simulate_data_and_possibly_append(  # noqa: PLR0913
     self,
     rng_key,
     params,
