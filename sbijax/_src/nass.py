@@ -1,17 +1,13 @@
-from functools import partial
 from typing import Any
 
 import jax
-import numpy as np
 import optax
-from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
-from tqdm import tqdm
 
 from sbijax._src._ne_base import NE
 from sbijax._src.util.dataloader import as_numpy_iterator_from_slices
-from sbijax._src.util.early_stopping import EarlyStopping
+from sbijax._src.util.train import train_loop
 
 
 def _jsd_summary_loss(params, rng, apply_fn, **batch):
@@ -136,7 +132,6 @@ class NASS(NE):
 
     return ret_summaries
 
-  # pylint: disable=undefined-loop-variable
   def _fit_summary_net(
     self,
     rng_key,
@@ -148,61 +143,25 @@ class NASS(NE):
   ):
     init_key, rng_key = jr.split(rng_key)
     params = self._init_summary_net_params(init_key, **next(iter(train_iter)))
-    state = optimizer.init(params)
-    loss_fn = jax.jit(partial(_jsd_summary_loss, apply_fn=self.model.apply))
 
-    @jax.jit
-    def step(rng, params, state, **batch):
-      loss, grads = jax.value_and_grad(loss_fn)(params, rng, **batch)
-      updates, new_state = optimizer.update(grads, state, params)
-      new_params = optax.apply_updates(params, updates)
-      return loss, new_params, new_state
+    def loss_fn(params, rng, **batch):
+      return _jsd_summary_loss(params, rng, self.model.apply, **batch)
 
-    losses = np.zeros([n_iter, 2])
-    early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
-    best_params, best_loss = None, np.inf
-    logging.info("training summary net")
-    for i in tqdm(range(n_iter)):
-      train_loss = 0.0
-      epoch_key, rng_key = jr.split(rng_key)
-      for j, batch in enumerate(train_iter):
-        batch_loss, params, state = step(
-          jr.fold_in(epoch_key, j), params, state, **batch
-        )
-        train_loss += batch_loss * (
-          batch["y"].shape[0] / train_iter.num_samples
-        )
-      val_key, rng_key = jr.split(rng_key)
-      validation_loss = self._summary_validation_loss(params, val_key, val_iter)
-      losses[i] = jnp.array([train_loss, validation_loss])
-
-      _, early_stop = early_stop.update(validation_loss)
-      if early_stop.should_stop:
-        logging.info("early stopping criterion found")
-        break
-      if validation_loss < best_loss:
-        best_loss = validation_loss
-        best_params = params.copy()
-
-    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, stacked_losses
+    return train_loop(
+      rng_key,
+      params=params,
+      optimizer=optimizer,
+      loss_fn=loss_fn,
+      validation_loss_fn=loss_fn,
+      train_iter=train_iter,
+      val_iter=val_iter,
+      n_iter=n_iter,
+      n_early_stopping_patience=n_early_stopping_patience,
+    )
 
   def _init_summary_net_params(self, rng_key, **init_data):
     params = self.model.init(rng_key, method="forward", **init_data)
     return params
-
-  def _summary_validation_loss(self, params, rng_key, val_iter):
-    loss_fn = jax.jit(partial(_jsd_summary_loss, apply_fn=self.model.apply))
-
-    def body_fn(batch_key, **batch):
-      loss = loss_fn(params, batch_key, **batch)
-      return loss * (batch["y"].shape[0] / val_iter.num_samples)
-
-    losses = 0.0
-    for batch in val_iter:
-      batch_key, rng_key = jr.split(rng_key)
-      losses += body_fn(batch_key, **batch)
-    return losses
 
   def simulate_data(
     self,
