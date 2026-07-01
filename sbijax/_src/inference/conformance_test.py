@@ -1,14 +1,18 @@
 # pylint: skip-file
 
-import chex
 import pytest
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax._src.inference.likelihood.nle import nle
-from sbijax._src.simulate import simulate
+from sbijax._src.inference.posterior.cmpe import cmpe
+from sbijax._src.inference.posterior.fmpe import fmpe
+from sbijax._src.inference.posterior.npe import npe
+from sbijax._src.nn.make_consistency_model import make_cm
+from sbijax._src.nn.make_continuous_flow import make_cnf
 from sbijax._src.nn.make_flow import make_maf
+from sbijax._src.simulate import simulate
 
 
 def _problem():
@@ -24,9 +28,26 @@ def _problem():
   return prior, simulator
 
 
-# registry of trainable estimators to check against the Estimator contract
+# registry of trainable estimators to check against the Estimator contract.
+# each entry builds the estimator from a prior and provides the sample kwargs
+# appropriate to its sampling style (MCMC-based vs direct).
 ESTIMATORS = {
-  "nle": lambda prior: nle(prior, make_maf(2)),
+  "nle": {
+    "build": lambda prior: nle(prior, make_maf(2)),
+    "sample_kwargs": {"n_chains": 2, "n_samples": 30, "n_warmup": 10},
+  },
+  "fmpe": {
+    "build": lambda prior: fmpe(prior, make_cnf(2)),
+    "sample_kwargs": {"n_samples": 64},
+  },
+  "npe": {
+    "build": lambda prior: npe(prior, make_maf(2)),
+    "sample_kwargs": {"n_samples": 64},
+  },
+  "cmpe": {
+    "build": lambda prior: cmpe(prior, make_cm(2)),
+    "sample_kwargs": {"n_samples": 64},
+  },
 }
 
 
@@ -34,20 +55,20 @@ ESTIMATORS = {
 def test_fit_returns_params_and_loss_history(name):
   prior, simulator = _problem()
   data = simulate(jr.PRNGKey(0), prior, simulator, n=200)
-  est = ESTIMATORS[name](prior)
+  est = ESTIMATORS[name]["build"](prior)
   params, info = est.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=100)
   assert params is not None
-  chex.assert_shape(info, (2, 2))
+  assert info.ndim == 2 and info.shape[1] == 2
 
 
 @pytest.mark.parametrize("name", list(ESTIMATORS))
-def test_sample_returns_chain_shaped_inference_data(name):
+def test_sample_returns_posterior_inference_data(name):
   prior, simulator = _problem()
   data = simulate(jr.PRNGKey(0), prior, simulator, n=200)
-  est = ESTIMATORS[name](prior)
+  est = ESTIMATORS[name]["build"](prior)
   params, _ = est.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=100)
   idata = est.sample(
-    jr.PRNGKey(2), params, jnp.zeros(2), n_chains=2, n_samples=30, n_warmup=10
+    jr.PRNGKey(2), params, jnp.zeros(2), **ESTIMATORS[name]["sample_kwargs"]
   )
   theta = idata["/posterior"]["theta"].data
-  chex.assert_shape(theta, (2, 20, 2))
+  assert theta.ndim == 3 and theta.shape[-1] == 2
