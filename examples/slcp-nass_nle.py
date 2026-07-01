@@ -66,7 +66,7 @@ def run(n_rounds, n_iter):
       ]
     ]
   )
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
   neural_network = make_nass_net(5, (64, 64))
   model_nass = NASS(fns, neural_network)
   model_nle = NLE(fns, make_maf(5))

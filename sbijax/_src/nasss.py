@@ -57,8 +57,8 @@ class NASSS(NASS):
   can be used to infer posterior distributions.
 
   Args:
-      model_fns: a tuple of calalbles. The first element needs to be a
-          function that constructs a tfd.JointDistributionNamed, the second
+      model_fns: a tuple. The first element is a
+          tfd.JointDistributionNamed prior distribution, the second
           element is a simulator function.
       summary_net: a (neural) conditional density estimator
           to model the likelihood function of summary statistics, i.e.,
@@ -71,7 +71,7 @@ class NASSS(NASS):
       >>> from sbijax.nn import make_nasss_net
       >>> from tensorflow_probability.substrates.jax import distributions as tfd
       ...
-      >>> prior = lambda: tfd.JointDistributionNamed(
+      >>> prior = tfd.JointDistributionNamed(
       ...    dict(theta=tfd.Normal(jnp.zeros(5), 1.0))
       ... )
       >>> s = lambda seed, theta: tfd.Normal(

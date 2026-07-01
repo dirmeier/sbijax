@@ -33,7 +33,7 @@ def simulator_fn(seed, theta):
 
 def run(use_spf, n_iter):
   y_observed = jnp.array([-2.0, 1.0])
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
   neural_network = (
     make_spf(2, -5.0, 5.0, n_params=10) if use_spf else make_mdn(2, 10)
   )

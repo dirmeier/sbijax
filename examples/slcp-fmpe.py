@@ -65,7 +65,7 @@ def run(n_iter):
   n_dim_theta = 5
   n_layers, hidden_size = 5, 128
   neural_network = make_cnf(n_dim_theta, n_layers, hidden_size)
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
   fmpe = FMPE(fns, neural_network)
 
   data, _ = fmpe.simulate_data(

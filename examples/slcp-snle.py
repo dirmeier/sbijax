@@ -166,7 +166,7 @@ def run(n_rounds, n_iter):
       ]
     ]
   )
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
 
   neural_network = make_maf(8, n_layer_dimensions=[8, 8, 5, 5, 5])
   snl = SNLE(fns, neural_network)

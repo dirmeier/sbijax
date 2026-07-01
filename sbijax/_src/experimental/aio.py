@@ -20,8 +20,8 @@ class AiO(FMPE):
   dependencies.
 
   Args:
-      model_fns: a tuple of callables. The first element needs to be a
-          function that constructs a tfd.JointDistributionNamed, the second
+      model_fns: a tuple. The first element is a
+          tfd.JointDistributionNamed prior distribution, the second
           element is a simulator function.
       score_estimator: a score estimator
 
@@ -30,7 +30,7 @@ class AiO(FMPE):
       >>> from sbijax.experimental.nn import make_simformer_based_score_model
       >>> from tensorflow_probability.substrates.jax import distributions as tfd
       ...
-      >>> prior = lambda: tfd.JointDistributionNamed(
+      >>> prior = tfd.JointDistributionNamed(
       ...    dict(theta=tfd.Normal(jnp.zeros(2), 1.0))
       ... )
       >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)

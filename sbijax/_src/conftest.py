@@ -33,4 +33,4 @@ def simulator_fn(seed, theta):
 
 @pytest.fixture()
 def prior_simulator_tuple(request):
-  yield prior_fn, simulator_fn
+  yield prior_fn(), simulator_fn
