@@ -2,7 +2,7 @@ import blackjax as bj
 import jax
 from jax import random as jr
 
-from sbijax._src.mcmc.util import sample_and_post_process_from_blackjax_samples
+from sbijax._src.mcmc.util import run_blackjax
 
 
 # ruff: noqa: PLR0913, D417
@@ -39,30 +39,15 @@ def sample_with_nuts(
       a JAX pytree with keys corresponding to the variables names
       and tensor values of dimension `n_chains x n_samples x dim_variable`
   """
-
-  def _inference_loop(rng_key, kernel, initial_state, n_samples):
-    @jax.jit
-    def _step(states, rng_key):
-      keys = jax.random.split(rng_key, n_chains)
-      states, _ = jax.vmap(kernel)(keys, states)
-      return states, states
-
-    sampling_keys = jax.random.split(rng_key, n_samples)
-    _, states = jax.lax.scan(_step, initial_state, sampling_keys)
-    return states
-
-  init_key, rng_key = jr.split(rng_key)
-  initial_states, kernel = _nuts_init(init_key, n_chains, prior, lp)
-  samples = sample_and_post_process_from_blackjax_samples(
+  return run_blackjax(
     rng_key,
-    _inference_loop,
-    kernel,
-    initial_states,
-    n_chains,
-    n_samples,
-    n_warmup,
+    _nuts_init,
+    prior,
+    lp,
+    n_chains=n_chains,
+    n_samples=n_samples,
+    n_warmup=n_warmup,
   )
-  return samples
 
 
 # pylint: disable=missing-function-docstring
