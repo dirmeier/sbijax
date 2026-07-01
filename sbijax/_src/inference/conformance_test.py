@@ -8,7 +8,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax._src.inference.likelihood.nle import nle
 from sbijax._src.simulate import simulate
-from sbijax.nn import make_maf
+from sbijax._src.nn.make_flow import make_maf
 
 
 def _problem():

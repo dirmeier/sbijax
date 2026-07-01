@@ -7,7 +7,7 @@ analysis.
 
 ## DR-001: Functional core with a thin OO facade
 
-**Status**: Accepted
+**Status**: Superseded by DR-010
 **Date**: 2026-07-01
 **Context**: The estimators are stateful classes that fuse many responsibilities
 and diverge from the function-first idiom of optax/blackjax/distrax. We need to
@@ -162,3 +162,34 @@ benchmark table.
 **Consequences**: Higher upfront test investment; in return, every method is
 provably conformant and calibrated, and refactors are de-risked. The conformance
 suite should land early (roadmap step 2) so subsequent migration is guarded.
+
+## DR-010: Fully functional API, no OO facade
+
+**Status**: Accepted
+**Date**: 2026-07-01
+**Context**: DR-001 kept a thin OO facade for continuity. On reflection the
+current OO API is already effectively functional at the call site (`fit` returns
+`params`, `sample_posterior` takes `params`), so the facade adds a class the
+author explicitly does not want and buys almost nothing. The desired idiom is
+dm-haiku's `hk.transform -> Transformed(init, apply)` and blackjax's
+`blackjax.nuts -> SamplingAlgorithm(init, step)` — a factory returning a
+`NamedTuple` of pure functions, both libraries already in use here.
+**Decision**: Drop the OO facade entirely. The public API is factory functions
+(`nle`, `npe`, `nre`, ...) that return an `Estimator` `NamedTuple` of pure
+functions, with parameters threaded explicitly:
+
+```
+est = nle(prior, net, sampler=nuts)     # cf. hk.transform / blackjax.nuts
+params, info = est.fit(key, data)       # cf. Transformed.init
+samples      = est.sample(key, params, observable)   # cf. Transformed.apply(params, ...)
+```
+
+**Alternatives considered**:
+- Thin OO facade (DR-001) — rejected: the author does not want classes, and the
+  surface it preserves is barely different from the functional one.
+- Keep params inside the estimator (stateful `sample(key, y)`) — rejected: breaks
+  the explicit-params contract that makes the design JAX-idiomatic.
+**Consequences**: One layer instead of two; the public surface is a set of
+factories returning `Estimator` NamedTuples, structurally identical to the
+haiku/blackjax records the codebase already uses. Supersedes DR-001. The
+migration guide replaces class construction with factory calls.

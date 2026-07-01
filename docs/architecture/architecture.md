@@ -4,9 +4,14 @@
 
 sbijax is a JAX library for simulation-based inference (SBI). This document
 defines the target architecture for a 0.4 redesign that moves the library from
-stateful estimator classes to a **functional core** of composable pure functions
-behind a **small set of uniform interfaces**, with a thin object-oriented facade
-for continuity and a dedicated **conformance + calibration** test harness.
+stateful estimator classes to a **fully functional API** of composable pure
+functions behind a **small set of uniform interfaces**, and a dedicated
+**conformance + calibration** test harness.
+
+The public surface follows dm-haiku (`hk.transform -> Transformed(init, apply)`)
+and blackjax (`blackjax.nuts -> SamplingAlgorithm(init, step)`): a factory
+returns a `NamedTuple` of pure functions, with parameters threaded explicitly.
+There are no classes.
 
 The design deliberately mirrors an idiom already proven in the sibling `tqe`
 library — every method is a factory returning a record of pure functions — and
@@ -26,7 +31,8 @@ test in isolation, and stylistically out of step with the JAX ecosystem.
 
 **Constraints and decisions** (see [decisions.md](decisions.md)):
 
-- Functional core with a thin OO facade (DR-001).
+- Fully functional API — factories returning `NamedTuple` records of pure
+  functions, no OO facade (DR-010, superseding DR-001).
 - Three honest interfaces rather than one forced abstraction (DR-002).
 - A breaking 0.4 release is acceptable; a migration guide will accompany it
   (DR-003).
@@ -69,7 +75,7 @@ flowchart TB
     S["SummaryNet\nfit -> summarize"]
   end
 
-  facade["OO facade\nNLE / NPE / ... .fit().sample()"]
+  public["public API\nnle / npe / ... factories\n-> Estimator NamedTuples"]
   harness["conformance + SBC + benchmarks"]
 
   prior --> estimator
@@ -85,9 +91,9 @@ flowchart TB
   simulate --> A
   nn --> S
 
-  E --> facade
-  A --> facade
-  S --> facade
+  E --> public
+  A --> public
+  S --> public
   E -.tested by.-> harness
   A -.tested by.-> harness
   S -.tested by.-> harness
@@ -141,16 +147,18 @@ classDiagram
 - **SummaryNet** — learns summary statistics rather than a posterior. `summarize`
   preprocesses data that is then fed to an Estimator.
 
-### Facade
+### Public API
 
-A thin OO layer preserves the familiar ergonomics. Each class holds its
-constructor dependencies and, after `fit`, its trained params, delegating to the
-core record. The facade contains no algorithm logic.
+The public surface is the factory functions themselves — no wrapper layer. A
+factory returns an `Estimator` (or `ABCSampler`/`SummaryNet`) `NamedTuple` of
+pure functions, exactly as `hk.transform` returns `Transformed(init, apply)` and
+`blackjax.nuts` returns `SamplingAlgorithm(init, step)`. Parameters are threaded
+explicitly by the caller.
 
 ```
-est = NLE(prior, net, sampler=nuts)   # wraps nle(...)
-est.fit(key, data)                    # stores params internally
-est.sample(key, y_obs)                # delegates to core sample(params, ...)
+est = nle(prior, net, sampler=nuts)          # cf. hk.transform / blackjax.nuts
+params, info = est.fit(key, data)            # cf. Transformed.init
+samples      = est.sample(key, params, y_obs)  # cf. Transformed.apply(params, ...)
 ```
 
 ## Data Architecture
@@ -182,7 +190,7 @@ erDiagram
 `Dataset`; `Estimator.fit` consumes it and produces `params` plus an `info`
 record (losses, diagnostics); `Estimator.sample` consumes `params` and an
 observation and produces `InferenceData`. `params` is a plain pytree threaded
-explicitly by the caller (or held by the facade) — this is the core of the
+explicitly by the caller — this is the core of the
 stateless design (DR-007).
 
 ### Amortized fit → sample
@@ -291,9 +299,11 @@ _src/
   train/         # train_loop
   mcmc/          # run_blackjax + kernels
   nn/            # network factories
-  facade/        # OO classes
   experimental/  # npse, aio, simformer
 ```
+
+The `inference/`, `abc/`, and `summary/` factories are the public API; there is
+no separate facade package.
 
 **Determinism / RNG.** Every entry point takes an explicit `rng_key`; no global
 state. This is enforced by the stateless design and checked by the conformance
@@ -306,9 +316,6 @@ suite.
 - **Sequential proposal construction.** For NPE-style atomic methods the
   proposal is the current posterior; the precise handoff (`sample` vs a
   dedicated proposal object) is a Phase-2 detail for the tracer-bullet method.
-- **Facade statefulness.** The facade holds `params` after `fit` for
-  ergonomics; whether it also exposes the functional `(params, info)` return to
-  advanced users needs a small API decision.
 - **SNLE / NASS composition.** SNLE (surjective NLE) and the SummaryNet →
   Estimator pipeline need a documented composition pattern once the core lands.
 ```
