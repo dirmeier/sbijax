@@ -48,6 +48,35 @@ Two seams make this work:
   posterior methods this wraps `estimator.sample`; for NLE/NRE it wraps their
   MCMC `sample`. It lives next to the driver, not on the estimator.
 
+### Atomic NPE loss (round > 0)
+
+When `round > 0`, NPE must correct for the proposal no longer being the prior.
+The atomic (APT / NPE-C) loss does this contrastively within the batch, using
+only the network and the prior — no proposal density. Port of the deleted
+`NPE._proposal_posterior_log_prob`:
+
+```
+def _atomic_loss(network, prior, params, rng, num_atoms, theta, y):
+    n = theta.shape[0]
+    m = clip(num_atoms, 2, n)                       # atoms per contrast set
+    # for each row, pick m-1 *other* rows uniformly (exclude self)
+    probs = (1 - eye(n)) / (n - 1)
+    contrast = sample_without_replacement(rng, probs, k=m-1)   # (n, m-1)
+    atomic_theta = concat(theta[:, None], theta[contrast], axis=1)  # (n, m, d)
+    atomic_theta = atomic_theta.reshape(n * m, d)
+    y_rep = repeat(y, m, axis=0)                    # (n*m, .)
+    lp_post = network.log_prob(y=atomic_theta, x=y_rep).reshape(n, m)
+    lp_prior = prior.log_prob(atomic_theta).reshape(n, m)
+    unnorm = lp_post - lp_prior                     # importance-reweight
+    # the true theta sits at atom index 0 of each set
+    log_prob = unnorm[:, 0] - logsumexp(unnorm, axis=-1)
+    return -mean(log_prob)
+```
+
+`num_atoms` is a factory argument of `npe`; `round` selects between this and the
+round-0 maximum-likelihood loss inside `npe`'s `fit`. Everything else about the
+estimator is unchanged.
+
 ### Open questions
 
 - Whether `round` on `fit` is the cleanest signal, or a dedicated
