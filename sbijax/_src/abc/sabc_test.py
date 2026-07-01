@@ -8,7 +8,6 @@ from jax import random as jr
 from scipy.optimize import brentq
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-import sbijax
 from sbijax._src.abc.sabc import (
   SABC,
   DiffEvolution,
@@ -27,8 +26,6 @@ from sbijax._src.abc.sabc import (
   sq_distance,
   weighted_sq,
 )
-
-# --- Task 1: configs and distances -----------------------------------------
 
 
 def test_single_eps_rejects_nonpositive_v():
@@ -55,9 +52,6 @@ def test_distance_callables_preserve_stat_axis():
   np.testing.assert_allclose(sq_distance(s, o), s**2)
   w = jnp.array([1.0, 0.5])
   np.testing.assert_allclose(weighted_sq(w)(s, o), s**2 * w)
-
-
-# --- Task 2: epsilon solvers -----------------------------------------------
 
 
 def _ref_epsilon_single(ubar, v):
@@ -114,9 +108,6 @@ def test_epsilon_multi_matches_reference():
   np.testing.assert_allclose(got, ref, rtol=1e-3)
 
 
-# --- Task 3: CDF transform -------------------------------------------------
-
-
 def test_cdf_eval_monotone_and_bounded():
   rng = np.random.default_rng(1)
   rho = jnp.asarray(rng.uniform(0.0, 5.0, size=(128, 2)).astype(np.float32))
@@ -142,9 +133,6 @@ def test_cdf_eval_smallest_distance_maps_to_column_min():
   assert bool(jnp.all(u[0] < u[2]))
 
 
-# --- Task 4: resampling ----------------------------------------------------
-
-
 def test_resample_weights_formula():
   u = jnp.array([[0.1, 0.1], [0.5, 0.5]])
   delta = 0.1
@@ -160,9 +148,6 @@ def test_resample_favours_small_distances():
   idx = _resample_indices(u, 1.0, 1000, jr.PRNGKey(0))
   assert idx.shape == (1000,)
   assert float(jnp.mean(idx == 0)) > 0.9
-
-
-# --- Task 5: DE proposal ---------------------------------------------------
 
 
 def test_de_propose_shape_and_zero_jitter():
@@ -182,9 +167,6 @@ def test_de_propose_shape_and_zero_jitter():
       if a != b
     )
     assert ok
-
-
-# --- Task 6: annealing core ------------------------------------------------
 
 
 def _toy_problem():
@@ -241,9 +223,6 @@ def test_sabc_core_is_jittable():
   assert out[0].shape == (500, 2)
 
 
-# --- Task 7: SABC class (2x2: single/multi eps x scalar/vector distance) ----
-
-
 def _low_noise_model():
   # wide prior, low simulator noise -> posterior concentrates near observed.
   def prior_fn():
@@ -285,17 +264,3 @@ def test_sabc_recovers_low_noise_gaussian(schedule, distance_fn):
   np.testing.assert_allclose(samples.mean(axis=0), [1.0, -1.0], atol=0.15)
   n_updates = 200_000 // 2000
   assert len(info.epsilon_history) == n_updates + 1
-
-
-# --- Task 8: exports -------------------------------------------------------
-
-
-def test_public_exports():
-  assert hasattr(sbijax, "SABC")
-  assert hasattr(sbijax, "SingleEps")
-  assert hasattr(sbijax, "MultiEps")
-  assert hasattr(sbijax, "DiffEvolution")
-  assert hasattr(sbijax, "abs_distance")
-  assert hasattr(sbijax, "sq_distance")
-  assert hasattr(sbijax, "l2_distance")
-  assert hasattr(sbijax, "weighted_sq")

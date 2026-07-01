@@ -366,7 +366,7 @@ def _sabc_core(
     )
     # Resample each time the cumulative number of accepted proposals crosses
     # the next ``2 * n_particles`` threshold (the reference SABC cadence).
-    n_acc = n_acc + a1 + a2
+    n_acc = (n_acc + a1 + a2).astype(n_acc.dtype)
     do_rs = n_acc >= (n_rs + 1) * resample_interval
     ridx = _resample_indices(state[1], delta, n_particles, k_rs)
     state = lax.cond(
