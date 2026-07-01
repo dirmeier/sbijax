@@ -32,10 +32,10 @@ jobs:
           version: "latest"
       - name: Install dependencies
         run: |
-          uv sync --all-groups
+          uv sync --all-groups --all-extras
       - name: Run lints
         run: |
-          make lints
+          uv run ruff check sbijax examples
 
   tests:
     runs-on: ubuntu-latest
@@ -55,10 +55,10 @@ jobs:
           version: "latest"
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --all-extras
       - name: Run tests
         run: |
-          make tests
+          uv run pytest
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v3
         env:
