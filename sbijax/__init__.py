@@ -1,9 +1,10 @@
 """sbijax: Simulation-based inference in JAX."""
 
-__version__ = "0.3.6"
+__version__ = "0.4.0"
 
-from sbijax._src.abc.sabc import (
-  SABC,
+from sbijax._src.inference import Estimator
+from sbijax._src.inference.abc import ABCSampler, sabc, smcabc
+from sbijax._src.inference.abc._sabc_engine import (
   DiffEvolution,
   MultiEps,
   SingleEps,
@@ -12,45 +13,46 @@ from sbijax._src.abc.sabc import (
   sq_distance,
   weighted_sq,
 )
-from sbijax._src.abc.smc_abc import SMCABC
-from sbijax._src.cmpe import CMPE
-from sbijax._src.fmpe import FMPE
-from sbijax._src.nass import NASS
-from sbijax._src.nasss import NASSS
-from sbijax._src.nle import NLE
-from sbijax._src.npe import NPE
-from sbijax._src.nre import NRE
-from sbijax._src.snle import SNLE
+from sbijax._src.inference.likelihood import nle, snle
+from sbijax._src.inference.posterior import cmpe, fmpe, npe
+from sbijax._src.inference.ratio import nre
+from sbijax._src.inference.summary import SummaryNet, nass, nasss
+from sbijax._src.simulate import simulate, stack
 from sbijax._src.util.data import (
   as_inference_data,
   inference_data_as_dictionary,
 )
 
 __all__ = [
-  "CMPE",
-  "FMPE",
-  "NASS",
-  "NASSS",
-  "NLE",
-  "NPE",
-  "NRE",
-  "SABC",
-  "SMCABC",
-  "SNLE",
-  "DiffEvolution",
-  "MultiEps",
-  "SingleEps",
+  "ABCSampler",
+  "Estimator",
+  "SummaryNet",
   "abs_distance",
   "as_inference_data",
+  "cmpe",
+  "DiffEvolution",
+  "fmpe",
   "inference_data_as_dictionary",
   "l2_distance",
+  "MultiEps",
+  "nass",
+  "nasss",
+  "nle",
+  "npe",
+  "nre",
   "plot_ess",
   "plot_loss_profile",
   "plot_posterior",
   "plot_rank",
   "plot_rhat_and_ress",
   "plot_trace",
+  "sabc",
+  "SingleEps",
+  "simulate",
+  "smcabc",
+  "snle",
   "sq_distance",
+  "stack",
   "weighted_sq",
 ]
 

@@ -19,7 +19,6 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src._sbi_base import SBI
 from sbijax._src.util.data import as_inference_data
 
 _CDF_INFLATE = 1.5
@@ -403,7 +402,7 @@ def _sabc_core(
 sabc_info = namedtuple("sabc_info", "epsilon_history u_history rho")
 
 
-class SABC(SBI):
+class SABC:
   r"""Simulated Annealing approximate Bayesian computation.
 
   Implements the algorithm from :cite:t:`albert2025simulated`. The
@@ -423,14 +422,8 @@ class SABC(SBI):
           (per-dimension) or ``-> (B,)`` / ``(B, 1)`` (scalar); scalar outputs
           are reshaped to ``(B, 1)`` internally.
 
-  Examples:
-      >>> from sbijax import SABC
-      >>> from tensorflow_probability.substrates.jax import distributions as tfd
-      >>> prior = tfd.JointDistributionNamed(
-      ...     dict(theta=tfd.Normal(jnp.zeros(2), 1.0)), batch_ndims=0)
-      >>> sim = lambda seed, theta: theta["theta"] + tfd.Normal(
-      ...     0.0, 0.1).sample(theta["theta"].shape, seed=seed)
-      >>> model = SABC((prior, sim), lambda x: x)
+  This is the internal engine; the public interface is the functional
+  :func:`sbijax._src.inference.abc.sabc.sabc` factory.
 
   References:
       Albert, Carlo, et al. "Simulated Annealing ABC with multiple summary
@@ -440,7 +433,8 @@ class SABC(SBI):
   def __init__(
     self, model_fns, summary_fn=lambda x: x, distance_fn=abs_distance
   ):
-    super().__init__(model_fns)
+    self.prior = model_fns[0]
+    self.simulator_fn = model_fns[1]
     self.summary_fn = summary_fn
     self.distance_fn = distance_fn
     self._rvs = None

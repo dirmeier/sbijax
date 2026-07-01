@@ -1,9 +1,8 @@
-"""Experimental methods and models."""
+"""Experimental methods and models.
 
-from sbijax._src.experimental.aio import AiO
-from sbijax._src.experimental.npse import NPSE
+NPSE and AiO were removed in the 0.4 functional redesign; they subclassed the
+old ``FMPE`` estimator and need re-implementing as functional factories. See
+``docs/architecture/backlog.md`` (item 3).
+"""
 
-__all__ = [
-  "NPSE",
-  "AiO",
-]
+__all__: list[str] = []

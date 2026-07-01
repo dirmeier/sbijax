@@ -5,8 +5,8 @@ Implements the method of :cite:t:`beaumont2009adaptive` as a functional
 from the existing implementation and exposed behind a pure ``sample`` function.
 """
 
-from sbijax._src.abc.smc_abc import SMCABC as _SMCABCEngine
 from sbijax._src.inference.abc._sampler import ABCSampler
+from sbijax._src.inference.abc._smcabc_engine import SMCABC as _SMCABCEngine
 
 
 def smcabc(prior, simulator, summary_fn, distance_fn):

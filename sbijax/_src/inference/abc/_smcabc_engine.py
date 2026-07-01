@@ -12,7 +12,6 @@ from jax.tree_util import tree_map
 from tensorflow_probability.substrates.jax import distributions as tfd
 from tqdm import tqdm
 
-from sbijax._src._sbi_base import SBI
 from sbijax._src.util.data import _tree_stack, as_inference_data
 
 if TYPE_CHECKING:
@@ -20,7 +19,7 @@ if TYPE_CHECKING:
 
 
 # ruff: noqa: PLR0913
-class SMCABC(SBI):
+class SMCABC:
   r"""Sequential Monte Carlo approximate Bayesian computation.
 
   Implements the algorithm from :cite:t:`beaumont2009adaptive`.
@@ -32,25 +31,16 @@ class SMCABC(SBI):
       summary_fn: summary function
       distance_fn: distance function
 
-  Examples:
-      >>> from sbijax import SMCABC
-      >>> from tensorflow_probability.substrates.jax import distributions as tfd
-      ...
-      >>> prior = tfd.JointDistributionNamed(
-      ...     dict(theta=tfd.Normal(0.0, 1.0))
-      ... )
-      >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)
-      >>> fns = prior, s
-      >>> summary_fn = lambda x: x
-      >>> distance_fn = lambda x, y: jax.vmap(lambda z: jnp.linalg.norm(z))(x - y)
-      >>> model = SMCABC(fns, summary_fn, distance_fn)
+  This is the internal engine; the public interface is the functional
+  :func:`sbijax._src.inference.abc.smcabc.smcabc` factory.
 
   References:
       Beaumont, Mark A, et al. "Adaptive approximate Bayesian computation". Biometrika, 2009.
   """
 
   def __init__(self, model_fns, summary_fn, distance_fn):
-    super().__init__(model_fns)
+    self.prior = model_fns[0]
+    self.simulator_fn = model_fns[1]
     self.summary_fn = summary_fn
     self.distance_fn = distance_fn
     self.summarized_observed: chex.Array

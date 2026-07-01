@@ -6,8 +6,8 @@ core is reused from the existing implementation; this factory exposes it behind
 a pure ``sample`` function taking the prior and simulator separately.
 """
 
-from sbijax._src.abc.sabc import SABC as _SABCEngine
-from sbijax._src.abc.sabc import abs_distance
+from sbijax._src.inference.abc._sabc_engine import SABC as _SABCEngine
+from sbijax._src.inference.abc._sabc_engine import abs_distance
 from sbijax._src.inference.abc._sampler import ABCSampler
 
 
