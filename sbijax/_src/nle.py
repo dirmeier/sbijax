@@ -22,8 +22,8 @@ class NLE(NE):
   Implements the method introduced in :cite:t:`papama2019neural`.
 
   Args:
-      model_fns: a tuple of calalbles. The first element needs to be a
-          function that constructs a tfd.JointDistributionNamed, the second
+      model_fns: a tuple. The first element is a
+          tfd.JointDistributionNamed prior distribution, the second
           element is a simulator function.
       density_estimator: a (neural) conditional density estimator
           to model the likelihood function
@@ -33,7 +33,7 @@ class NLE(NE):
       >>> from sbijax.nn import make_mdn
       >>> from tensorflow_probability.substrates.jax import distributions as tfd
       ...
-      >>> prior = lambda: tfd.JointDistributionNamed(
+      >>> prior = tfd.JointDistributionNamed(
       ...    dict(theta=tfd.Normal(0.0, 1.0))
       ... )
       >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)

@@ -235,7 +235,7 @@ def _low_noise_model():
       theta["theta"].shape, seed=seed
     )
 
-  return prior_fn, simulator_fn
+  return prior_fn(), simulator_fn
 
 
 @pytest.mark.parametrize(

@@ -426,7 +426,7 @@ class SABC(SBI):
   Examples:
       >>> from sbijax import SABC
       >>> from tensorflow_probability.substrates.jax import distributions as tfd
-      >>> prior = lambda: tfd.JointDistributionNamed(
+      >>> prior = tfd.JointDistributionNamed(
       ...     dict(theta=tfd.Normal(jnp.zeros(2), 1.0)), batch_ndims=0)
       >>> sim = lambda seed, theta: theta["theta"] + tfd.Normal(
       ...     0.0, 0.1).sample(theta["theta"].shape, seed=seed)

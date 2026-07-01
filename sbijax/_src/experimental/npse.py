@@ -13,8 +13,8 @@ class NPSE(FMPE):
   :cite:t:`sharrock2024sequential`.
 
   Args:
-      model_fns: a tuple of callables. The first element needs to be a
-          function that constructs a tfd.JointDistributionNamed, the second
+      model_fns: a tuple. The first element is a
+          tfd.JointDistributionNamed prior distribution, the second
           element is a simulator function.
       score_estimator: a score_estimator estimator
 
@@ -23,7 +23,7 @@ class NPSE(FMPE):
       >>> from sbijax.experimental.nn import make_score_model
       >>> from tensorflow_probability.substrates.jax import distributions as tfd
       ...
-      >>> prior = lambda: tfd.JointDistributionNamed(
+      >>> prior = tfd.JointDistributionNamed(
       ...    dict(theta=tfd.Normal(0.0, 1.0))
       ... )
       >>> s = lambda seed, theta: tfd.Normal(theta["theta"], 1.0).sample(seed=seed)

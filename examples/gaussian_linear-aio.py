@@ -29,7 +29,7 @@ def simulator_fn(seed, theta):
 
 def run(n_iter):
   y_observed = jnp.linspace(-2.0, 2.0, 5)
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
   mask = jnp.zeros((10, 10))
   mask = mask.at[np.arange(5, 10), np.arange(5)].set(1)
   mask = mask + mask.T + jnp.eye(10)

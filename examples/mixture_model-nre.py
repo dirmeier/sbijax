@@ -35,7 +35,7 @@ def simulator_fn(seed, theta):
 
 def run(n_iter):
   y_observed = jnp.array([-2.0, 1.0])
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
   neural_network = make_mlp()
   model = NRE(fns, neural_network)
 

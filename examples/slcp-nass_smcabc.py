@@ -75,7 +75,7 @@ def run(n_rounds, n_iter):
       ]
     ]
   )
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
   model_nass = NASS(fns, make_nass_net(5, (64, 64)))
 
   data, _ = model_nass.simulate_data(jr.PRNGKey(1), n_simulations=20_000)

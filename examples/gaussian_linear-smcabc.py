@@ -40,7 +40,7 @@ def distance_fn(y_simulated, y_observed):
 def run(n_rounds):
   y_observed = jnp.array([-1.0, 1.0])
 
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
 
   smc = SMCABC(fns, summary_fn, distance_fn)
   smc_samples, _ = smc.sample_posterior(

@@ -14,7 +14,7 @@ class SBI(abc.ABC):  # noqa: B024  # base class; subclasses define their own API
     Args:
         model_fns: tuple
     """
-    self.prior = model_fns[0]()
+    self.prior = model_fns[0]
     self.simulator_fn = model_fns[1]
 
   @staticmethod

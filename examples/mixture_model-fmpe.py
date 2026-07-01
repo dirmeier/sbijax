@@ -33,7 +33,7 @@ def simulator_fn(seed, theta):
 
 def run(n_iter):
   y_observed = jnp.array([-2.0, 2.0])
-  fns = prior_fn, simulator_fn
+  fns = prior_fn(), simulator_fn
   neural_network = make_cnf(2)
   model = FMPE(fns, neural_network)
 
