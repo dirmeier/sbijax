@@ -2,10 +2,6 @@
 
 __version__ = "0.3.6"
 
-import os
-
-from matplotlib.pyplot import style
-
 from sbijax._src.abc.sabc import (
   SABC,
   DiffEvolution,
@@ -24,14 +20,6 @@ from sbijax._src.nasss import NASSS
 from sbijax._src.nle import NLE
 from sbijax._src.npe import NPE
 from sbijax._src.nre import NRE
-from sbijax._src.plot.plot import (
-  plot_ess,
-  plot_loss_profile,
-  plot_posterior,
-  plot_rank,
-  plot_rhat_and_ress,
-  plot_trace,
-)
 from sbijax._src.snle import SNLE
 from sbijax._src.util.data import (
   as_inference_data,
@@ -66,8 +54,27 @@ __all__ = [
   "weighted_sq",
 ]
 
-style_path = os.path.join(os.path.dirname(__file__), "_src", "plot", "styles")
-style.core.USER_LIBRARY_PATHS.append(style_path)
-style.core.reload_library()
-style.use(os.path.join(style_path, "sbijax.mplstyle"))
-del os, style
+_PLOT_FNS = frozenset(
+  {
+    "plot_ess",
+    "plot_loss_profile",
+    "plot_posterior",
+    "plot_rank",
+    "plot_rhat_and_ress",
+    "plot_trace",
+  }
+)
+
+
+def __getattr__(name):
+  """Lazily import plotting helpers so matplotlib stays optional."""
+  if name in _PLOT_FNS:
+    try:
+      from sbijax._src.plot import plot  # noqa: PLC0415
+    except ImportError as e:
+      raise ImportError(
+        f"`{name}` requires the optional plotting dependencies; install "
+        "them with `pip install sbijax[all]`."
+      ) from e
+    return getattr(plot, name)
+  raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
