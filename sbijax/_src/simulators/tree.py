@@ -2,7 +2,6 @@ from jax import numpy as jnp
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 
-# ruff: noqa: PLR0913, E501
 def tree():
   """Tree model.
 
@@ -33,7 +32,7 @@ def tree():
 
   def prior_fn():
     prior = tfd.JointDistributionNamed(
-      dict(a=a_prior_fn, b=b_prior_fn, c=c_prior_fn)
+      {"a": a_prior_fn, "b": b_prior_fn, "c": c_prior_fn}
     )
     return prior
 

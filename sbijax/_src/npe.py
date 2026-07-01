@@ -15,7 +15,7 @@ from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 class NPE(NE):
   """Neural posterior estimation.
 
@@ -86,7 +86,7 @@ class NPE(NE):
     rng_key,
     data,
     *,
-    optimizer=optax.adam(0.0003),
+    optimizer=None,
     n_iter=1000,
     batch_size=128,
     percentage_data_as_validation_set=0.1,
@@ -110,6 +110,8 @@ class NPE(NE):
     Returns:
         a tuple of parameters and a tuple of the training information
     """
+    if optimizer is None:
+      optimizer = optax.adam(0.0003)
     itr_key, rng_key = jr.split(rng_key)
     train_iter, val_iter = self.as_iterators(
       itr_key, data, batch_size, percentage_data_as_validation_set
@@ -146,7 +148,7 @@ class NPE(NE):
 
     if n_round == 0:
 
-      def loss_fn(params, rng, **batch):
+      def loss_fn(params, rng, **batch):  # noqa: ARG001
         theta, y = batch["theta"], batch["y"]
         log_det = 0
         if hasattr(self, "_prior_bijectors"):
@@ -211,8 +213,8 @@ class NPE(NE):
         best_params = params.copy()
 
     self.n_round += 1
-    losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, losses
+    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
+    return best_params, stacked_losses
 
   def _init_params(self, rng_key, **init_data):
     params = self.model.init(
@@ -258,7 +260,7 @@ class NPE(NE):
     if self.n_round == 0:
       _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
 
-      def loss_fn(rng, **batch):
+      def loss_fn(rng, **batch):  # noqa: ARG001
         theta, y = batch["theta"], batch["y"]
         log_det = 0
         if hasattr(self, "_prior_bijectors"):
@@ -325,7 +327,7 @@ class NPE(NE):
 
     thetas = None
     n_curr = n_samples
-    n_total_simulations_round = 0
+    n_total_simulations_round = jnp.asarray(0)
     _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
     while n_curr > 0:
       n_sim = jnp.minimum(200, jnp.maximum(200, n_curr))
@@ -347,12 +349,10 @@ class NPE(NE):
         proposal_probs = self.prior.log_prob(jax.vmap(unravel_fn)(proposal))
       if check_proposal_probs:
         proposal = proposal[jnp.isfinite(proposal_probs)]
-      if thetas is None:
-        thetas = proposal
-      else:
-        thetas = jnp.vstack([thetas, proposal])
+      thetas = proposal if thetas is None else jnp.vstack([thetas, proposal])
       n_curr -= proposal.shape[0]
 
+    assert thetas is not None
     ess = float(thetas.shape[0] / n_total_simulations_round)
 
     def reshape(p):

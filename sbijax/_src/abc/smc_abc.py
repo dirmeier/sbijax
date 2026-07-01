@@ -1,6 +1,6 @@
 from collections import namedtuple
+from typing import TYPE_CHECKING
 
-import chex
 import jax
 from blackjax.smc import resampling
 from blackjax.smc.ess import ess
@@ -15,8 +15,11 @@ from tqdm import tqdm
 from sbijax._src._sbi_base import SBI
 from sbijax._src.util.data import _tree_stack, as_inference_data
 
+if TYPE_CHECKING:
+  import chex
 
-# ruff: noqa: PLR0913, E501
+
+# ruff: noqa: PLR0913
 class SMCABC(SBI):
   r"""Sequential Monte Carlo approximate Bayesian computation.
 
@@ -51,7 +54,7 @@ class SMCABC(SBI):
     self.summary_fn = summary_fn
     self.distance_fn = distance_fn
     self.summarized_observed: chex.Array
-    self.n_total_simulations = 0
+    self.n_total_simulations: int | chex.Array = 0
 
   def sample_posterior(
     self,
@@ -202,7 +205,7 @@ class SMCABC(SBI):
 
       idxs = jnp.where(ds < epsilon)[0]
       new_candidate_particles = tree_map(
-        lambda x: x[idxs], new_candidate_particles
+        lambda x, idxs=idxs: x[idxs], new_candidate_particles
       )
       if new_particles is None:
         new_particles = new_candidate_particles

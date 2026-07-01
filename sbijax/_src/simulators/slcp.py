@@ -5,7 +5,6 @@ from jax import scipy as jsp
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 
-# ruff: noqa: PLR0913, E501
 def slcp():
   """Simple likelihood complex posterior model.
 
@@ -23,12 +22,12 @@ def slcp():
 
   def prior_fn():
     prior = tfd.JointDistributionNamed(
-      dict(
-        theta=tfd.Independent(
+      {
+        "theta": tfd.Independent(
           tfd.Uniform(jnp.full(5, -3.0), jnp.full(5, 3.0)),
           reinterpreted_batch_ndims=1,
         )
-      )
+      }
     )
     return prior
 

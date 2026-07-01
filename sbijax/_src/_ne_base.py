@@ -10,7 +10,6 @@ from sbijax._src.util.data import inference_data_as_dictionary as flatten
 from sbijax._src.util.data import stack_data
 
 
-# ruff: noqa: PLR0913
 class NE(SBI, ABC):
   """Sequential neural estimation base class."""
 
@@ -28,7 +27,7 @@ class NE(SBI, ABC):
     self.model = network
     self.round = 0
 
-  def simulate_data_and_possibly_append(
+  def simulate_data_and_possibly_append(  # noqa: PLR0913
     self,
     rng_key,
     params,
@@ -58,10 +57,7 @@ class NE(SBI, ABC):
       n_simulations=n_simulations,
       **kwargs,
     )
-    if data is None:
-      d_new = new_data
-    else:
-      d_new = stack_data(data, new_data)
+    d_new = new_data if data is None else stack_data(data, new_data)
     return d_new, diagnostics
 
   @abc.abstractmethod
@@ -119,7 +115,7 @@ class NE(SBI, ABC):
     else:
       if observable is None:
         raise ValueError(
-          "need to have access to 'observable' " "when sampling from posterior"
+          "need to have access to 'observable' when sampling from posterior"
         )
       if "n_samples" not in kwargs:
         kwargs["n_samples"] = n_simulations

@@ -93,7 +93,18 @@ In order to contribute:
    ```
 4) Create a new branch locally `git checkout -b feature/my-new-feature` or `git checkout -b issue/fixes-bug`.
 5) Implement your contribution and ideally a test case.
-6) Test it by calling `make tests`, `make lints` and `make format` on the (Unix) command line.
+6) Test, lint and format your contribution by running:
+
+   ```shell
+   uv run pytest                         # run the test suite
+   uv run ruff check sbijax examples     # lint
+   uv run ruff format sbijax examples    # format
+   uv run mypy sbijax                    # type-check
+   ```
+
+   The `pre-commit` hook installed in step 3 runs `ruff` and `mypy` on every
+   commit, so these checks also run automatically. To build the docs locally,
+   run `make html` from within the `docs` directory.
 7) Submit a PR 🙂.
 
 ## Citing sbijax

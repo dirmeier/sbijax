@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from typing import Any
 
 import haiku as hk
 import jax
@@ -13,7 +14,7 @@ class _ResnetBlock(hk.Module):
   def __init__(
     self,
     hidden_size: int,
-    activation: Callable = jax.nn.relu,
+    activation: Callable[..., Any] = jax.nn.relu,
     dropout_rate: float = 0.2,
     do_batch_norm: bool = False,
     batch_norm_decay: float = 0.1,
@@ -52,7 +53,7 @@ class _Resnet(hk.Module):
     self,
     n_layers: int,
     hidden_size: int,
-    activation: Callable = jax.nn.relu,
+    activation: Callable[..., Any] = jax.nn.relu,
     dropout_rate: float = 0.1,
     do_batch_norm: bool = True,
     batch_norm_decay: float = 0.1,
@@ -85,7 +86,7 @@ class _Resnet(hk.Module):
 def make_resnet(
   n_layers: int = 2,
   hidden_size: int = 64,
-  activation: Callable = jax.nn.tanh,
+  activation: Callable[..., Any] = jax.nn.tanh,
   dropout_rate: float = 0.2,
   do_batch_norm: bool = False,
   batch_norm_decay: float = 0.2,

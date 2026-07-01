@@ -85,7 +85,6 @@ def _consistency_loss(
   return jnp.mean(loss)
 
 
-# ruff: noqa: E501
 class CMPE(FMPE):
   r"""Consistency model posterior estimation.
 
@@ -180,7 +179,7 @@ class CMPE(FMPE):
           batch["y"].shape[0] / train_iter.num_samples
         )
       val_key, rng_key = jr.split(rng_key)
-      validation_loss = self._validation_loss(
+      validation_loss = self._consistency_validation_loss(
         val_key, params, ema_params, n_iter, val_iter
       )
       losses[i] = jnp.array([train_loss, validation_loss])
@@ -193,8 +192,8 @@ class CMPE(FMPE):
         best_loss = validation_loss
         best_params = params.copy()
 
-    losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, losses
+    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
+    return best_params, stacked_losses
 
   def _init_params(self, rng_key, **init_data):
     times = jr.uniform(jr.PRNGKey(0), shape=(init_data["y"].shape[0], 1))
@@ -209,7 +208,9 @@ class CMPE(FMPE):
     return params
 
   # ruff: noqa: PLR0913
-  def _validation_loss(self, rng_key, params, ema_params, n_iter, val_iter):
+  def _consistency_validation_loss(
+    self, rng_key, params, ema_params, n_iter, val_iter
+  ):
     loss_fn = jax.jit(
       partial(
         _consistency_loss,

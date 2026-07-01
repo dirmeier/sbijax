@@ -16,9 +16,9 @@ def _tree_stack(trees):
     leaves_list.append(leaves)
     treedef_list.append(treedef)
 
-  grouped_leaves = zip(*leaves_list)
+  grouped_leaves = zip(*leaves_list, strict=False)
   result_leaves = [jnp.vstack(leave) for leave in grouped_leaves]
-  return treedef_list[0].unflatten(result_leaves)
+  return jax.tree_util.tree_unflatten(treedef_list[0], result_leaves)
 
 
 def stack_data(data: PyTree, also_data: PyTree) -> PyTree:
@@ -53,7 +53,7 @@ def as_inference_data(samples: PyTree, observed: jax.Array) -> xarray.DataTree:
   d_ds["posterior"] = az.dict_to_dataset(
     samples,
     coords={f"{k}_dim": np.arange(v.shape[-1]) for k, v in samples.items()},
-    dims={k: [f"{k}_dim"] for k in samples.keys()},
+    dims={k: [f"{k}_dim"] for k in samples},
   )
   d_ds["observed_data"] = az.dict_to_dataset(
     {"y": observed}, skip_event_dims=True
@@ -72,6 +72,8 @@ def inference_data_as_dictionary(inference_data: xarray.DataTree) -> PyTree:
       a PyTree
   """
   posterior = inference_data["/posterior"]
-  posterior = {k: v.data for k, v in posterior.data_vars.items()}
-  posterior = {k: v.reshape(-1, v.shape[-1]) for k, v in posterior.items()}
-  return posterior
+  posterior_vars = {k: v.data for k, v in posterior.data_vars.items()}
+  posterior_vars = {
+    k: v.reshape(-1, v.shape[-1]) for k, v in posterior_vars.items()
+  }
+  return posterior_vars

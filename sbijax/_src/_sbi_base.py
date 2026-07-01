@@ -5,7 +5,7 @@ from sbijax._src.util.dataloader import as_batch_iterators
 
 # pylint: disable=too-many-instance-attributes,unused-argument,
 # pylint: disable=too-few-public-methods
-class SBI(abc.ABC):
+class SBI(abc.ABC):  # noqa: B024  # base class; subclasses define their own API
   """SBI base class."""
 
   def __init__(self, model_fns):

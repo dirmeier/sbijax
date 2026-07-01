@@ -1,7 +1,7 @@
 exclude: 'docs/_static'
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v6.0.0
     hooks:
     - id: check-docstring-first
     - id: check-added-large-files
@@ -15,14 +15,14 @@ repos:
     - id: trailing-whitespace
 
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.14.1
+  rev: v2.1.0
   hooks:
   - id: mypy
     args: ["--ignore-missing-imports"]
     files: "(sbijax|examples)"
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.0
+  rev: v0.15.20
   hooks:
     - id: ruff
       args: [ --fix ]

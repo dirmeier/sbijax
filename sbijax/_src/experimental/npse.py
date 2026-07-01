@@ -6,7 +6,6 @@ from jax._src.flatten_util import ravel_pytree
 from sbijax import FMPE, as_inference_data, inference_data_as_dictionary
 
 
-# ruff: noqa: PLR0913, E501
 class NPSE(FMPE):
   """Neural posterior score estimation.
 

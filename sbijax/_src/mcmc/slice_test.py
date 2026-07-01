@@ -1,8 +1,3 @@
-import chex
-from jax import random as jr
-
-from sbijax._src.mcmc import sample_with_slice
-
 # TODO(Simon): comment in once the sampler is written in BlackJAX
 # def test_slice_sampler(prior_log_prob_tuple):
 #     samples = sample_with_slice(

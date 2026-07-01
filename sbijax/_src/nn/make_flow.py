@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterable
+from typing import Any
 
 import distrax
 import haiku as hk
@@ -20,13 +21,13 @@ from surjectors.util import make_alternating_binary_mask, unstack
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 def make_maf(
   n_dimension: int,
   n_layers: int | None = 5,
   n_layer_dimensions: Iterable[int] | None = None,
   hidden_sizes: Iterable[int] = (64, 64),
-  activation: Callable = jax.nn.tanh,
+  activation: Callable[..., Any] = jax.nn.tanh,
 ) -> hk.Transformed:
   """Create an affine (surjective) masked autoregressive flow.
 
@@ -72,7 +73,7 @@ def _make_maf(
   n_layer_dimensions,
   hidden_sizes,
   activation,
-):
+) -> hk.Transformed:
   def _bijector_fn(params):
     means, log_scales = unstack(params, -1)
     return surjectors.ScalarAffine(means, jnp.exp(log_scales))
@@ -146,7 +147,7 @@ def _make_maf(
   return _flow
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 def make_spf(
   n_dimension: int,
   range_min: float,
@@ -155,7 +156,7 @@ def make_spf(
   n_layer_dimensions: Iterable[int] | None = None,
   hidden_sizes: Iterable[int] = (64, 64),
   n_params: int = 10,
-  activation: Callable = jax.nn.tanh,
+  activation: Callable[..., Any] = jax.nn.tanh,
 ) -> hk.Transformed:
   """Create a rational-quadratic (surjective) spline coupling flow.
 
@@ -210,7 +211,7 @@ def _make_spf(
   n_params,
   hidden_sizes,
   activation,
-):
+) -> hk.Transformed:
   def _bijector_fn(params):
     return distrax.RationalQuadraticSpline(
       params, range_min=range_min, range_max=range_max

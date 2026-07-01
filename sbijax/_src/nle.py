@@ -19,7 +19,7 @@ from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.early_stopping import EarlyStopping
 
 
-# ruff: noqa: PLR0913, E501
+# ruff: noqa: PLR0913
 class NLE(NE):
   """Neural likelihood estimation.
 
@@ -54,7 +54,7 @@ class NLE(NE):
     self,
     rng_key,
     data,
-    optimizer=optax.adam(0.0003),
+    optimizer=None,
     n_iter=1000,
     batch_size=100,
     percentage_data_as_validation_set=0.1,
@@ -80,6 +80,8 @@ class NLE(NE):
         a tuple of parameters and a tuple of the training
         information
     """
+    if optimizer is None:
+      optimizer = optax.adam(0.0003)
     itr_key, rng_key = jr.split(rng_key)
     train_iter, val_iter = self.as_iterators(
       itr_key, data, batch_size, percentage_data_as_validation_set
@@ -148,8 +150,8 @@ class NLE(NE):
         best_loss = validation_loss
         best_params = params.copy()
 
-    losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, losses
+    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
+    return best_params, stacked_losses
 
   def _validation_loss(self, params, val_iter):
     @jax.jit
