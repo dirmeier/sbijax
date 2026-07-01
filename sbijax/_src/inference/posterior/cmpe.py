@@ -16,11 +16,82 @@ import optax
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._src.cmpe import _consistency_loss
 from sbijax._src.inference._estimator import Estimator
 from sbijax._src.inference.posterior._sampling import rejection_sample_flow
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.early_stopping import EarlyStopping
+
+
+def _alpha_t(time):
+  return 1.0 / (_time_schedule(time + 1) - _time_schedule(time))
+
+
+def _time_schedule(n, rho=7, t_min=0.001, t_max=50, n_inters=1000):
+  left = t_min ** (1 / rho)
+  right = t_max ** (1 / rho) - t_min ** (1 / rho)
+  right = (n - 1) / (n_inters - 1) * right
+  return (left + right) ** rho
+
+
+def _discretization_schedule(n_iter, max_iter=1000):
+  s0, s1 = 10, 50
+  nk = (
+    (n_iter / max_iter) * (jnp.square(s1 + 1) - jnp.square(s0))
+    + jnp.square(s0)
+    - 1
+  )
+  nk = jnp.ceil(jnp.sqrt(nk)) + 1
+  return nk
+
+
+def _consistency_loss(
+  params,
+  ema_params,
+  rng_key,
+  apply_fn,
+  n_iter,
+  t_min,
+  t_max,
+  is_training=False,
+  **batch,
+):
+  theta = batch["theta"]
+  nk = _discretization_schedule(n_iter)
+
+  t_key, rng_key = jr.split(rng_key)
+  time_idx = jr.randint(t_key, shape=(theta.shape[0],), minval=1, maxval=nk - 1)
+  tn = _time_schedule(time_idx, t_min=t_min, t_max=t_max, n_inters=nk).reshape(
+    -1, 1
+  )
+  tnp1 = _time_schedule(
+    time_idx + 1, t_min=t_min, t_max=t_max, n_inters=nk
+  ).reshape(-1, 1)
+
+  noise_key, rng_key = jr.split(rng_key)
+  noise = jr.normal(noise_key, shape=(*theta.shape,))
+
+  train_rng, rng_key = jr.split(rng_key)
+  fnp1 = apply_fn(
+    params,
+    train_rng,
+    method="vector_field",
+    theta=theta + tnp1 * noise,
+    time=tnp1,
+    context=batch["y"],
+    is_training=is_training,
+  )
+  fn = apply_fn(
+    ema_params,
+    train_rng,
+    method="vector_field",
+    theta=theta + tn * noise,
+    time=tn,
+    context=batch["y"],
+    is_training=is_training,
+  )
+  mse = jnp.sqrt(jnp.mean(jnp.square(fnp1 - fn), axis=1))
+  loss = _alpha_t(time_idx) * mse
+  return jnp.mean(loss)
 
 
 def cmpe(prior, network, *, t_min=0.001, t_max=50.0):

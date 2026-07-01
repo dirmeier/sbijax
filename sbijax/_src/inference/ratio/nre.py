@@ -9,17 +9,67 @@ with the prior and drawing samples with the injected MCMC sampler.
 # ruff: noqa: PLR0913
 from functools import partial
 
+import jax
 import optax
 from jax import numpy as jnp
 from jax import random as jr
+from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
 
 from sbijax._src.inference._estimator import Estimator
 from sbijax._src.mcmc import sample_with_nuts
-from sbijax._src.nre import _loss
 from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.train import train_loop
+
+
+def _get_prior_probs_marginal_and_joint(k, gamma):
+  p_marginal = 1 / (1 + gamma * k)
+  p_joint = gamma / (1 + gamma * k)
+  return p_marginal, p_joint
+
+
+def _as_logits(params, rng_key, model, k, theta, y):
+  n = theta.shape[0]
+  y = jnp.repeat(y, k + 1, axis=0)
+  ps = jnp.ones((n, n)) * (1.0 - jnp.eye(n)) / (n - 1.0)
+  choices = jax.vmap(
+    lambda key, p: jr.choice(key, n, (k,), replace=False, p=p)
+  )(jr.split(rng_key, n), ps)
+  contrasting_theta = theta[choices]
+  atomic_theta = jnp.concatenate(
+    [theta[:, None, :], contrasting_theta], axis=1
+  ).reshape(n * (k + 1), -1)
+  inputs = jnp.concatenate([y, atomic_theta], axis=-1)
+  return model.apply(params, inputs, is_training=False)
+
+
+def _marginal_joint_loss(gamma, num_classes, log_marg, log_joint):
+  loggamma = jnp.log(gamma)
+  log_k = jnp.full((log_marg.shape[0], 1), jnp.log(num_classes))
+  denominator_marginal = jnp.concatenate([loggamma + log_marg, log_k], axis=-1)
+  denominator_joint = jnp.concatenate([loggamma + log_joint, log_k], axis=-1)
+  log_prob_marginal = log_k - jsp.special.logsumexp(
+    denominator_marginal, axis=-1
+  )
+  log_prob_joint = (
+    loggamma
+    + log_joint[:, 0]
+    - jsp.special.logsumexp(denominator_joint, axis=-1)
+  )
+  p_marg, p_joint = _get_prior_probs_marginal_and_joint(num_classes, gamma)
+  return p_marg * log_prob_marginal + p_joint * num_classes * log_prob_joint
+
+
+def _loss(params, rng_key, model, gamma, num_classes, **batch):
+  n, _ = batch["y"].shape
+  rng_key1, rng_key2, rng_key = jr.split(rng_key, 3)
+  log_marg = _as_logits(params, rng_key1, model, num_classes, **batch)
+  log_joint = _as_logits(params, rng_key2, model, num_classes, **batch)
+  log_marg = log_marg.reshape(n, num_classes + 1)[:, 1:]
+  log_joint = log_joint.reshape(n, num_classes + 1)[:, :-1]
+  loss = _marginal_joint_loss(gamma, num_classes, log_marg, log_joint)
+  return -jnp.mean(loss)
 
 
 def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
