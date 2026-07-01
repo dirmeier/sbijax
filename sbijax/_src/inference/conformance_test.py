@@ -6,12 +6,15 @@ from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax._src.inference.likelihood.nle import nle
+from sbijax._src.inference.likelihood.snle import snle
 from sbijax._src.inference.posterior.cmpe import cmpe
 from sbijax._src.inference.posterior.fmpe import fmpe
 from sbijax._src.inference.posterior.npe import npe
+from sbijax._src.inference.ratio.nre import nre
 from sbijax._src.nn.make_consistency_model import make_cm
 from sbijax._src.nn.make_continuous_flow import make_cnf
 from sbijax._src.nn.make_flow import make_maf
+from sbijax._src.nn.make_mlp import make_mlp
 from sbijax._src.simulate import simulate
 
 
@@ -47,6 +50,14 @@ ESTIMATORS = {
   "cmpe": {
     "build": lambda prior: cmpe(prior, make_cm(2)),
     "sample_kwargs": {"n_samples": 64},
+  },
+  "nre": {
+    "build": lambda prior: nre(prior, make_mlp()),
+    "sample_kwargs": {"n_chains": 2, "n_samples": 30, "n_warmup": 10},
+  },
+  "snle": {
+    "build": lambda prior: snle(prior, make_maf(2)),
+    "sample_kwargs": {"n_chains": 2, "n_samples": 30, "n_warmup": 10},
   },
 }
 
