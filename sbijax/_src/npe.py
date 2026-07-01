@@ -3,16 +3,14 @@ from functools import partial
 import jax
 import numpy as np
 import optax
-from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
-from tqdm import tqdm
 
 from sbijax._src._ne_base import NE
 from sbijax._src.util.data import as_inference_data
-from sbijax._src.util.early_stopping import EarlyStopping
+from sbijax._src.util.train import train_loop
 
 
 # ruff: noqa: PLR0913
@@ -128,7 +126,6 @@ class NPE(NE):
 
     return params, losses
 
-  # pylint: disable=undefined-loop-variable
   def _fit_model_single_round(
     self,
     seed,
@@ -141,12 +138,9 @@ class NPE(NE):
   ):
     init_key, seed = jr.split(seed)
     params = self._init_params(init_key, **next(iter(train_iter)))
-    state = optimizer.init(params)
 
-    n_round = self.n_round
-    _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
-
-    if n_round == 0:
+    if self.n_round == 0:
+      _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
 
       def loss_fn(params, rng, **batch):  # noqa: ARG001
         theta, y = batch["theta"], batch["y"]
@@ -178,43 +172,19 @@ class NPE(NE):
         )
         return -jnp.mean(lp)
 
-    @jax.jit
-    def step(params, rng, state, **batch):
-      loss, grads = jax.value_and_grad(loss_fn)(params, rng, **batch)
-      updates, new_state = optimizer.update(grads, state, params)
-      new_params = optax.apply_updates(params, updates)
-      return loss, new_params, new_state
-
-    losses = np.zeros([n_iter, 2])
-    early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
-    best_params, best_loss = None, np.inf
-    logging.info("training model")
-    for i in tqdm(range(n_iter)):
-      train_loss = 0.0
-      rng_key = jr.fold_in(seed, i)
-      for batch in train_iter:
-        train_key, rng_key = jr.split(rng_key)
-        batch_loss, params, state = step(params, train_key, state, **batch)
-        train_loss += batch_loss * (
-          batch["y"].shape[0] / train_iter.num_samples
-        )
-      val_key, rng_key = jr.split(rng_key)
-      validation_loss = self._validation_loss(
-        val_key, params, val_iter, n_atoms
-      )
-      losses[i] = jnp.array([train_loss, validation_loss])
-
-      _, early_stop = early_stop.update(validation_loss)
-      if early_stop.should_stop:
-        logging.info("early stopping criterion found")
-        break
-      if validation_loss < best_loss:
-        best_loss = validation_loss
-        best_params = params.copy()
-
+    best_params, losses = train_loop(
+      seed,
+      params=params,
+      optimizer=optimizer,
+      loss_fn=loss_fn,
+      validation_loss_fn=loss_fn,
+      train_iter=train_iter,
+      val_iter=val_iter,
+      n_iter=n_iter,
+      n_early_stopping_patience=n_early_stopping_patience,
+    )
     self.n_round += 1
-    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, stacked_losses
+    return best_params, losses
 
   def _init_params(self, rng_key, **init_data):
     params = self.model.init(
@@ -255,46 +225,6 @@ class NPE(NE):
     ] - jsp.special.logsumexp(unnormalized_log_prob, axis=-1)
 
     return log_prob_proposal_posterior
-
-  def _validation_loss(self, rng_key, params, val_iter, n_atoms):
-    if self.n_round == 0:
-      _, unravel_fn = ravel_pytree(self.prior.sample(seed=jr.PRNGKey(1)))
-
-      def loss_fn(rng, **batch):  # noqa: ARG001
-        theta, y = batch["theta"], batch["y"]
-        log_det = 0
-        if hasattr(self, "_prior_bijectors"):
-          theta_map = jax.vmap(unravel_fn)(theta)
-          theta = self._prior_bijectors.inverse(theta_map)
-          log_det = self._prior_bijectors.inverse_log_det_jacobian(theta_map)
-          theta = jax.vmap(lambda x: ravel_pytree(x)[0])(theta)
-        lp = self.model.apply(
-          params,
-          None,
-          method="log_prob",
-          y=theta,
-          x=y,
-        )
-        lp = lp + log_det
-        return -jnp.mean(lp)
-
-    else:
-
-      def loss_fn(rng, **batch):
-        lp = self._proposal_posterior_log_prob(
-          params, rng, n_atoms, batch["theta"], batch["y"]
-        )
-        return -jnp.mean(lp)
-
-    def body_fn(batch, rng_key):
-      loss = jax.jit(loss_fn)(rng_key, **batch)
-      return loss * (batch["y"].shape[0] / val_iter.num_samples)
-
-    loss = 0.0
-    for batch in val_iter:
-      val_key, rng_key = jr.split(rng_key)
-      loss += body_fn(batch, val_key)
-    return loss
 
   def sample_posterior(
     self,

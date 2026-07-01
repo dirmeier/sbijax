@@ -5,22 +5,19 @@ from typing import Any, NamedTuple
 
 import chex
 import jax
-import numpy as np
 import optax
-from absl import logging
 from haiku import Params, Transformed
 from jax import Array
 from jax import numpy as jnp
 from jax import random as jr
 from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
-from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._ne_base import NE
 from sbijax._src.mcmc.util import mcmc_diagnostics
 from sbijax._src.util.data import as_inference_data
-from sbijax._src.util.early_stopping import EarlyStopping
+from sbijax._src.util.train import train_loop
 
 
 def _get_prior_probs_marginal_and_joint(K, gamma):
@@ -184,7 +181,6 @@ class NRE(NE):
 
     return params, losses
 
-  # pylint: disable=undefined-loop-variable
   def _fit_model_single_round(
     self,
     rng_key,
@@ -197,49 +193,29 @@ class NRE(NE):
   ):
     init_key, rng_key = jr.split(rng_key)
     params = self._init_params(init_key, **next(iter(train_iter)))
-    state = optimizer.init(params)
 
-    loss_fn = partial(_loss, gamma=self.gamma, num_classes=self.num_classes)
-
-    @jax.jit
-    def step(params, rng, state, **batch):
-      loss, grads = jax.value_and_grad(loss_fn)(
-        params, rng, self.model, **batch
+    def loss_fn(params, rng, **batch):
+      return _loss(
+        params,
+        rng,
+        self.model,
+        gamma=self.gamma,
+        num_classes=self.num_classes,
+        **batch,
       )
-      updates, new_state = optimizer.update(grads, state, params)
-      new_params = optax.apply_updates(params, updates)
-      return loss, new_params, new_state
 
-    losses = np.zeros([n_iter, 2])
-    early_stop = EarlyStopping(
-      n_early_stopping_delta, n_early_stopping_patience
+    return train_loop(
+      rng_key,
+      params=params,
+      optimizer=optimizer,
+      loss_fn=loss_fn,
+      validation_loss_fn=loss_fn,
+      train_iter=train_iter,
+      val_iter=val_iter,
+      n_iter=n_iter,
+      n_early_stopping_patience=n_early_stopping_patience,
+      n_early_stopping_delta=n_early_stopping_delta,
     )
-    best_params, best_loss = None, np.inf
-    logging.info("training model")
-    for i in tqdm(range(n_iter)):
-      train_loss = 0.0
-      rng_key = jr.fold_in(rng_key, i)
-      for batch in train_iter:
-        train_key, rng_key = jr.split(rng_key)
-        batch_loss, params, state = step(params, train_key, state, **batch)
-        train_loss += batch_loss * (
-          batch["y"].shape[0] / train_iter.num_samples
-        )
-      val_key, rng_key = jr.split(rng_key)
-      validation_loss = self._validation_loss(val_key, params, val_iter)
-      losses[i] = jnp.array([train_loss, validation_loss])
-
-      _, early_stop = early_stop.update(validation_loss)
-      if early_stop.should_stop:
-        logging.info("early stopping criterion found")
-        break
-      if validation_loss < best_loss:
-        best_loss = validation_loss
-        best_params = params.copy()
-
-    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
-
-    return best_params, stacked_losses
 
   def _init_params(self, rng_key, **init_data):
     params = self.model.init(
@@ -247,20 +223,6 @@ class NRE(NE):
       jnp.concatenate([init_data["y"], init_data["theta"]], axis=-1),
     )
     return params
-
-  def _validation_loss(self, rng_key, params, val_iter):
-    loss_fn = partial(_loss, gamma=self.gamma, num_classes=self.num_classes)
-
-    @jax.jit
-    def body_fn(rng_key, **batch):
-      loss = loss_fn(params, rng_key, self.model, **batch)
-      return loss * (batch["y"].shape[0] / val_iter.num_samples)
-
-    loss = 0.0
-    for batch in val_iter:
-      val_key, rng_key = jr.split(rng_key)
-      loss += body_fn(val_key, **batch)
-    return loss
 
   def simulate_data_and_possibly_append(
     self,

@@ -2,21 +2,17 @@ from functools import partial
 
 import arviz
 import chex
-import jax
-import numpy as np
 import optax
 import xarray
-from absl import logging
 from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
-from tqdm import tqdm
 
 from sbijax._src import mcmc
 from sbijax._src._ne_base import NE
 from sbijax._src.mcmc.util import mcmc_diagnostics
 from sbijax._src.util.data import as_inference_data
-from sbijax._src.util.early_stopping import EarlyStopping
+from sbijax._src.util.train import train_loop
 
 
 # ruff: noqa: PLR0913
@@ -97,7 +93,7 @@ class NLE(NE):
 
     return params, losses
 
-  # pylint: disable=arguments-differ,undefined-loop-variable
+  # pylint: disable=arguments-differ
   def _fit_model_single_round(
     self,
     seed,
@@ -109,53 +105,8 @@ class NLE(NE):
   ):
     init_key, seed = jr.split(seed)
     params = self._init_params(init_key, **next(iter(train_iter)))
-    state = optimizer.init(params)
 
-    @jax.jit
-    def step(params, state, **batch):
-      def loss_fn(params):
-        lp = self.model.apply(
-          params,
-          rng=None,
-          method="log_prob",
-          y=batch["y"],
-          x=batch["theta"],
-        )
-        return -jnp.mean(lp)
-
-      loss, grads = jax.value_and_grad(loss_fn)(params)
-      updates, new_state = optimizer.update(grads, state, params)
-      new_params = optax.apply_updates(params, updates)
-      return loss, new_params, new_state
-
-    losses = np.zeros([n_iter, 2])
-    early_stop = EarlyStopping(1e-3, n_early_stopping_patience)
-    best_params, best_loss = None, np.inf
-    logging.info("training model")
-    for i in tqdm(range(n_iter)):
-      train_loss = 0.0
-      for batch in train_iter:
-        batch_loss, params, state = step(params, state, **batch)
-        train_loss += batch_loss * (
-          batch["y"].shape[0] / train_iter.num_samples
-        )
-      validation_loss = self._validation_loss(params, val_iter)
-      losses[i] = jnp.array([train_loss, validation_loss])
-
-      _, early_stop = early_stop.update(validation_loss)
-      if early_stop.should_stop:
-        logging.info("early stopping criterion found")
-        break
-      if validation_loss < best_loss:
-        best_loss = validation_loss
-        best_params = params.copy()
-
-    stacked_losses = jnp.vstack(losses)[: (i + 1), :]
-    return best_params, stacked_losses
-
-  def _validation_loss(self, params, val_iter):
-    @jax.jit
-    def loss_fn(**batch):
+    def loss_fn(params, rng, **batch):  # noqa: ARG001
       lp = self.model.apply(
         params,
         rng=None,
@@ -165,14 +116,17 @@ class NLE(NE):
       )
       return -jnp.mean(lp)
 
-    def body_fn(batch):
-      loss = loss_fn(**batch)
-      return loss * (batch["y"].shape[0] / val_iter.num_samples)
-
-    losses = 0.0
-    for batch in val_iter:
-      losses += body_fn(batch)
-    return losses
+    return train_loop(
+      seed,
+      params=params,
+      optimizer=optimizer,
+      loss_fn=loss_fn,
+      validation_loss_fn=loss_fn,
+      train_iter=train_iter,
+      val_iter=val_iter,
+      n_iter=n_iter,
+      n_early_stopping_patience=n_early_stopping_patience,
+    )
 
   def _init_params(self, rng_key, **init_data):
     params = self.model.init(
