@@ -2,6 +2,7 @@
 
 __version__ = "0.4.0"
 
+from sbijax._src.diagnostics import sbc
 from sbijax._src.inference import Estimator, run_sequential
 from sbijax._src.inference.abc import ABCSampler, sabc, smcabc
 from sbijax._src.inference.abc._sabc_engine import (
@@ -61,6 +62,7 @@ __all__ = [
   "plot_trace",
   "run_sequential",
   "sabc",
+  "sbc",
   "SingleEps",
   "simulate",
   "smcabc",
