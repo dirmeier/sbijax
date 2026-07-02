@@ -3,12 +3,14 @@
 Remaining work after the functional core and the ten-method port. See
 [architecture.md](architecture.md) and [decisions.md](decisions.md).
 
+**All items below are implemented** (items 1–5). This document is retained as
+the design record for that work.
+
 ## 1. Sequential inference driver (`run_sequential`) + atomic NPE
 
-**Status:** not implemented. The functional `npe` is single-round amortized
-only; the atomic multi-round objective (`_proposal_posterior_log_prob`,
-`num_atoms`) and the round loop that lived in `_ne_base` are not ported. This is
-a capability gap versus the old `NPE`.
+**Status:** done. `npe(prior, net, *, num_atoms=10)` selects the atomic
+proposal-posterior loss when `fit` is passed an `Info` with `round > 0`;
+`run_sequential` drives the rounds (see `inference/sequential.py`, DR-011).
 
 ### Proposed design
 
@@ -88,34 +90,42 @@ estimator is unchanged.
 - Proposal handoff for MCMC-sampled methods (NLE/NRE): drawing `n` proposal
   parameters per round via MCMC may be expensive; consider caching or reusing
   chains.
-- SNPE truncation (as in the experimental NPSE/AiO) vs atomic correction —
-  decide whether truncated proposals are a separate driver option.
+- ~~SNPE truncation (NPSE/AiO) vs atomic correction — truncated proposals a
+  separate driver option?~~ *Resolved:* truncation is a driver **option** —
+  `run_sequential` takes a `proposal_fn` hook, and
+  `experimental.make_truncated_proposal` builds a truncated-prior proposal for
+  it (see item 3).
 
 ## 2. Public API cutover
 
-Wire the new factories into `sbijax/__init__.py` (`nle`, `npe`, `nre`, `fmpe`,
-`cmpe`, `snle`, `sabc`, `smcabc`, `nass`, `nasss`, plus `simulate`, `stack`, and
-the interface records). This is the breaking 0.4 surface (DR-003, DR-010).
+**Status:** done. `sbijax/__init__.py` exports the factories (`nle`, `npe`,
+`nre`, `fmpe`, `cmpe`, `snle`, `sabc`, `smcabc`, `nass`, `nasss`), `simulate`,
+`stack`, `run_sequential`, `sbc`, the interface records (`Estimator`,
+`ABCSampler`, `SummaryNet`) and the per-method `Info` records. Breaking 0.4
+surface (DR-003, DR-010).
 
 ## 3. Experimental methods
 
-`experimental/npse.py` and `experimental/aio.py` currently subclass the OO
-`FMPE`. When the old classes are removed they must be ported to functional
-factories (they add truncated-prior sampling — see candidate 4 in the original
-assessment) or moved behind the new `fmpe` core.
+**Status:** done. `experimental/npse.py` and `experimental/aio.py` are
+functional factories delegating to the `fmpe` core; their truncated-prior
+sampling is ported to `experimental/_truncated.py`'s `make_truncated_proposal`,
+plugged into `run_sequential` via its `proposal_fn` hook.
 
 ## 4. Correctness harness — remaining tiers
 
-The conformance tier exists (every method checked against its interface). Still
-to add (DR-009):
+**Status:** done (DR-009). Beyond the conformance tier:
 
-- **SBC calibration** — simulation-based calibration rank tests on a tractable
-  problem, proving the posteriors are calibrated.
-- **Benchmark table** — a small sbibm-style table proving recovery of known
-  posteriors for a couple of reference tasks.
+- **SBC calibration** — `diagnostics/sbc.py` (`sbc`), with a calibration test on
+  a tractable Gaussian problem (`diagnostics/sbc_test.py`).
+- **Benchmark table** — `diagnostics/benchmark_test.py` checks mean/covariance
+  recovery of the analytic Gaussian posterior for `npe` and `nle`.
 
 ## 5. Docs and examples
 
-- Migration guide (old class API → new functional API) for the 0.4 release.
-- Update `examples/` and the estimator docstrings to the functional API.
-- Sphinx reference for the `inference/`, `abc/`, `summary/`, `simulate/` trees.
+**Status:** done.
+
+- Migration guide (`docs/migration.rst`), linked from the docs index.
+- `examples/` rewritten to the functional API (`amortized_npe.py`,
+  `sequential_npe.py`); front-page example updated.
+- Sphinx reference (`docs/sbijax.rst`, `docs/sbijax.experimental.rst`) updated
+  to the functional factories, interfaces and `Info` records.

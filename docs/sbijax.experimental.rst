@@ -6,15 +6,20 @@
 ``sbijax.experimental`` contains experimental code that might get ported to the
 main code base or possibly deleted again.
 
+``npse`` and ``aio`` are functional factories that delegate to the ``fmpe``
+core; ``make_truncated_proposal`` builds the truncated-prior proposal they use
+with :func:`sbijax.run_sequential`.
+
 .. autosummary::
-    AiO
-    NPSE
+    npse
+    aio
+    make_truncated_proposal
 
-..  autoclass:: AiO
-    :members: fit, simulate_data, simulate_data_and_possibly_append, sample_posterior
+.. autofunction:: npse
 
-..  autoclass:: NPSE
-    :members: fit, simulate_data, simulate_data_and_possibly_append, sample_posterior
+.. autofunction:: aio
+
+.. autofunction:: make_truncated_proposal
 
 .. currentmodule:: sbijax.experimental.nn
 

@@ -23,36 +23,37 @@ diagnostics and for visualizing posterior distributions.
 Example
 -------
 
-``Sbijax`` implements a slim object-oriented API with functional elements stemming from
-JAX. All a user needs to define is a prior model, a simulator function and an inferential algorithm.
-For example, you can define a neural likelihood estimation method and generate posterior samples like this:
+``Sbijax`` implements a fully functional API in the idiom of dm-haiku and
+blackjax: every method is a factory returning a record of pure functions, with
+parameters threaded explicitly. All a user needs to define is a prior, a
+simulator function and an inferential algorithm. For example, you can define a
+neural likelihood estimation method and generate posterior samples like this:
 
 .. code-block:: python
 
     from jax import numpy as jnp, random as jr
-    from sbijax import NLE
+    from sbijax import nle, simulate
     from sbijax.nn import make_maf
     from tensorflow_probability.substrates.jax import distributions as tfd
 
-    def prior_fn():
-        prior = tfd.JointDistributionNamed(dict(
-            theta=tfd.Normal(jnp.zeros(2), jnp.ones(2))
-        ), batch_ndims=0)
-        return prior
+    prior = tfd.JointDistributionNamed(dict(
+        theta=tfd.Normal(jnp.zeros(2), jnp.ones(2))
+    ), batch_ndims=0)
 
     def simulator_fn(seed, theta):
         p = tfd.Normal(jnp.zeros_like(theta["theta"]), 0.1)
         y = theta["theta"] + p.sample(seed=seed)
         return y
 
-
-    fns = prior_fn, simulator_fn
-    model = NLE(fns, make_maf(2))
+    estimator = nle(prior, make_maf(2))
 
     y_observed = jnp.array([-1.0, 1.0])
-    data, _ = model.simulate_data(jr.PRNGKey(1))
-    params, _ = model.fit(jr.PRNGKey(2), data=data)
-    posterior, _ = model.sample_posterior(jr.PRNGKey(3), params, y_observed)
+    data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=10_000)
+    params, info = estimator.fit(jr.PRNGKey(2), data)
+    posterior = estimator.sample(jr.PRNGKey(3), params, y_observed)
+
+Migrating from the 0.3 object-oriented API? See the
+:doc:`migration guide <migration>`.
 
 Installation
 ------------
@@ -103,6 +104,7 @@ License
     :hidden:
 
     🏡 Home <self>
+    🔀 Migration guide <migration>
     📚 References <references>
 
 ..  toctree::

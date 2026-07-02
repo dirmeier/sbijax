@@ -329,9 +329,10 @@ suite.
   add their own diagnostic fields. Sampling diagnostics stay in `sample`'s
   `InferenceData` (`sample_stats`), and SBC ranks stay in the calibration
   harness — neither rides in `Info`.
-- **Sequential proposal construction.** For NPE-style atomic methods the
-  proposal is the current posterior; the precise handoff (`sample` vs a
-  dedicated proposal object) is a Phase-2 detail for the tracer-bullet method.
+- **Sequential proposal construction.** *Resolved.* `run_sequential` builds the
+  proposal from the fitted posterior via a `proposal_fn` hook
+  (`_posterior_proposal` by default). Truncated-prior proposals (NPSE/AiO) are a
+  drop-in `proposal_fn` (`experimental.make_truncated_proposal`).
 - **SNLE / NASS composition.** SNLE (surjective NLE) and the SummaryNet →
   Estimator pipeline need a documented composition pattern once the core lands.
 ```
