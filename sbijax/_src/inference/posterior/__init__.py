@@ -1,7 +1,7 @@
 """Neural posterior estimation methods."""
 
-from sbijax._src.inference.posterior.cmpe import cmpe
-from sbijax._src.inference.posterior.fmpe import fmpe
-from sbijax._src.inference.posterior.npe import npe
+from sbijax._src.inference.posterior.cmpe import CMPEInfo, cmpe
+from sbijax._src.inference.posterior.fmpe import FMPEInfo, fmpe
+from sbijax._src.inference.posterior.npe import NPEInfo, npe
 
-__all__ = ["cmpe", "fmpe", "npe"]
+__all__ = ["CMPEInfo", "FMPEInfo", "NPEInfo", "cmpe", "fmpe", "npe"]

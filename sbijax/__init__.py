@@ -13,10 +13,17 @@ from sbijax._src.inference.abc._sabc_engine import (
   sq_distance,
   weighted_sq,
 )
-from sbijax._src.inference.likelihood import nle, snle
-from sbijax._src.inference.posterior import cmpe, fmpe, npe
-from sbijax._src.inference.ratio import nre
-from sbijax._src.inference.summary import SummaryNet, nass, nasss
+from sbijax._src.inference.likelihood import NLEInfo, nle, snle
+from sbijax._src.inference.posterior import (
+  CMPEInfo,
+  FMPEInfo,
+  NPEInfo,
+  cmpe,
+  fmpe,
+  npe,
+)
+from sbijax._src.inference.ratio import NREInfo, nre
+from sbijax._src.inference.summary import SummaryInfo, SummaryNet, nass, nasss
 from sbijax._src.simulate import simulate, stack
 from sbijax._src.util.data import (
   as_inference_data,
@@ -25,7 +32,13 @@ from sbijax._src.util.data import (
 
 __all__ = [
   "ABCSampler",
+  "CMPEInfo",
   "Estimator",
+  "FMPEInfo",
+  "NLEInfo",
+  "NPEInfo",
+  "NREInfo",
+  "SummaryInfo",
   "SummaryNet",
   "abs_distance",
   "as_inference_data",
