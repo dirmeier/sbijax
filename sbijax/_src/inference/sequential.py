@@ -1,0 +1,83 @@
+"""Sequential (multi-round) inference driver.
+
+Orchestrates multi-round inference as a standalone driver rather than estimator
+state (DR-005): each round simulates from the current posterior, appends to the
+accumulated dataset, and refits. The round is carried across refits by the
+estimator's per-method ``Info`` (DR-011); the estimator itself stays stateless.
+"""
+
+# ruff: noqa: PLR0913
+import jax
+from jax import random as jr
+
+from sbijax._src.simulate import simulate, stack
+from sbijax._src.util.data import inference_data_as_dictionary
+
+
+def _posterior_proposal(estimator, params, observable):
+  """Wrap the current posterior as a proposal for the next round.
+
+  Args:
+      estimator: the estimator being fitted
+      params: the parameters fitted in the current round
+      observable: the observation the posterior is conditioned on
+
+  Returns:
+      a callable ``(rng_key, n) -> theta`` drawing ``n`` parameters from the
+      posterior, in the pytree structure the prior and simulator use
+  """
+
+  def proposal(rng_key, n):
+    idata = estimator.sample(rng_key, params, observable, n_samples=n)
+    theta = inference_data_as_dictionary(idata)
+    return jax.tree_util.tree_map(lambda x: x[:n], theta)
+
+  return proposal
+
+
+def run_sequential(
+  rng_key,
+  estimator,
+  prior,
+  simulator,
+  observable,
+  *,
+  n_rounds,
+  n_simulations_per_round,
+  **fit_kwargs,
+):
+  """Run multi-round sequential inference.
+
+  Round 0 simulates from the prior; each later round simulates from the
+  posterior fitted in the previous round, appends to the accumulated dataset,
+  and refits. The estimator selects its per-round behaviour from the ``Info``
+  threaded back into ``fit`` (e.g. NPE switches to its atomic loss in rounds
+  > 0); estimators whose loss is proposal-invariant simply ignore it.
+
+  Args:
+      rng_key: a jax random key
+      estimator: an :class:`~sbijax._src.inference._estimator.Estimator`
+      prior: a ``tfd`` distribution over parameters
+      simulator: a callable ``(rng_key, theta) -> y``
+      observable: the observation to condition the sequential posterior on
+      n_rounds: number of simulate/append/refit rounds
+      n_simulations_per_round: number of pairs drawn each round
+      **fit_kwargs: forwarded to ``estimator.fit`` each round
+
+  Returns:
+      a tuple of the parameters fitted in the final round and its ``Info``
+  """
+  data, params, info = None, None, None
+  for _ in range(n_rounds):
+    sim_key, fit_key, rng_key = jr.split(rng_key, 3)
+    proposal = (
+      None
+      if info is None
+      else _posterior_proposal(estimator, params, observable)
+    )
+    round_data = simulate(
+      sim_key, prior, simulator, proposal=proposal, n=n_simulations_per_round
+    )
+    data = round_data if data is None else stack(data, round_data)
+    params, info = estimator.fit(fit_key, data, info=info, **fit_kwargs)
+  return params, info

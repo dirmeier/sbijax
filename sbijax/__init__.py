@@ -2,7 +2,7 @@
 
 __version__ = "0.4.0"
 
-from sbijax._src.inference import Estimator
+from sbijax._src.inference import Estimator, run_sequential
 from sbijax._src.inference.abc import ABCSampler, sabc, smcabc
 from sbijax._src.inference.abc._sabc_engine import (
   DiffEvolution,
@@ -46,6 +46,7 @@ __all__ = [
   "plot_rank",
   "plot_rhat_and_ress",
   "plot_trace",
+  "run_sequential",
   "sabc",
   "SingleEps",
   "simulate",

@@ -8,6 +8,7 @@ with the prior and drawing samples with the injected MCMC sampler.
 
 # ruff: noqa: PLR0913
 from functools import partial
+from typing import NamedTuple
 
 import jax
 import optax
@@ -16,11 +17,23 @@ from jax import random as jr
 from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.inference._estimator import Estimator
+from sbijax._src.inference._estimator import Estimator, next_round
 from sbijax._src.mcmc import sample_with_nuts
 from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.train import train_loop
+
+
+class NREInfo(NamedTuple):
+  """Diagnostics returned by :func:`nre`'s ``fit`` (DR-011).
+
+  Attributes:
+      round: the training round; ``fit`` reads this back to advance rounds
+      losses: a ``(n_epochs, 2)`` array of train/validation losses
+  """
+
+  round: int
+  losses: jax.Array
 
 
 def _get_prior_probs_marginal_and_joint(k, gamma):
@@ -90,6 +103,7 @@ def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
     rng_key,
     data,
     *,
+    info=None,
     optimizer=None,
     n_iter=1000,
     batch_size=100,
@@ -115,7 +129,7 @@ def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
         params, rng, network, gamma=gamma, num_classes=num_classes, **batch
       )
 
-    return train_loop(
+    params, losses = train_loop(
       rng_key,
       params=params,
       optimizer=optimizer,
@@ -127,6 +141,7 @@ def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
       n_early_stopping_patience=n_early_stopping_patience,
       n_early_stopping_delta=n_early_stopping_delta,
     )
+    return params, NREInfo(round=next_round(info), losses=losses)
 
   def sample(
     rng_key,

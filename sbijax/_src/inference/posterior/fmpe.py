@@ -7,14 +7,29 @@ support; no MCMC sampler is involved.
 """
 
 # ruff: noqa: PLR0913
+from typing import NamedTuple
+
+import jax
 import optax
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._src.inference._estimator import Estimator
+from sbijax._src.inference._estimator import Estimator, next_round
 from sbijax._src.inference.posterior._sampling import rejection_sample_flow
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.train import train_loop
+
+
+class FMPEInfo(NamedTuple):
+  """Diagnostics returned by :func:`fmpe`'s ``fit`` (DR-011).
+
+  Attributes:
+      round: the training round; ``fit`` reads this back to advance rounds
+      losses: a ``(n_epochs, 2)`` array of train/validation losses
+  """
+
+  round: int
+  losses: jax.Array
 
 
 def fmpe(prior, network):
@@ -33,6 +48,7 @@ def fmpe(prior, network):
     rng_key,
     data,
     *,
+    info=None,
     optimizer=None,
     n_iter=1000,
     batch_size=100,
@@ -78,7 +94,7 @@ def fmpe(prior, network):
       )
       return jnp.mean(lp)
 
-    return train_loop(
+    params, losses = train_loop(
       rng_key,
       params=params,
       optimizer=optimizer,
@@ -90,6 +106,7 @@ def fmpe(prior, network):
       n_early_stopping_patience=n_early_stopping_patience,
       n_early_stopping_delta=n_early_stopping_delta,
     )
+    return params, FMPEInfo(round=next_round(info), losses=losses)
 
   def sample(rng_key, params, observable, *, n_samples=4_000, **kwargs):
     return rejection_sample_flow(

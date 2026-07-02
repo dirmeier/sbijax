@@ -4,6 +4,22 @@ from collections.abc import Callable
 from typing import NamedTuple
 
 
+def next_round(info):
+  """Return the round index a ``fit`` call should train under.
+
+  ``fit`` reads only the ``round`` field of an incoming ``Info`` (DR-011): the
+  first round passes ``info=None`` and trains round 0; every later round passes
+  the previous round's ``Info`` and advances by one.
+
+  Args:
+      info: the previous round's per-method ``Info``, or ``None`` for round 0
+
+  Returns:
+      ``0`` if ``info`` is ``None``, otherwise ``info.round + 1``
+  """
+  return 0 if info is None else info.round + 1
+
+
 class Estimator(NamedTuple):
   """A trainable simulation-based inference estimator.
 

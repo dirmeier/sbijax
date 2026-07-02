@@ -63,13 +63,26 @@ ESTIMATORS = {
 
 
 @pytest.mark.parametrize("name", list(ESTIMATORS))
-def test_fit_returns_params_and_loss_history(name):
+def test_fit_returns_params_and_info(name):
   prior, simulator = _problem()
   data = simulate(jr.PRNGKey(0), prior, simulator, n=200)
   est = ESTIMATORS[name]["build"](prior)
   params, info = est.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=100)
   assert params is not None
-  assert info.ndim == 2 and info.shape[1] == 2
+  # structural Info contract (DR-011): every per-method Info exposes an int
+  # `round` and a (n_epochs, 2) `losses` history.
+  assert isinstance(info.round, int) and info.round == 0
+  assert info.losses.ndim == 2 and info.losses.shape[1] == 2
+
+
+@pytest.mark.parametrize("name", list(ESTIMATORS))
+def test_fit_advances_round_when_info_passed(name):
+  prior, simulator = _problem()
+  data = simulate(jr.PRNGKey(0), prior, simulator, n=200)
+  est = ESTIMATORS[name]["build"](prior)
+  _, info0 = est.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=100)
+  _, info1 = est.fit(jr.PRNGKey(1), data, info=info0, n_iter=2, batch_size=100)
+  assert info1.round == 1
 
 
 @pytest.mark.parametrize("name", list(ESTIMATORS))
