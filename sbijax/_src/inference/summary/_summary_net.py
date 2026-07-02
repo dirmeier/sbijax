@@ -16,6 +16,19 @@ from sbijax._src.util.dataloader import (
 from sbijax._src.util.train import train_loop
 
 
+class SummaryInfo(NamedTuple):
+  """Diagnostics returned by a :class:`SummaryNet`'s ``fit`` (DR-011).
+
+  Summary networks are not sequential, so -- unlike an estimator ``Info`` --
+  this record carries no ``round`` field, only the loss history.
+
+  Attributes:
+      losses: a ``(n_epochs, 2)`` array of train/validation losses
+  """
+
+  losses: jax.Array
+
+
 class SummaryNet(NamedTuple):
   """A learned summary-statistics network.
 
@@ -25,7 +38,7 @@ class SummaryNet(NamedTuple):
   :class:`~sbijax._src.inference._estimator.Estimator`.
 
   Attributes:
-      fit: ``(rng_key, data, **kwargs) -> (params, info)``
+      fit: ``(rng_key, data, **kwargs) -> (params, SummaryInfo)``
       summarize: ``(params, data, **kwargs) -> summaries``
   """
 
@@ -67,7 +80,7 @@ def make_summary_net(network, jsd_loss):
     def loss_fn(params, rng, **batch):
       return jsd_loss(params, rng, network.apply, **batch)
 
-    return train_loop(
+    params, losses = train_loop(
       rng_key,
       params=params,
       optimizer=optimizer,
@@ -78,6 +91,7 @@ def make_summary_net(network, jsd_loss):
       n_iter=n_iter,
       n_early_stopping_patience=n_early_stopping_patience,
     )
+    return params, SummaryInfo(losses=losses)
 
   def summarize(params, data, *, batch_size=512):
     if params is None or len(params) == 0:

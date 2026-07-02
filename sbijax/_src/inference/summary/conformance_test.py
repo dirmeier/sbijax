@@ -38,6 +38,7 @@ def test_fit_then_summarize(name):
   sn = SUMMARY_NETS[name]()
   params, info = sn.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=128)
   assert params is not None
-  assert info.ndim == 2 and info.shape[1] == 2
+  # SummaryNet has no rounds; its Info carries only the loss history (DR-011).
+  assert info.losses.ndim == 2 and info.losses.shape[1] == 2
   summaries = sn.summarize(params, data["y"])
   chex.assert_shape(summaries, (256, 2))
