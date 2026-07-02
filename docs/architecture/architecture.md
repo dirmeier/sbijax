@@ -117,7 +117,7 @@ Three interfaces, because the families genuinely differ (DR-002):
 ```mermaid
 classDiagram
   class Estimator {
-    +fit(key, data, *, optimizer, n_iter) (params, info)
+    +fit(key, data, *, info, optimizer, n_iter) (params, Info)
     +sample(key, params, observable, *, n_samples) InferenceData
   }
   class ABCSampler {
@@ -187,11 +187,19 @@ erDiagram
 ```
 
 **Ownership and flow.** No component owns mutable state. `simulate` produces a
-`Dataset`; `Estimator.fit` consumes it and produces `params` plus an `info`
-record (losses, diagnostics); `Estimator.sample` consumes `params` and an
-observation and produces `InferenceData`. `params` is a plain pytree threaded
-explicitly by the caller — this is the core of the
-stateless design (DR-007).
+`Dataset`; `Estimator.fit` consumes it and produces `params` plus a per-method
+`Info` record; `Estimator.sample` consumes `params` and an observation and
+produces `InferenceData`. `params` is a plain pytree threaded explicitly by the
+caller — this is the core of the stateless design (DR-007).
+
+`Info` is a per-method `NamedTuple` (`NPEInfo`, `NLEInfo`, ...) defined in the
+method's own module, mirroring blackjax's per-algorithm `HMCInfo` / `NUTSInfo`
+(DR-011). Every `Info` exposes at least `round: int` and `losses` (the
+`(n_epochs, 2)` history); methods add their own diagnostic fields. `fit` takes
+an optional `info=None`: `None` is round 0, otherwise the round is
+`info.round + 1`. **`round` is the only field `fit` reads on input**; the rest
+is output-only diagnostics. Threading `info` back is what lets `run_sequential`
+carry the round across refits (see below and backlog item 1).
 
 ### Amortized fit → sample
 
@@ -223,9 +231,9 @@ sequenceDiagram
   loop each round
     Seq->>Sim: simulate(key, prior, simulator, proposal)
     Sim-->>Seq: round_data
-    Seq->>Est: fit(key, all_data)
+    Seq->>Est: fit(key, all_data, info=info)
     Est-->>Seq: params, info
-    Note over Seq: proposal := posterior(params, y_obs)
+    Note over Seq: info.round advances; proposal := posterior(params, y_obs)
   end
   Seq-->>U: params, info
 ```
@@ -245,8 +253,10 @@ Contracts are described, not implemented.
 - `npe(prior, net, *, num_atoms=10) -> Estimator`
 - `nle(prior, net, *, sampler=nuts) -> Estimator`
 - `nre(prior, net, *, sampler=nuts, num_classes=...) -> Estimator`
-- `Estimator.fit(rng_key, data, *, optimizer=None, n_iter, batch_size,
-  n_early_stopping_patience, n_early_stopping_delta) -> (params, info)`
+- `Estimator.fit(rng_key, data, *, info=None, optimizer=None, n_iter,
+  batch_size, n_early_stopping_patience, n_early_stopping_delta) -> (params,
+  Info)` — `info` defaults to `None` (round 0); pass the previous round's `Info`
+  to advance the round. Returns a per-method `Info` NamedTuple (DR-011).
 - `Estimator.sample(rng_key, params, observable, *, n_samples, **sampler_kwargs)
   -> InferenceData`
 
@@ -277,8 +287,11 @@ construction (DR-004).
 **Correctness harness** (the credibility layer, DR-009). Three tiers:
 
 1. *Conformance* — a registry-driven test that every Estimator/ABCSampler/
-   SummaryNet satisfies its interface contract (return shapes, `InferenceData`
-   structure) on a toy problem. Mirrors `tqe`'s `test_objective_contract.py`.
+   SummaryNet satisfies its interface contract on a toy problem: return shapes,
+   `InferenceData` structure, and the **structural `Info` contract** (every
+   `Info` exposes `round: int` and a `(n_epochs, 2)` `losses` array; DR-011).
+   Method-specific `Info` fields are checked by that method's own test, not the
+   shared suite. Mirrors `tqe`'s `test_objective_contract.py`.
 2. *Calibration* — simulation-based calibration (SBC) rank tests proving the
    posteriors are calibrated, run on a small analytically-tractable problem.
 3. *Benchmark* — a small sbibm-style table proving recovery of known posteriors
@@ -311,8 +324,11 @@ suite.
 
 ## Open Questions
 
-- **`info` contents.** Minimum is training losses; SBC/diagnostics may ride
-  along. Exact schema to be fixed when the conformance test is written.
+- **`info` contents.** *Resolved (DR-011).* `Info` is a per-method NamedTuple
+  exposing at least `round: int` and a `(n_epochs, 2)` `losses` array; methods
+  add their own diagnostic fields. Sampling diagnostics stay in `sample`'s
+  `InferenceData` (`sample_stats`), and SBC ranks stay in the calibration
+  harness — neither rides in `Info`.
 - **Sequential proposal construction.** For NPE-style atomic methods the
   proposal is the current posterior; the precise handoff (`sample` vs a
   dedicated proposal object) is a Phase-2 detail for the tracer-bullet method.

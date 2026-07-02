@@ -193,3 +193,42 @@ samples      = est.sample(key, params, observable)   # cf. Transformed.apply(par
 factories returning `Estimator` NamedTuples, structurally identical to the
 haiku/blackjax records the codebase already uses. Supersedes DR-001. The
 migration guide replaces class construction with factory calls.
+
+## DR-011: Per-method `Info` records; `round` the only read-back field
+
+**Status**: Accepted
+**Date**: 2026-07-02
+**Context**: `fit` returns `(params, info)`, where `info` is currently a bare
+`(n_epochs, 2)` loss array. Sequential inference (`run_sequential` + atomic NPE,
+see [backlog.md](backlog.md)) needs `fit` to know whether it is training on prior
+draws (round 0, maximum-likelihood loss) or proposal draws (round > 0, atomic
+APT loss). Crucially, the atomic loss needs only the network, the prior, and
+`num_atoms` — no proposal density has to be threaded — so the sole cross-round
+signal is the round index. Separately, methods want to report richer training
+diagnostics than a single loss array.
+**Decision**: Replace the bare loss array with a **per-method `Info`
+NamedTuple**, one per factory (`NPEInfo`, `NLEInfo`, ...), defined in the
+method's own module — mirroring blackjax's per-algorithm `HMCInfo` / `NUTSInfo`.
+Every `Info` exposes at least `round: int` and `losses` (the `(n_epochs, 2)`
+history); methods add their own diagnostic fields (e.g. NPE's `num_atoms`).
+`fit` gains an optional `info=None` argument: round 0 when `None`, otherwise
+`info.round + 1`. **`round` is the only field `fit` reads on input**; every
+other field is output-only diagnostics. `run_sequential` threads `info` back as
+the round carry.
+**Alternatives considered**:
+- One shared `Info` across all methods — a coupling point: an NPE-specific
+  diagnostic would land on every method's contract, reintroducing the
+  god-object coupling the redesign removes (cf. the assessment's gap 2).
+- A bare `round: int` kwarg on `fit` (the backlog's first sketch) — sufficient
+  for atomic NPE, but leaves diagnostics a loose array with no room for
+  method-specific reporting.
+- blackjax-style split of `state` (carry) from `info` (diagnostics) into two
+  records — cleanest in theory, but the carry here is a single int (`round`); a
+  second one-field record is not worth its weight. We deliberately merge and
+  document that `round` is the sole read-back field.
+**Consequences**: The conformance suite pins a **structural** contract (every
+`Info` has `round` + `losses` of the right shape) rather than one shared type;
+method-specific fields are checked by each method's own test. `fit(key, data)`
+stays unburdened for amortized single-round use (`info` defaults to `None`).
+Resolves the "info contents" open question in [architecture.md](architecture.md)
+and enables the sequential driver and atomic NPE (backlog item 1).

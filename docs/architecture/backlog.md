@@ -25,24 +25,27 @@ run_sequential(
 Loop:
 
 ```
-data, params = None, None
-for r in range(n_rounds):
-    proposal = None if r == 0 else _posterior_proposal(estimator, params, observable)
+data, params, info = None, None, None
+for _ in range(n_rounds):
+    proposal = None if info is None else _posterior_proposal(estimator, params, observable)
     round_data = simulate(key, prior, simulator, proposal=proposal,
                           n=n_simulations_per_round)
     data = round_data if data is None else stack(data, round_data)
-    params, info = estimator.fit(key, data, round=r, **fit_kwargs)
+    params, info = estimator.fit(key, data, info=info, **fit_kwargs)
 return params, info
 ```
 
 Two seams make this work:
 
-- **`estimator.fit(..., round=0)`** gains an optional `round` argument
-  (default 0). NLE/NRE ignore it — their loss is proposal-invariant. NPE reads
-  it: `round == 0` uses the maximum-likelihood loss (with event-space
-  bijections), `round > 0` uses the atomic proposal-posterior loss. The atomic
-  loss needs only the prior (already captured) and `num_atoms` (a factory
-  argument), so no proposal density has to be threaded into the loss.
+- **`estimator.fit(..., info=None)`** gains an optional `info` argument
+  (DR-011). `info is None` is round 0; otherwise the round is `info.round + 1`.
+  NLE/NRE ignore the round — their loss is proposal-invariant — and just pass it
+  through. NPE reads it: round 0 uses the maximum-likelihood loss (with
+  event-space bijections), round > 0 uses the atomic proposal-posterior loss.
+  The atomic loss needs only the prior (already captured) and `num_atoms` (a
+  factory argument), so no proposal density has to be threaded into the loss.
+  `round` is the only field `fit` reads back; `Info` is otherwise output-only
+  diagnostics (per-method `NPEInfo`/`NLEInfo`/..., DR-011).
 - **`_posterior_proposal(estimator, params, observable)`** returns a callable
   `(rng_key, n) -> theta` that draws from the current posterior. For amortized
   posterior methods this wraps `estimator.sample`; for NLE/NRE it wraps their
@@ -79,9 +82,9 @@ estimator is unchanged.
 
 ### Open questions
 
-- Whether `round` on `fit` is the cleanest signal, or a dedicated
-  `estimator.fit_round` variant. `round` keeps one `fit` signature and is
-  preferred unless it forces awkward branching.
+- ~~Whether `round` on `fit` is the cleanest signal.~~ *Resolved (DR-011):* the
+  round is carried by the per-method `Info` (`fit(..., info=None)`), keeping one
+  `fit` signature; `round` is the only field read back.
 - Proposal handoff for MCMC-sampled methods (NLE/NRE): drawing `n` proposal
   parameters per round via MCMC may be expensive; consider caching or reusing
   chains.
