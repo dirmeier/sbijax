@@ -172,3 +172,19 @@ Summary networks are unchanged in spirit -- ``fit`` then ``summarize``:
     sn = nass(make_nass_net(2, [64, 64]))
     params, info = sn.fit(jr.PRNGKey(0), data)
     summaries = sn.summarize(params, data["y"])
+
+To infer with the learned summaries, chain the summary network into a
+downstream estimator with :func:`~sbijax.summarized_estimator` instead of
+threading ``summarize`` by hand (which risks conditioning the estimator on an
+un-summarized observation):
+
+.. code-block:: python
+
+    from sbijax import nass, nle, summarized_estimator
+
+    sn = nass(make_nass_net(2, [64, 64]))
+    sn_params, _ = sn.fit(jr.PRNGKey(0), data)
+
+    est = summarized_estimator(nle(prior, make_maf(2)), sn, sn_params)
+    params, info = est.fit(jr.PRNGKey(1), data)            # trains on summaries
+    idata = est.sample(jr.PRNGKey(2), params, y_observed)  # summarizes y_observed

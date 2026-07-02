@@ -26,6 +26,7 @@ functional idiom of dm-haiku and blackjax. Parameters are threaded explicitly::
     smcabc
     nass
     nasss
+    summarized_estimator
     run_sequential
     simulate
     stack
@@ -71,6 +72,10 @@ Summary statistics
 
 .. autofunction:: nass
 .. autofunction:: nasss
+
+A summary network is chained into a downstream estimator with:
+
+.. autofunction:: summarized_estimator
 
 Sequential inference
 --------------------

@@ -24,7 +24,13 @@ from sbijax._src.inference.posterior import (
   npe,
 )
 from sbijax._src.inference.ratio import NREInfo, nre
-from sbijax._src.inference.summary import SummaryInfo, SummaryNet, nass, nasss
+from sbijax._src.inference.summary import (
+  SummaryInfo,
+  SummaryNet,
+  nass,
+  nasss,
+  summarized_estimator,
+)
 from sbijax._src.simulate import simulate, stack
 from sbijax._src.util.data import (
   as_inference_data,
@@ -69,6 +75,7 @@ __all__ = [
   "snle",
   "sq_distance",
   "stack",
+  "summarized_estimator",
   "weighted_sq",
 ]
 

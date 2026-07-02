@@ -333,6 +333,10 @@ suite.
   proposal from the fitted posterior via a `proposal_fn` hook
   (`_posterior_proposal` by default). Truncated-prior proposals (NPSE/AiO) are a
   drop-in `proposal_fn` (`experimental.make_truncated_proposal`).
-- **SNLE / NASS composition.** SNLE (surjective NLE) and the SummaryNet →
-  Estimator pipeline need a documented composition pattern once the core lands.
+- **SNLE / NASS composition.** *Resolved.* SNLE needs no composition — the
+  dimensionality reduction is internal to the surjective flow, so `snle`
+  delegates to `nle`. The SummaryNet → Estimator pipeline is provided by
+  `summarized_estimator(estimator, summary_net, summary_params)`, an `Estimator`
+  adapter that summarizes the training data in `fit` and the observation in
+  `sample`, so the summary transform can never be applied inconsistently.
 ```
