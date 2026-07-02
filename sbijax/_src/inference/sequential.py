@@ -44,15 +44,17 @@ def run_sequential(
   *,
   n_rounds,
   n_simulations_per_round,
+  proposal_fn=None,
   **fit_kwargs,
 ):
   """Run multi-round sequential inference.
 
-  Round 0 simulates from the prior; each later round simulates from the
-  posterior fitted in the previous round, appends to the accumulated dataset,
-  and refits. The estimator selects its per-round behaviour from the ``Info``
-  threaded back into ``fit`` (e.g. NPE switches to its atomic loss in rounds
-  > 0); estimators whose loss is proposal-invariant simply ignore it.
+  Round 0 simulates from the prior; each later round simulates from a proposal
+  built from the posterior fitted in the previous round, appends to the
+  accumulated dataset, and refits. The estimator selects its per-round
+  behaviour from the ``Info`` threaded back into ``fit`` (e.g. NPE switches to
+  its atomic loss in rounds > 0); estimators whose loss is proposal-invariant
+  simply ignore it.
 
   Args:
       rng_key: a jax random key
@@ -62,18 +64,23 @@ def run_sequential(
       observable: the observation to condition the sequential posterior on
       n_rounds: number of simulate/append/refit rounds
       n_simulations_per_round: number of pairs drawn each round
+      proposal_fn: an optional ``(estimator, params, observable) -> ((rng_key,
+          n) -> theta)`` factory building the next round's proposal; defaults to
+          sampling the fitted posterior. Pass e.g.
+          :func:`~sbijax._src.experimental._truncated.make_truncated_proposal`
+          for truncated-prior proposals.
       **fit_kwargs: forwarded to ``estimator.fit`` each round
 
   Returns:
       a tuple of the parameters fitted in the final round and its ``Info``
   """
+  if proposal_fn is None:
+    proposal_fn = _posterior_proposal
   data, params, info = None, None, None
   for _ in range(n_rounds):
     sim_key, fit_key, rng_key = jr.split(rng_key, 3)
     proposal = (
-      None
-      if info is None
-      else _posterior_proposal(estimator, params, observable)
+      None if info is None else proposal_fn(estimator, params, observable)
     )
     round_data = simulate(
       sim_key, prior, simulator, proposal=proposal, n=n_simulations_per_round

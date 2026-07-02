@@ -1,8 +1,10 @@
-"""Experimental methods and models.
+"""Experimental sbijax methods.
 
-NPSE and AiO were removed in the 0.4 functional redesign; they subclassed the
-old ``FMPE`` estimator and need re-implementing as functional factories. See
-``docs/architecture/backlog.md`` (item 3).
+NPSE (:cite:t:`sharrock2024sequential`) and AiO (:cite:t:`gloeckler2024allinone`)
+are functional factories that delegate to the ``fmpe`` core, plus a
+truncated-prior proposal for sequential inference.
 """
 
-__all__: list[str] = []
+from sbijax._src.experimental import aio, make_truncated_proposal, npse
+
+__all__ = ["aio", "make_truncated_proposal", "npse"]
