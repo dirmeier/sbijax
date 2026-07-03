@@ -86,13 +86,15 @@ def test_fit_advances_round_when_info_passed(name):
 
 
 @pytest.mark.parametrize("name", list(ESTIMATORS))
-def test_sample_returns_posterior_inference_data(name):
+def test_sample_returns_named_pytree_and_info(name):
   prior, simulator = _problem()
   data = simulate(jr.PRNGKey(0), prior, simulator, n=200)
   est = ESTIMATORS[name]["build"](prior)
   params, _ = est.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=100)
-  idata = est.sample(
+  samples, info = est.sample(
     jr.PRNGKey(2), params, jnp.zeros(2), **ESTIMATORS[name]["sample_kwargs"]
   )
-  theta = idata["/posterior"]["theta"].data
-  assert theta.ndim == 3 and theta.shape[-1] == 2
+  theta = samples["theta"]
+  assert theta.ndim == 3 and theta.shape[-1] == 2  # (n_chains, n_draws, dim)
+  # structural (pytree, record) contract (DR-012): info is a NamedTuple
+  assert isinstance(info, tuple) and hasattr(info, "_fields")

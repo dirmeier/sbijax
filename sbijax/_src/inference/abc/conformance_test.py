@@ -41,11 +41,11 @@ ABC_SAMPLERS = {
 
 
 @pytest.mark.parametrize("name", list(ABC_SAMPLERS))
-def test_abc_sample_returns_posterior_inference_data(name):
+def test_abc_sample_returns_named_pytree_and_info(name):
   prior, simulator = _problem()
   sampler = ABC_SAMPLERS[name]["build"](prior, simulator)
-  idata = sampler.sample(
+  particles, info = sampler.sample(
     jr.PRNGKey(0), jnp.zeros(2), **ABC_SAMPLERS[name]["sample_kwargs"]
   )
-  theta = idata["/posterior"]["theta"].data
-  assert theta.ndim == 3 and theta.shape[-1] == 2
+  assert "theta" in particles
+  assert isinstance(info, tuple) and hasattr(info, "_fields")
