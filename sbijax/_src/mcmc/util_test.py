@@ -12,8 +12,7 @@ from sbijax._src.mcmc.nuts import sample_with_nuts
 from sbijax._src.mcmc.util import run_blackjax
 
 
-def _mala_init(rng_key, n_chains, prior, lp):
-  initial_positions = prior.sample(seed=rng_key, sample_shape=(n_chains,))
+def _mala_init(rng_key, initial_positions, lp):
   kernel = bj.mala(lp, 0.1)
   initial_state = jax.vmap(kernel.init)(initial_positions)
   return initial_state, kernel.step
@@ -21,10 +20,13 @@ def _mala_init(rng_key, n_chains, prior, lp):
 
 def test_run_blackjax_returns_chain_shaped_samples(prior_log_prob_tuple):
   prior_fn, lp = prior_log_prob_tuple
+  prior = prior_fn()
+  init_key, run_key = jr.split(jr.key(0))
+  initial_positions = prior.sample(seed=init_key, sample_shape=(8,))
   samples, info = run_blackjax(
-    jr.PRNGKey(0),
+    run_key,
     _mala_init,
-    prior_fn(),
+    initial_positions,
     lp,
     n_chains=8,
     n_samples=200,
@@ -44,7 +46,7 @@ def test_sample_with_nuts_returns_samples_and_mcmc_info():
     return jnp.sum(prior.log_prob(theta))
 
   samples, info = sample_with_nuts(
-    jr.PRNGKey(0), lp, prior, n_chains=2, n_samples=40, n_warmup=20
+    jr.key(0), lp, prior, n_chains=2, n_samples=40, n_warmup=20
   )
   assert samples["theta"].shape == (2, 20, 2)
   assert isinstance(info, MCMCSampleInfo)

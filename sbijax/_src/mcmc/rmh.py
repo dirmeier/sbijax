@@ -35,17 +35,19 @@ def sample_with_rmh(
       ...     return jnp.sum(lp_data) + jnp.sum(lp_prior)
       ...
       >>> prop_posterior_lp = ft.partial(log_prob, y=jnp.array([-1.0, 1.0]))
-      >>> samples = sample_with_rmh(jr.PRNGKey(0), prop_posterior_lp, prior)
+      >>> samples = sample_with_rmh(jr.key(0), prop_posterior_lp, prior)
 
   Returns:
       a tuple ``(samples, info)``: a named pytree with leaves of shape
       ``n_chains x (n_samples - n_warmup) x dim`` and an
       ``MCMCSampleInfo`` with the mean post-warmup acceptance rate
   """
+  init_key, run_key = jr.split(rng_key)
+  initial_positions = prior.sample(seed=init_key, sample_shape=(n_chains,))
   return run_blackjax(
-    rng_key,
+    run_key,
     _mh_init,
-    prior,
+    initial_positions,
     lp,
     n_chains=n_chains,
     n_samples=n_samples,
@@ -54,9 +56,7 @@ def sample_with_rmh(
 
 
 # pylint: disable=missing-function-docstring,no-member
-def _mh_init(rng_key, n_chains, prior, lp):
-  init_key, rng_key = jr.split(rng_key)
-  initial_positions = prior.sample(seed=init_key, sample_shape=(n_chains,))
+def _mh_init(rng_key, initial_positions, lp):
   flat_ip = jax.vmap(lambda x: ravel_pytree(x)[0])(initial_positions)
   kernel = bj.rmh(
     lp,
