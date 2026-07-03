@@ -41,8 +41,8 @@ def run():
   print(f"trained for {info.losses.shape[0]} epochs")
 
   y_observed = jnp.tile(jnp.array([-1.0, 1.0]), 4)
-  idata = estimator.sample(jr.PRNGKey(3), params, y_observed)
-  theta = idata["/posterior"]["theta"].data.reshape(-1, 2)
+  samples, _ = estimator.sample(jr.PRNGKey(3), params, y_observed)
+  theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
   print("posterior mean:", jnp.mean(theta, axis=0))
 
 

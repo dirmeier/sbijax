@@ -3,15 +3,15 @@
 Demonstrates AiO on a linear Gaussian model.
 """
 
-import matplotlib.pyplot as plt
-import numpy as np
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import plot_posterior
-from sbijax.experimental import AiO
+from sbijax import simulate
+from sbijax.experimental import aio
 from sbijax.experimental.nn import make_simformer_based_score_model
+
+import numpy as np
 
 
 def prior_fn():
@@ -28,25 +28,23 @@ def simulator_fn(seed, theta):
 
 
 def run(n_iter):
+  prior = prior_fn()
   y_observed = jnp.linspace(-2.0, 2.0, 5)
-  fns = prior_fn(), simulator_fn
   mask = jnp.zeros((10, 10))
   mask = mask.at[np.arange(5, 10), np.arange(5)].set(1)
   mask = mask + mask.T + jnp.eye(10)
 
   neural_network = make_simformer_based_score_model(5, mask, 1, 1)
-  model = AiO(fns, neural_network)
+  model = aio(prior, neural_network)
 
-  data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10_000)
+  data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=10_000)
   params, info = model.fit(
-    jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter
+    jr.PRNGKey(2), data, n_early_stopping_patience=25, n_iter=n_iter
   )
-  inference_result, _ = model.sample_posterior(
-    jr.PRNGKey(3), params, y_observed
-  )
-
-  plot_posterior(inference_result)
-  plt.show()
+  samples, _ = model.sample(jr.PRNGKey(3), params, y_observed)
+  theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":

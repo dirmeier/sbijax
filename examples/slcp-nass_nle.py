@@ -9,7 +9,7 @@ from jax import random as jr
 from matplotlib import pyplot as plt
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import NASS, NLE, inference_data_as_dictionary
+from sbijax import nass, nle, simulate, stack, summarized_estimator
 from sbijax.nn import make_maf, make_nass_net
 
 
@@ -52,6 +52,7 @@ def simulator_fn(seed, theta):
 
 
 def run(n_rounds, n_iter):
+  prior = prior_fn()
   y_observed = jnp.array(
     [
       [
@@ -66,42 +67,43 @@ def run(n_rounds, n_iter):
       ]
     ]
   )
-  fns = prior_fn(), simulator_fn
-  neural_network = make_nass_net(5, (64, 64))
-  model_nass = NASS(fns, neural_network)
-  model_nle = NLE(fns, make_maf(5))
 
-  data, params_nle, params_nass = None, {}, {}
+  summary_net = nass(make_nass_net(5, (64, 64)))
+  estimator = nle(prior, make_maf(5))
+
+  data, params_nle, params_nass = None, None, None
   for i in range(n_rounds):
     simulate_key, nass_key, nle_key = jr.split(jr.fold_in(jr.PRNGKey(1), i), 3)
-    s_observed = model_nass.summarize(params_nass, y_observed)
-    data, _ = model_nle.simulate_data_and_possibly_append(
-      simulate_key,
-      params=params_nle,
-      observable=s_observed,
-      data=data,
-    )
-    params_nass, _ = model_nass.fit(nass_key, data=data, n_iter=n_iter)
-    summaries = model_nass.summarize(params_nass, data)
-    params_nle, _ = model_nle.fit(nle_key, data=summaries, n_iter=n_iter)
 
-  s_observed = model_nass.summarize(params_nass, y_observed)
-  inference_results, _ = model_nle.sample_posterior(
-    jr.PRNGKey(3), params_nle, s_observed
-  )
+    # build proposal: summarize the observation using current summary params
+    if params_nass is not None:
+      s_observed = summary_net.summarize(params_nass, y_observed)
+      proposal_samples, _ = estimator.sample(
+        simulate_key, params_nle, s_observed
+      )
+      flat = proposal_samples["theta"].reshape(
+        -1, proposal_samples["theta"].shape[-1]
+      )
 
-  samples = inference_data_as_dictionary(inference_results.posterior)["theta"]
-  _, axes = plt.subplots(figsize=(12, 10), nrows=5, ncols=5)
-  for i in range(0, 5):
-    for j in range(0, 5):
-      ax = axes[i, j]
-      if i < j:
-        ax.axis("off")
-      else:
-        ax.hexbin(samples[..., j], samples[..., i], gridsize=50, bins="log")
-  for i in range(5):
-    axes[i, i].hist(samples[..., i], color="black")
-  plt.show()
+      def proposal(rng_key, n, _flat=flat):
+        idx = jr.choice(rng_key, _flat.shape[0], (n,), replace=True)
+        return {"theta": _flat[idx]}
+
+      round_data = simulate(simulate_key, prior, simulator_fn, proposal=proposal, n=2_000)
+    else:
+      round_data = simulate(simulate_key, prior, simulator_fn, n=2_000)
+
+    data = round_data if data is None else stack(data, round_data)
+
+    params_nass, _ = summary_net.fit(nass_key, data, n_iter=n_iter)
+    summarized_data = summary_net.summarize(params_nass, data)
+    params_nle, _ = estimator.fit(nle_key, summarized_data, n_iter=n_iter)
+
+  s_observed = summary_net.summarize(params_nass, y_observed)
+  samples, _ = estimator.sample(jr.PRNGKey(3), params_nle, s_observed)
+  theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":

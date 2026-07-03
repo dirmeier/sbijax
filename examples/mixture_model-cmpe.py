@@ -5,12 +5,11 @@ Demonstrates CMPE on a simple mixture model.
 
 import argparse
 
-import matplotlib.pyplot as plt
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import CMPE, plot_posterior
+from sbijax import cmpe, simulate
 from sbijax.nn import make_cm
 
 
@@ -34,21 +33,19 @@ def simulator_fn(seed, theta):
 
 
 def run(n_iter):
+  prior = prior_fn()
   y_observed = jnp.array([-2.0, 1.0])
-  fns = prior_fn(), simulator_fn
   neural_network = make_cm(2, 64)
-  model = CMPE(fns, neural_network)
+  model = cmpe(prior, neural_network)
 
-  data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10_000)
+  data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=10_000)
   params, info = model.fit(
-    jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter
+    jr.PRNGKey(2), data, n_early_stopping_patience=25, n_iter=n_iter
   )
-  inference_result, _ = model.sample_posterior(
-    jr.PRNGKey(3), params, y_observed
-  )
-
-  plot_posterior(inference_result)
-  plt.show()
+  samples, _ = model.sample(jr.PRNGKey(3), params, y_observed)
+  theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":

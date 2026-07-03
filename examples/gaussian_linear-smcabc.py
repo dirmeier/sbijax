@@ -6,12 +6,11 @@ Demonstrates sequential Monte Carlo ABC on a simple bivariate Gaussian example.
 import argparse
 
 import jax
-import matplotlib.pyplot as plt
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import SMCABC, plot_posterior
+from sbijax import smcabc
 
 
 def prior_fn():
@@ -38,12 +37,11 @@ def distance_fn(y_simulated, y_observed):
 
 
 def run(n_rounds):
+  prior = prior_fn()
   y_observed = jnp.array([-1.0, 1.0])
 
-  fns = prior_fn(), simulator_fn
-
-  smc = SMCABC(fns, summary_fn, distance_fn)
-  smc_samples, _ = smc.sample_posterior(
+  smc = smcabc(prior, simulator_fn, summary_fn, distance_fn)
+  particles, _ = smc.sample(
     jr.PRNGKey(1),
     y_observed,
     n_rounds=1,
@@ -51,8 +49,9 @@ def run(n_rounds):
     ess_min=500,
     eps_step=0.9,
   )
-  plot_posterior(smc_samples)
-  plt.show()
+  theta = particles["theta"].reshape(-1, particles["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":

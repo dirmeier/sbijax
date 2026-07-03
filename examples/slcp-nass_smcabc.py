@@ -9,10 +9,9 @@ import argparse
 import jax
 from jax import numpy as jnp
 from jax import random as jr
-from matplotlib import pyplot as plt
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import NASS, SMCABC, inference_data_as_dictionary
+from sbijax import nass, simulate, smcabc
 from sbijax.nn import make_nass_net
 
 
@@ -61,6 +60,7 @@ def distance_fn(y_simulated, y_observed):
 
 
 def run(n_rounds, n_iter):
+  prior = prior_fn()
   y_observed = jnp.array(
     [
       [
@@ -75,20 +75,18 @@ def run(n_rounds, n_iter):
       ]
     ]
   )
-  fns = prior_fn(), simulator_fn
-  model_nass = NASS(fns, make_nass_net(5, (64, 64)))
 
-  data, _ = model_nass.simulate_data(jr.PRNGKey(1), n_simulations=20_000)
-  params_nass, _ = model_nass.fit(
-    jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter
+  summary_net = nass(make_nass_net(5, (64, 64)))
+  data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=20_000)
+  params_nass, _ = summary_net.fit(
+    jr.PRNGKey(2), data, n_early_stopping_patience=25, n_iter=n_iter
   )
 
   def summary_fn(y):
-    s = model_nass.summarize(params_nass, y)
-    return s
+    return summary_net.summarize(params_nass, y)
 
-  model_smc = SMCABC(fns, summary_fn, distance_fn)
-  inference_results, _ = model_smc.sample_posterior(
+  smc = smcabc(prior, simulator_fn, summary_fn, distance_fn)
+  particles, _ = smc.sample(
     jr.PRNGKey(3),
     y_observed,
     n_rounds=n_rounds,
@@ -96,19 +94,9 @@ def run(n_rounds, n_iter):
     eps_step=0.825,
     ess_min=2_000,
   )
-
-  samples = inference_data_as_dictionary(inference_results.posterior)["theta"]
-  _, axes = plt.subplots(figsize=(12, 10), nrows=5, ncols=5)
-  for i in range(0, 5):
-    for j in range(0, 5):
-      ax = axes[i, j]
-      if i < j:
-        ax.axis("off")
-      else:
-        ax.hexbin(samples[..., j], samples[..., i], gridsize=50, bins="log")
-  for i in range(5):
-    axes[i, i].hist(samples[..., i], color="black")
-  plt.show()
+  theta = particles["theta"].reshape(-1, particles["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":
