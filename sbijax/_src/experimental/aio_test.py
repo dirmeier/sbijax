@@ -9,6 +9,9 @@ from sbijax._src.experimental.nn.make_simformer import (
   make_simformer_based_score_model,
 )
 from sbijax._src.simulate.simulate import simulate
+from sbijax._src.train._types import ObjectiveFns
+from sbijax._src.train.fit import fit
+from sbijax._src.train.sample import sample
 
 
 def _problem():
@@ -26,9 +29,10 @@ def _problem():
 
 def test_aio_fit_then_sample():
   prior, simulator = _problem()
-  data = simulate(jr.PRNGKey(0), prior, simulator, n=64)
-  est = aio(prior, make_simformer_based_score_model(2, jnp.eye(4), 1, 1))
-  params, _ = est.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=32)
-  samples, _ = est.sample(jr.PRNGKey(2), params, jnp.zeros(2), n_samples=16)
+  obj = aio(make_simformer_based_score_model(2, jnp.eye(4), 1, 1))
+  assert isinstance(obj, ObjectiveFns)
+  data = simulate(jr.key(0), prior, simulator, n=64)
+  params, _ = fit(jr.key(1), obj, data, n_iter=2, batch_size=32)
+  samples, _ = sample(jr.key(2), obj, params, jnp.zeros(2), n_samples=16)
   theta = samples["theta"]
   assert theta.ndim == 3 and theta.shape[-1] == 2

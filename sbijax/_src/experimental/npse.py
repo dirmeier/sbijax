@@ -12,15 +12,14 @@ to :func:`~sbijax.run_sequential` via its ``proposal_fn`` hook.
 from sbijax._src.inference.posterior.fmpe import fmpe
 
 
-def npse(prior, network):
+def npse(network):
   """Construct a neural posterior score estimator.
 
   Args:
-      prior: a ``tfd`` distribution serving as the prior over parameters
       network: a score network with ``loss``, ``sample`` and ``log_prob``
           methods (e.g. :func:`sbijax.experimental.nn.make_score_model`)
 
   Returns:
-      an :class:`~sbijax._src.inference._estimator.Estimator`
+      an :class:`~sbijax._src.train._types.ObjectiveFns`
   """
-  return fmpe(prior, network)
+  return fmpe(network)

@@ -16,6 +16,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
+from sbijax._src.train.sample import sample
 from sbijax._src.util.data import flatten_chains
 
 
@@ -41,13 +42,13 @@ def make_truncated_proposal(
       max_iter: maximum rejection rounds before giving up
 
   Returns:
-      a ``proposal_fn(estimator, params, observable)`` returning a callable
-      ``(rng_key, n) -> theta`` that draws parameters from the truncated prior,
-      in the pytree structure the prior and simulator use
+      a ``proposal_fn(objective, params, observable, sampler)`` returning a
+      callable ``(rng_key, n) -> theta`` that draws parameters from the
+      truncated prior, in the pytree structure the prior and simulator use
   """
-  _, unravel_fn = ravel_pytree(prior.sample(seed=jr.PRNGKey(0)))
+  _, unravel_fn = ravel_pytree(prior.sample(seed=jr.key(0)))
 
-  def proposal_fn(estimator, params, observable):
+  def proposal_fn(objective, params, observable, sampler=None):
     def log_prob(rng_key, theta_flat):
       return network.apply(
         params,
@@ -60,8 +61,13 @@ def make_truncated_proposal(
 
     def proposal(rng_key, n):
       calib_key, bound_key, rng_key = jr.split(rng_key, 3)
-      samples, _ = estimator.sample(
-        calib_key, params, observable, n_samples=n_calibration
+      samples, _ = sample(
+        calib_key,
+        objective,
+        params,
+        observable,
+        sampler=sampler,
+        n_samples=n_calibration,
       )
       flat_posterior = jax.vmap(lambda x: ravel_pytree(x)[0])(
         flatten_chains(samples)

@@ -15,15 +15,14 @@ marginals or arbitrary conditionals), so a single fixed mask is used throughout.
 from sbijax._src.inference.posterior.fmpe import fmpe
 
 
-def aio(prior, network):
+def aio(network):
   """Construct an all-in-one posterior estimator.
 
   Args:
-      prior: a ``tfd`` distribution serving as the prior over parameters
       network: a simformer-based score network with ``loss``, ``sample`` and
           ``log_prob`` methods
 
   Returns:
-      an :class:`~sbijax._src.inference._estimator.Estimator`
+      an :class:`~sbijax._src.train._types.ObjectiveFns`
   """
-  return fmpe(prior, network)
+  return fmpe(network)
