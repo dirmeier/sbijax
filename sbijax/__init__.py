@@ -19,7 +19,7 @@ from sbijax._src.inference.abc.sabc import sabc
 from sbijax._src.inference.abc.smcabc import smcabc
 from sbijax._src.inference.likelihood.nle import NLEInfo, nle
 from sbijax._src.inference.likelihood.snle import snle
-from sbijax._src.inference.posterior.cmpe import CMPEInfo, cmpe
+from sbijax._src.inference.posterior.cmpe import cmpe
 from sbijax._src.inference.posterior.fmpe import fmpe
 from sbijax._src.inference.posterior.npe import NPEInfo, npe
 from sbijax._src.inference.ratio.nre import NREInfo, nre
@@ -32,7 +32,6 @@ from sbijax._src.simulate.simulate import simulate, stack
 
 __all__ = [
   "ABCSampler",
-  "CMPEInfo",
   "Estimator",
   "NLEInfo",
   "NPEInfo",
