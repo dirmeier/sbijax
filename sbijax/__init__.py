@@ -13,7 +13,6 @@ from sbijax._src.inference.abc._sabc_engine import (
   sq_distance,
   weighted_sq,
 )
-from sbijax._src.inference.abc._sampler import ABCSampler
 from sbijax._src.inference.abc.sabc import sabc
 from sbijax._src.inference.abc.smcabc import smcabc
 from sbijax._src.inference.likelihood.nle import nle
@@ -26,22 +25,17 @@ from sbijax._src.inference.sequential import run_sequential
 from sbijax._src.inference.summary._compose import summarized_estimator
 from sbijax._src.inference.summary.nass import nass
 from sbijax._src.inference.summary.nasss import nasss
-from sbijax._src.mcmc.sampler import make_sampler
 from sbijax._src.simulate.simulate import simulate, stack
-from sbijax._src.train._types import Info, ObjectiveFns, SummaryFns
 from sbijax._src.train.fit import fit
 from sbijax._src.train.sample import sample
 
 __all__ = [
-  "ABCSampler",
   "abs_distance",
   "DiffEvolution",
   "ess",
   "fit",
   "fmpe",
-  "Info",
   "l2_distance",
-  "make_sampler",
   "MultiEps",
   "nass",
   "nasss",
@@ -49,7 +43,6 @@ __all__ = [
   "npe",
   "npse",
   "nre",
-  "ObjectiveFns",
   "rhat",
   "run_sequential",
   "sabc",
@@ -62,6 +55,5 @@ __all__ = [
   "sq_distance",
   "stack",
   "summarized_estimator",
-  "SummaryFns",
   "weighted_sq",
 ]
