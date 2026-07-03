@@ -87,13 +87,6 @@ In order to contribute:
 5) test it by calling ``make tests``, ``make lints`` and ``make format`` on the (Unix) command line,
 6) submit a PR 🙂
 
-Acknowledgements
-----------------
-
-.. note::
-
-    📝 The API of the package is heavily inspired by the excellent Pytorch-based `sbi <https://github.com/sbi-dev/sbi>`_ package.
-
 License
 -------
 

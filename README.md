@@ -20,7 +20,7 @@ diagnostics and for visualizing posterior distributions.
 > [!CAUTION]
 > ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
-## Examples
+## Quick start
 
 `Sbijax` implements a fully functional API in the idiom of dm-haiku and blackjax:
 every method is a factory returning a record of pure functions, with parameters
@@ -123,4 +123,4 @@ If you find our work relevant to your research, please consider citing:
 ## Acknowledgements
 
 > [!NOTE]
-> 📝 The API of the package is heavily inspired by the excellent Pytorch-based [`sbi`](https://github.com/sbi-dev/sbi) package.
+> 📝 The API of the package is heavily inspired by [`Haiku`](https://github.com/google-deepmind/dm-haiku) and [`BlackJAX`](https://github.com/blackjax-devs/blackjax).
