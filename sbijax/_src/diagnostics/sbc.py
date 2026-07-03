@@ -13,7 +13,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.util.data import inference_data_as_dictionary
+from sbijax._src.util.data import flatten_chains
 
 
 def sbc(
@@ -52,7 +52,7 @@ def sbc(
     theta_key, y_key, post_key = jr.split(key, 3)
     theta_true = prior.sample(seed=theta_key, sample_shape=(1,))
     y = simulator(y_key, theta_true)
-    idata = estimator.sample(
+    samples, _ = estimator.sample(
       post_key,
       params,
       y[0],
@@ -60,7 +60,7 @@ def sbc(
       **sample_kwargs,
     )
     posterior = jax.vmap(lambda x: ravel_pytree(x)[0])(
-      inference_data_as_dictionary(idata)
+      flatten_chains(samples)
     )
     theta_flat, _ = ravel_pytree(jax.tree.map(lambda a: a[0], theta_true))
     return jnp.sum(posterior < theta_flat, axis=0)

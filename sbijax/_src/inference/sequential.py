@@ -11,7 +11,7 @@ import jax
 from jax import random as jr
 
 from sbijax._src.simulate import simulate, stack
-from sbijax._src.util.data import inference_data_as_dictionary
+from sbijax._src.util.data import flatten_chains
 
 
 def _posterior_proposal(estimator, params, observable):
@@ -28,8 +28,15 @@ def _posterior_proposal(estimator, params, observable):
   """
 
   def proposal(rng_key, n):
-    idata = estimator.sample(rng_key, params, observable, n_samples=n)
-    theta = inference_data_as_dictionary(idata)
+    # Amortized estimators return ``n_samples`` draws directly; MCMC-based ones
+    # (NLE/NRE/SNLE) return ``n_chains * (n_samples - n_warmup)`` draws after a
+    # warmup. One chain with ``n_samples=2n`` and ``n_warmup=n`` yields exactly
+    # ``n`` post-warmup draws for the latter and at least ``n`` for the former;
+    # the ``n_warmup``/``n_chains`` kwargs are ignored by amortized estimators.
+    samples, _ = estimator.sample(
+      rng_key, params, observable, n_samples=2 * n, n_warmup=n, n_chains=1
+    )
+    theta = flatten_chains(samples)
     return jax.tree_util.tree_map(lambda x: x[:n], theta)
 
   return proposal

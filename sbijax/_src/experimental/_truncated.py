@@ -16,7 +16,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.util.data import inference_data_as_dictionary
+from sbijax._src.util.data import flatten_chains
 
 
 def make_truncated_proposal(
@@ -60,11 +60,11 @@ def make_truncated_proposal(
 
     def proposal(rng_key, n):
       calib_key, bound_key, rng_key = jr.split(rng_key, 3)
-      idata = estimator.sample(
+      samples, _ = estimator.sample(
         calib_key, params, observable, n_samples=n_calibration
       )
       flat_posterior = jax.vmap(lambda x: ravel_pytree(x)[0])(
-        inference_data_as_dictionary(idata)
+        flatten_chains(samples)
       )
       lp_key, rng_key = jr.split(rng_key)
       boundary = jnp.quantile(log_prob(lp_key, flat_posterior), quantile)
