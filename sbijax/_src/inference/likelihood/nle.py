@@ -16,7 +16,6 @@ from jax._src.flatten_util import ravel_pytree
 
 from sbijax._src.inference._estimator import Estimator, next_round
 from sbijax._src.mcmc import sample_with_nuts
-from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.train import train_loop
 
@@ -112,6 +111,12 @@ def nle(prior, network, *, sampler=sample_with_nuts):
     n_warmup=1_000,
     **kwargs,
   ):
+    """Draw posterior samples via MCMC.
+
+    Returns:
+        a tuple ``(samples, info)`` of the named posterior pytree and an
+        ``MCMCSampleInfo``
+    """
     observable = jnp.atleast_2d(observable)
 
     def log_density(theta):
@@ -126,7 +131,7 @@ def nle(prior, network, *, sampler=sample_with_nuts):
       )
       return jnp.sum(log_lik) + jnp.sum(prior.log_prob(theta))
 
-    samples = sampler(
+    samples, info = sampler(
       rng_key=rng_key,
       lp=log_density,
       prior=prior,
@@ -135,6 +140,6 @@ def nle(prior, network, *, sampler=sample_with_nuts):
       n_warmup=n_warmup,
       **kwargs,
     )
-    return as_inference_data(samples, jnp.squeeze(observable))
+    return samples, info
 
   return Estimator(fit=fit, sample=sample)

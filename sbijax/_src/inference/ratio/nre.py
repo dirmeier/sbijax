@@ -19,7 +19,6 @@ from jax._src.flatten_util import ravel_pytree
 
 from sbijax._src.inference._estimator import Estimator, next_round
 from sbijax._src.mcmc import sample_with_nuts
-from sbijax._src.util.data import as_inference_data
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.train import train_loop
 
@@ -153,6 +152,12 @@ def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
     n_warmup=1_000,
     **kwargs,
   ):
+    """Draw posterior samples via MCMC.
+
+    Returns:
+        a tuple ``(samples, info)`` of the named posterior pytree and an
+        ``MCMCSampleInfo``
+    """
     observable = jnp.atleast_2d(observable)
     classifier = partial(network.apply, params, is_training=False)
 
@@ -163,7 +168,7 @@ def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
       lp = classifier(jnp.concatenate([observable, theta_flat], axis=-1))
       return jnp.sum(lp_prior) + jnp.sum(lp)
 
-    samples = sampler(
+    samples, info = sampler(
       rng_key=rng_key,
       lp=log_density,
       prior=prior,
@@ -172,6 +177,6 @@ def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
       n_warmup=n_warmup,
       **kwargs,
     )
-    return as_inference_data(samples, jnp.squeeze(observable))
+    return samples, info
 
   return Estimator(fit=fit, sample=sample)
