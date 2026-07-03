@@ -8,7 +8,7 @@ from sbijax._src.experimental.aio import aio
 from sbijax._src.experimental.nn.make_simformer import (
   make_simformer_based_score_model,
 )
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def _problem():

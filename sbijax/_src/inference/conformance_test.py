@@ -15,7 +15,7 @@ from sbijax._src.nn.make_consistency_model import make_cm
 from sbijax._src.nn.make_continuous_flow import make_cnf
 from sbijax._src.nn.make_flow import make_maf
 from sbijax._src.nn.make_mlp import make_mlp
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def _problem():

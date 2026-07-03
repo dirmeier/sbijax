@@ -2,7 +2,7 @@
 import chex
 from jax import random as jr
 
-from sbijax._src.mcmc import sample_with_imh
+from sbijax._src.mcmc.irmh import sample_with_imh
 
 
 def test_rmh_sampler(prior_log_prob_tuple):

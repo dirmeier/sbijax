@@ -5,7 +5,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 from sbijax._src.inference._sample_info import MCMCSampleInfo
 from sbijax._src.inference.likelihood.nle import nle
 from sbijax._src.nn.make_flow import make_maf
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def test_nle_sample_returns_pytree_and_mcmc_info():

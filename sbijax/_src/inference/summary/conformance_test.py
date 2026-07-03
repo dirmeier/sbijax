@@ -9,7 +9,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 from sbijax._src.inference.summary.nass import nass
 from sbijax._src.inference.summary.nasss import nasss
 from sbijax._src.nn.make_nass_network import make_nass_net, make_nasss_net
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def _problem():

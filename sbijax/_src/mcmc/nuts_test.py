@@ -2,7 +2,7 @@
 import chex
 from jax import random as jr
 
-from sbijax._src.mcmc import sample_with_nuts
+from sbijax._src.mcmc.nuts import sample_with_nuts
 
 
 def test_nuts_sampler(prior_log_prob_tuple):

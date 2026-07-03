@@ -18,7 +18,7 @@ from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
 
 from sbijax._src.inference._estimator import Estimator, next_round
-from sbijax._src.mcmc import sample_with_nuts
+from sbijax._src.mcmc.nuts import sample_with_nuts
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.train import train_loop
 

@@ -2,7 +2,7 @@
 import chex
 from jax import random as jr
 
-from sbijax._src.mcmc import sample_with_mala
+from sbijax._src.mcmc.mala import sample_with_mala
 
 
 def test_mala_sampler(prior_log_prob_tuple):

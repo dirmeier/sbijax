@@ -7,7 +7,7 @@ from sbijax._src.inference.posterior.fmpe import fmpe
 from sbijax._src.inference.posterior.npe import npe
 from sbijax._src.nn.make_continuous_flow import make_cnf
 from sbijax._src.nn.make_flow import make_maf
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def test_fmpe_sample_returns_pytree_and_direct_info():

@@ -2,11 +2,9 @@
 
 __version__ = "0.4.0"
 
-from sbijax._src.diagnostics import sbc
 from sbijax._src.diagnostics.convergence import ess, rhat
-from sbijax._src.inference import Estimator, run_sequential
-from sbijax._src.inference._sample_info import DirectSampleInfo, MCMCSampleInfo
-from sbijax._src.inference.abc import ABCSampler, sabc, smcabc
+from sbijax._src.diagnostics.sbc import sbc
+from sbijax._src.inference._estimator import Estimator
 from sbijax._src.inference.abc._sabc_engine import (
   DiffEvolution,
   MultiEps,
@@ -16,32 +14,27 @@ from sbijax._src.inference.abc._sabc_engine import (
   sq_distance,
   weighted_sq,
 )
-from sbijax._src.inference.likelihood import NLEInfo, nle, snle
-from sbijax._src.inference.posterior import (
-  CMPEInfo,
-  FMPEInfo,
-  NPEInfo,
-  cmpe,
-  fmpe,
-  npe,
-)
-from sbijax._src.inference.ratio import NREInfo, nre
-from sbijax._src.inference.summary import (
-  SummaryInfo,
-  SummaryNet,
-  nass,
-  nasss,
-  summarized_estimator,
-)
-from sbijax._src.simulate import simulate, stack
+from sbijax._src.inference.abc._sampler import ABCSampler
+from sbijax._src.inference.abc.sabc import sabc
+from sbijax._src.inference.abc.smcabc import smcabc
+from sbijax._src.inference.likelihood.nle import NLEInfo, nle
+from sbijax._src.inference.likelihood.snle import snle
+from sbijax._src.inference.posterior.cmpe import CMPEInfo, cmpe
+from sbijax._src.inference.posterior.fmpe import FMPEInfo, fmpe
+from sbijax._src.inference.posterior.npe import NPEInfo, npe
+from sbijax._src.inference.ratio.nre import NREInfo, nre
+from sbijax._src.inference.sequential import run_sequential
+from sbijax._src.inference.summary._compose import summarized_estimator
+from sbijax._src.inference.summary._summary_net import SummaryInfo, SummaryNet
+from sbijax._src.inference.summary.nass import nass
+from sbijax._src.inference.summary.nasss import nasss
+from sbijax._src.simulate.simulate import simulate, stack
 
 __all__ = [
   "ABCSampler",
   "CMPEInfo",
-  "DirectSampleInfo",
   "Estimator",
   "FMPEInfo",
-  "MCMCSampleInfo",
   "NLEInfo",
   "NPEInfo",
   "NREInfo",

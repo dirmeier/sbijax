@@ -10,7 +10,7 @@ estimator's per-method ``Info`` (DR-011); the estimator itself stays stateless.
 import jax
 from jax import random as jr
 
-from sbijax._src.simulate import simulate, stack
+from sbijax._src.simulate.simulate import simulate, stack
 from sbijax._src.util.data import flatten_chains
 
 

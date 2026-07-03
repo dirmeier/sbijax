@@ -7,7 +7,7 @@ training or sampling logic. This factory therefore delegates to :func:`nle`.
 """
 
 from sbijax._src.inference.likelihood.nle import nle
-from sbijax._src.mcmc import sample_with_nuts
+from sbijax._src.mcmc.nuts import sample_with_nuts
 
 
 def snle(prior, network, *, sampler=sample_with_nuts):

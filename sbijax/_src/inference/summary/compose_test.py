@@ -9,7 +9,7 @@ from sbijax._src.inference.summary._compose import summarized_estimator
 from sbijax._src.inference.summary.nass import nass
 from sbijax._src.nn.make_flow import make_maf
 from sbijax._src.nn.make_nass_network import make_nass_net
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def _problem():

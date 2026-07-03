@@ -8,7 +8,7 @@ from sbijax._src.experimental._truncated import make_truncated_proposal
 from sbijax._src.experimental.nn.make_score_network import make_score_model
 from sbijax._src.experimental.npse import npse
 from sbijax._src.inference.sequential import run_sequential
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def _problem():

@@ -7,7 +7,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 from sbijax._src.diagnostics.sbc import sbc
 from sbijax._src.inference.posterior.npe import npe
 from sbijax._src.nn.make_flow import make_maf
-from sbijax._src.simulate import simulate
+from sbijax._src.simulate.simulate import simulate
 
 
 def _gaussian_problem():
