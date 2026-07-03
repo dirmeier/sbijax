@@ -18,7 +18,9 @@ def _toy_objective():
   def step_fn(optimizer, rng, state, batch):
     loss, grads = jax.value_and_grad(_loss)(state.params, batch)
     updates, opt_state = optimizer.update(grads, state.opt_state, state.params)
-    return {"loss": loss}, TrainingState(optax.apply_updates(state.params, updates), opt_state)
+    return {"loss": loss}, TrainingState(
+      optax.apply_updates(state.params, updates), opt_state
+    )
 
   def eval_fn(rng, state, batch):
     return {"loss": _loss(state.params, batch)}
@@ -31,14 +33,23 @@ def test_fit_trains_and_advances_round():
   data = {"y": y, "theta": (y @ jnp.array([1.0, -2.0, 0.5]))[:, None]}
   opt = optax.adam(1e-2)
   params, info = fit(
-    jr.key(1), _toy_objective(), data,
-    optimizer=opt, n_iter=60, batch_size=64,
+    jr.key(1),
+    _toy_objective(),
+    data,
+    optimizer=opt,
+    n_iter=60,
+    batch_size=64,
   )
   assert isinstance(info, Info) and info.round == 0
   assert info.losses.ndim == 2 and info.losses.shape[1] == 2
   assert jnp.allclose(params["w"], jnp.array([1.0, -2.0, 0.5]), atol=0.2)
   _, info1 = fit(
-    jr.key(1), _toy_objective(), data,
-    optimizer=opt, n_iter=2, batch_size=64, info=info,
+    jr.key(1),
+    _toy_objective(),
+    data,
+    optimizer=opt,
+    n_iter=2,
+    batch_size=64,
+    info=info,
   )
   assert info1.round == 1

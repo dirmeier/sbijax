@@ -22,7 +22,7 @@ def fit(
   objective,
   data,
   *,
-  optimizer=optax.adam(3e-4),
+  optimizer=None,
   info=None,
   n_iter=1000,
   batch_size=100,
@@ -47,6 +47,8 @@ def fit(
   Returns:
       a tuple ``(params, Info)``
   """
+  if optimizer is None:
+    optimizer = optax.adam(3e-4)
   train_fns = objective.train
   itr_key, rng_key = jr.split(rng_key)
   train_iter, val_iter = as_batch_iterators(
@@ -74,7 +76,9 @@ def fit(
     for batch in train_iter:
       step_key, rng_key = jr.split(rng_key)
       metrics, state = step_fn(step_key, state, batch)
-      train_loss += metrics["loss"] * (batch["y"].shape[0] / train_iter.num_samples)
+      train_loss += metrics["loss"] * (
+        batch["y"].shape[0] / train_iter.num_samples
+      )
     val_key, rng_key = jr.split(rng_key)
     val_loss = _weighted(
       lambda b, s=state, k=val_key: eval_fn(k, s, b)["loss"], val_iter

@@ -6,6 +6,8 @@ likelihood-to-evidence ratio; the posterior is obtained at sample time by
 handing the ratio log-density to an injected MCMC sampler that adds the prior.
 """
 
+# ruff: noqa: PLR0913
+
 from functools import partial
 
 import jax
@@ -93,9 +95,7 @@ def nre(network, *, num_classes=10, gamma=1.0):
 
   def step_fn(optimizer, rng_key, state, batch):
     loss, grads = jax.value_and_grad(_loss)(state.params, rng_key, batch)
-    updates, opt_state = optimizer.update(
-      grads, state.opt_state, state.params
-    )
+    updates, opt_state = optimizer.update(grads, state.opt_state, state.params)
     return {"loss": loss}, TrainingState(
       optax.apply_updates(state.params, updates), opt_state
     )
@@ -104,8 +104,15 @@ def nre(network, *, num_classes=10, gamma=1.0):
     return {"loss": _loss(state.params, rng_key, batch)}
 
   def sample_fn(
-    rng_key, params, observable, *, sampler=None, n_chains=4,
-    n_samples=2_000, n_warmup=1_000, **kwargs
+    rng_key,
+    params,
+    observable,
+    *,
+    sampler=None,
+    n_chains=4,
+    n_samples=2_000,
+    n_warmup=1_000,
+    **kwargs,
   ):
     if sampler is None:
       raise ValueError(
@@ -119,7 +126,12 @@ def nre(network, *, num_classes=10, gamma=1.0):
       theta_flat = theta_flat.reshape(observable.shape[0], -1)
       return classifier(jnp.concatenate([observable, theta_flat], axis=-1))
 
-    return sampler(rng_key, loglik_fn, n_chains=n_chains,
-                   n_samples=n_samples, n_warmup=n_warmup)
+    return sampler(
+      rng_key,
+      loglik_fn,
+      n_chains=n_chains,
+      n_samples=n_samples,
+      n_warmup=n_warmup,
+    )
 
   return ObjectiveFns(TrainFns(init_fn, step_fn, eval_fn), sample_fn)

@@ -15,10 +15,12 @@ def test_fmpe_objective_trains_and_samples():
   prior = tfd.JointDistributionNamed(
     {"theta": tfd.Normal(jnp.zeros(2), 1.0)}, batch_ndims=0
   )
+
   def sim(seed, theta):
     return theta["theta"] + tfd.Normal(0.0, 1.0).sample(
       theta["theta"].shape, seed=seed
     )
+
   obj = fmpe(make_cnf(2))
   assert isinstance(obj, ObjectiveFns)
   data = simulate(jr.key(0), prior, sim, n=200)

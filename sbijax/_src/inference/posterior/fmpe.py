@@ -41,12 +41,8 @@ def fmpe(network):
     return TrainingState(params=params, opt_state=optimizer.init(params))
 
   def step_fn(optimizer, rng_key, state, batch):
-    loss, grads = jax.value_and_grad(_loss)(
-      state.params, rng_key, batch, True
-    )
-    updates, opt_state = optimizer.update(
-      grads, state.opt_state, state.params
-    )
+    loss, grads = jax.value_and_grad(_loss)(state.params, rng_key, batch, True)
+    updates, opt_state = optimizer.update(grads, state.opt_state, state.params)
     return {"loss": loss}, TrainingState(
       optax.apply_updates(state.params, updates), opt_state
     )
@@ -54,9 +50,7 @@ def fmpe(network):
   def eval_fn(rng_key, state, batch):
     return {"loss": _loss(state.params, rng_key, batch, False)}
 
-  def sample_fn(
-    rng_key, params, observable, *, sampler=None, n_samples=4_000, **kwargs
-  ):
+  def sample_fn(rng_key, params, observable, *, n_samples=4_000, **kwargs):
     return rejection_sample_flow(
       rng_key, network, params, observable, n_samples
     )

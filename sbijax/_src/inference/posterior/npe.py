@@ -146,9 +146,7 @@ def npe(network, *, num_atoms=10):
       Returns:
           a tuple ``({"loss": scalar}, new_state)``
       """
-      loss, grads = jax.value_and_grad(loss_fn)(
-        state.params, rng_key, **batch
-      )
+      loss, grads = jax.value_and_grad(loss_fn)(state.params, rng_key, **batch)
       updates, opt_state = optimizer.update(
         grads, state.opt_state, state.params
       )
@@ -169,9 +167,7 @@ def npe(network, *, num_atoms=10):
       """
       return {"loss": loss_fn(state.params, rng_key, **batch)}
 
-    def sample_fn(
-      rng_key, params, observable, *, sampler=None, n_samples=4_000, **kwargs
-    ):
+    def sample_fn(rng_key, params, observable, *, n_samples=4_000, **kwargs):
       """Draw posterior samples from the trained flow.
 
       Args:

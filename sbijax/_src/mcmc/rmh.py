@@ -56,7 +56,7 @@ def sample_with_rmh(
 
 
 # pylint: disable=missing-function-docstring,no-member
-def _mh_init(rng_key, initial_positions, lp):
+def _mh_init(_rng_key, initial_positions, lp):
   flat_ip = jax.vmap(lambda x: ravel_pytree(x)[0])(initial_positions)
   kernel = bj.rmh(
     lp,

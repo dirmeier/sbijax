@@ -54,7 +54,7 @@ def sample_with_mala(
 
 
 # pylint: disable=missing-function-docstring,no-member
-def _mala_init(rng_key, initial_positions, lp):
+def _mala_init(_rng_key, initial_positions, lp):
   kernel = bj.mala(lp, 0.1)
   initial_state = jax.vmap(kernel.init)(initial_positions)
   return initial_state, kernel.step

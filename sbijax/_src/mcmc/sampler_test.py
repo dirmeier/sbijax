@@ -14,7 +14,9 @@ def test_make_sampler_draws_from_target_with_gaussian_init():
   sampler = make_sampler(nuts, prior=prior)
 
   def loglik(theta):
-    return tfd.Normal(jnp.array([1.0, -1.0]), 1.0).log_prob(theta["theta"]).sum()
+    return (
+      tfd.Normal(jnp.array([1.0, -1.0]), 1.0).log_prob(theta["theta"]).sum()
+    )
 
   samples, info = sampler(
     jr.key(0), loglik, n_chains=4, n_samples=200, n_warmup=100

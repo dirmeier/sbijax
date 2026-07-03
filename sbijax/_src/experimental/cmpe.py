@@ -117,14 +117,10 @@ def cmpe(network, *, t_min=0.001, t_max=50.0):
       is_training=True,
     )
     params_dict = {"params": params, "ema_params": params}
-    return TrainingState(
-      params=params_dict, opt_state=optimizer.init(params)
-    )
+    return TrainingState(params=params_dict, opt_state=optimizer.init(params))
 
   def step_fn(optimizer, rng_key, state, batch):
-    loss, grads = jax.value_and_grad(_loss)(
-      state.params, rng_key, batch, True
-    )
+    loss, grads = jax.value_and_grad(_loss)(state.params, rng_key, batch, True)
     # grad is only valid for live params; zero out ema_params gradient
     live_grads = grads["params"]
     updates, opt_state = optimizer.update(
@@ -140,9 +136,7 @@ def cmpe(network, *, t_min=0.001, t_max=50.0):
   def eval_fn(rng_key, state, batch):
     return {"loss": _loss(state.params, rng_key, batch, False)}
 
-  def sample_fn(
-    rng_key, params, observable, *, sampler=None, n_samples=4_000, **kwargs
-  ):
+  def sample_fn(rng_key, params, observable, *, n_samples=4_000, **kwargs):
     # params is the params_dict; sampling uses only the live params.
     live_params = params["params"]
     return rejection_sample_flow(

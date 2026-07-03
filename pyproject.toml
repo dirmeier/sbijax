@@ -133,14 +133,14 @@ extend-select = [
     "TCH",  # Type-checking blocks
     "UP",   # Pyupgrade (modern syntax)
 ]
-ignore=["S101", "F841", "PLR2004"]
+ignore=["S101", "F841", "PLR2004", "S610"]
 
 [tool.ruff.lint.flake8-unused-arguments]
 # *args/**kwargs only exist to satisfy uniform module/callback signatures.
 ignore-variadic-names = true
 
 [tool.ruff.lint.per-file-ignores]
-"**/*_test.py" = ["D103", "B007", "B023", "ARG001", "ARG002"]
+"**/*_test.py" = ["D103", "B007", "B023", "ARG001", "ARG002", "ARG005"]
 "**/conftest.py" = ["ARG001"]
 "examples/**" = ["D103", "B007", "ARG001"]
 "experiments/**" = ["D103", "PLR0913", "PLC0415", "S603"]

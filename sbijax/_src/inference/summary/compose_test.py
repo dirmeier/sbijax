@@ -24,9 +24,7 @@ def _problem():
   )
 
   def simulator(seed, theta):
-    noise = tfd.Normal(0.0, 1.0).sample(
-      (theta["theta"].shape[0], 4), seed=seed
-    )
+    noise = tfd.Normal(0.0, 1.0).sample((theta["theta"].shape[0], 4), seed=seed)
     return jnp.tile(theta["theta"], (1, 2)) + noise
 
   return prior, simulator
