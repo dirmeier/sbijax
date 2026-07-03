@@ -21,7 +21,7 @@ from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
 
 from sbijax._src.inference._estimator import Estimator, next_round
-from sbijax._src.util.data import as_inference_data
+from sbijax._src.inference._sample_info import DirectSampleInfo
 from sbijax._src.util.dataloader import as_batch_iterators
 from sbijax._src.util.train import train_loop
 
@@ -237,6 +237,6 @@ def npe(prior, network, *, num_atoms=10, use_event_space_bijections=True):
     thetas = jax.tree_util.tree_map(
       reshape, jax.vmap(unravel_fn)(thetas[:n_samples])
     )
-    return as_inference_data(thetas, jnp.squeeze(observable))
+    return thetas, DirectSampleInfo(n_samples=n_samples)
 
   return Estimator(fit=fit, sample=sample)
