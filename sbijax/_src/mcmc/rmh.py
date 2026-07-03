@@ -38,8 +38,9 @@ def sample_with_rmh(
       >>> samples = sample_with_rmh(jr.PRNGKey(0), prop_posterior_lp, prior)
 
   Returns:
-      a JAX pytree with keys corresponding to the variables names
-      and tensor values of dimension `n_chains x n_samples x dim_variable`
+      a tuple ``(samples, info)``: a named pytree with leaves of shape
+      ``n_chains x (n_samples - n_warmup) x dim`` and an
+      ``MCMCSampleInfo`` with the mean post-warmup acceptance rate
   """
   return run_blackjax(
     rng_key,
