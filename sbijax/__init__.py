@@ -32,10 +32,6 @@ from sbijax._src.inference.summary import (
   summarized_estimator,
 )
 from sbijax._src.simulate import simulate, stack
-from sbijax._src.util.data import (
-  as_inference_data,
-  inference_data_as_dictionary,
-)
 
 __all__ = [
   "ABCSampler",
@@ -48,11 +44,9 @@ __all__ = [
   "SummaryInfo",
   "SummaryNet",
   "abs_distance",
-  "as_inference_data",
   "cmpe",
   "DiffEvolution",
   "fmpe",
-  "inference_data_as_dictionary",
   "l2_distance",
   "MultiEps",
   "nass",
