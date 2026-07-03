@@ -6,7 +6,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.util.data import as_inference_data
+from sbijax._src.inference._sample_info import DirectSampleInfo
 
 
 def rejection_sample_flow(
@@ -27,7 +27,8 @@ def rejection_sample_flow(
       n_sim: the number of proposals drawn per rejection round
 
   Returns:
-      an inference data object of posterior samples
+      a tuple ``(samples, DirectSampleInfo)`` of the named posterior pytree
+      and a sampling record
   """
   observable = jnp.atleast_2d(observable)
   _, unravel_fn = ravel_pytree(prior.sample(seed=jr.PRNGKey(1)))
@@ -55,4 +56,4 @@ def rejection_sample_flow(
   thetas = jax.tree_util.tree_map(
     reshape, jax.vmap(unravel_fn)(thetas[:n_samples])
   )
-  return as_inference_data(thetas, jnp.squeeze(observable))
+  return thetas, DirectSampleInfo(n_samples=n_samples)
