@@ -4,7 +4,6 @@ __version__ = "0.4.0"
 
 from sbijax._src.diagnostics.convergence import ess, rhat
 from sbijax._src.diagnostics.sbc import sbc
-from sbijax._src.inference._estimator import Estimator
 from sbijax._src.inference.abc._sabc_engine import (
   DiffEvolution,
   MultiEps,
@@ -27,26 +26,34 @@ from sbijax._src.inference.sequential import run_sequential
 from sbijax._src.inference.summary._compose import summarized_estimator
 from sbijax._src.inference.summary.nass import nass
 from sbijax._src.inference.summary.nasss import nasss
+from sbijax._src.mcmc.sampler import make_sampler
 from sbijax._src.simulate.simulate import simulate, stack
+from sbijax._src.train._types import Info, ObjectiveFns, SummaryFns
+from sbijax._src.train.fit import fit
+from sbijax._src.train.sample import sample
 
 __all__ = [
   "ABCSampler",
-  "Estimator",
   "abs_distance",
   "cmpe",
   "DiffEvolution",
   "ess",
+  "fit",
   "fmpe",
+  "Info",
   "l2_distance",
+  "make_sampler",
   "MultiEps",
   "nass",
   "nasss",
   "nle",
   "npe",
   "nre",
+  "ObjectiveFns",
   "rhat",
   "run_sequential",
   "sabc",
+  "sample",
   "sbc",
   "SingleEps",
   "simulate",
@@ -55,5 +62,6 @@ __all__ = [
   "sq_distance",
   "stack",
   "summarized_estimator",
+  "SummaryFns",
   "weighted_sq",
 ]
