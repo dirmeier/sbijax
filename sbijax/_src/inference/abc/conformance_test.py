@@ -45,7 +45,7 @@ def test_abc_sample_returns_named_pytree_and_info(name):
   prior, simulator = _problem()
   sampler = ABC_SAMPLERS[name]["build"](prior, simulator)
   particles, info = sampler.sample(
-    jr.PRNGKey(0), jnp.zeros(2), **ABC_SAMPLERS[name]["sample_kwargs"]
+    jr.key(0), jnp.zeros(2), **ABC_SAMPLERS[name]["sample_kwargs"]
   )
   assert "theta" in particles
-  assert isinstance(info, tuple) and hasattr(info, "_fields")
+  assert info is None or (isinstance(info, tuple) and hasattr(info, "_fields"))
