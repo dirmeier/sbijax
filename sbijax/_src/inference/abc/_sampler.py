@@ -12,7 +12,7 @@ class ABCSampler(NamedTuple):
   ``sample`` function that simulates during sampling.
 
   Attributes:
-      sample: ``(rng_key, observable, **kwargs) -> InferenceData``
+      sample: ``(rng_key, observable, **kwargs) -> (particles, info)``
   """
 
   sample: Callable

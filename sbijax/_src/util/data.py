@@ -46,6 +46,4 @@ def flatten_chains(samples: PyTree) -> PyTree:
   Returns:
       the same pytree with each leaf reshaped to ``(n_chains * n_draws, dim)``
   """
-  return jax.tree_util.tree_map(
-    lambda x: x.reshape(-1, x.shape[-1]), samples
-  )
+  return jax.tree_util.tree_map(lambda x: x.reshape(-1, x.shape[-1]), samples)

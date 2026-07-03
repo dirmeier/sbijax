@@ -59,9 +59,7 @@ def sbc(
       n_samples=n_posterior_samples,
       **sample_kwargs,
     )
-    posterior = jax.vmap(lambda x: ravel_pytree(x)[0])(
-      flatten_chains(samples)
-    )
+    posterior = jax.vmap(lambda x: ravel_pytree(x)[0])(flatten_chains(samples))
     theta_flat, _ = ravel_pytree(jax.tree.map(lambda a: a[0], theta_true))
     return jnp.sum(posterior < theta_flat, axis=0)
 

@@ -18,7 +18,14 @@ def test_run_sequential_npe_completes_with_pytree_proposal():
     )
 
   params, info = run_sequential(
-    jr.PRNGKey(0), npe(prior, make_maf(2)), prior, simulator, jnp.zeros(2),
-    n_rounds=2, n_simulations_per_round=100, n_iter=2, batch_size=100,
+    jr.PRNGKey(0),
+    npe(prior, make_maf(2)),
+    prior,
+    simulator,
+    jnp.zeros(2),
+    n_rounds=2,
+    n_simulations_per_round=100,
+    n_iter=2,
+    batch_size=100,
   )
   assert info.round == 1

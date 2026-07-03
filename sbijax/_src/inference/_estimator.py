@@ -29,8 +29,9 @@ class Estimator(NamedTuple):
 
   - ``fit(rng_key, data, **kwargs) -> (params, info)`` trains the estimator on a
     dataset and returns the fitted parameters and a loss history.
-  - ``sample(rng_key, params, observable, **kwargs) -> InferenceData`` draws
-    from the approximate posterior conditioned on an observation.
+  - ``sample(rng_key, params, observable, **kwargs) -> (samples, info)`` draws
+    from the approximate posterior conditioned on an observation, returning the
+    named posterior pytree and a per-method sampling record.
 
   Attributes:
       fit: the training function

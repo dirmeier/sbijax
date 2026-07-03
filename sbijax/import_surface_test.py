@@ -1,3 +1,5 @@
+"""Guards for the slim public surface (no plotting, no arviz helpers)."""
+
 import sbijax
 
 
@@ -7,8 +9,6 @@ def test_no_plotting_symbols_exported():
 
 
 def test_slim_surface_exports():
-  import sbijax
-
   for name in ["ess", "rhat", "MCMCSampleInfo", "DirectSampleInfo", "sbc"]:
     assert name in sbijax.__all__ and hasattr(sbijax, name)
   for gone in ["as_inference_data", "inference_data_as_dictionary"]:
