@@ -54,12 +54,6 @@ __all__ = [
   "nle",
   "npe",
   "nre",
-  "plot_ess",
-  "plot_loss_profile",
-  "plot_posterior",
-  "plot_rank",
-  "plot_rhat_and_ress",
-  "plot_trace",
   "run_sequential",
   "sabc",
   "sbc",
@@ -72,28 +66,3 @@ __all__ = [
   "summarized_estimator",
   "weighted_sq",
 ]
-
-_PLOT_FNS = frozenset(
-  {
-    "plot_ess",
-    "plot_loss_profile",
-    "plot_posterior",
-    "plot_rank",
-    "plot_rhat_and_ress",
-    "plot_trace",
-  }
-)
-
-
-def __getattr__(name):
-  """Lazily import plotting helpers so matplotlib stays optional."""
-  if name in _PLOT_FNS:
-    try:
-      from sbijax._src.plot import plot  # noqa: PLC0415
-    except ImportError as e:
-      raise ImportError(
-        f"`{name}` requires the optional plotting dependencies; install "
-        "them with `pip install sbijax[all]`."
-      ) from e
-    return getattr(plot, name)
-  raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
