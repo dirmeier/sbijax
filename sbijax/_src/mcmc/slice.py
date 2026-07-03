@@ -1,8 +1,11 @@
 import jax
 import tensorflow_probability.substrates.jax as tfp
 from einops import rearrange
+from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
+
+from sbijax._src.inference._sample_info import MCMCSampleInfo
 
 
 # ruff: noqa: PLR0913, D417
@@ -54,8 +57,9 @@ def sample_with_slice(
       >>> samples = sample_with_slice(jr.PRNGKey(0), prop_posterior_lp, prior)
 
   Returns:
-      a JAX pytree with keys corresponding to the variables names
-      and tensor values of dimension `n_chains x n_samples x dim_variable`
+      a tuple ``(samples, info)``: a named pytree with leaves of shape
+      ``n_chains x (n_samples - n_warmup) x dim`` and an ``MCMCSampleInfo``
+      (acceptance rate is ``nan`` for slice sampling)
   """
   test_sample = prior.sample(seed=jr.PRNGKey(0))
   _, unravel_fn = ravel_pytree(test_sample)
@@ -85,7 +89,7 @@ def sample_with_slice(
     k: v.reshape(n_chains, (n_samples - n_warmup), -1)
     for k, v in samples.items()
   }
-  return samples
+  return samples, MCMCSampleInfo(acceptance_rate=jnp.array(jnp.nan))
 
 
 # pylint: disable=missing-function-docstring
