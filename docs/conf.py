@@ -14,6 +14,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     'sphinxcontrib.bibtex',
+    'sphinxcontrib.mermaid',
     "sphinx.ext.viewcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
