@@ -223,7 +223,7 @@ def cmpe(prior, network, *, t_min=0.001, t_max=50.0):
 
   def sample(rng_key, params, observable, *, n_samples=4_000, **kwargs):
     return rejection_sample_flow(
-      rng_key, network, params, prior, observable, n_samples
+      rng_key, network, params, observable, n_samples
     )
 
   return Estimator(fit=fit, sample=sample)
