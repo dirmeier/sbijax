@@ -8,15 +8,15 @@ from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 from tensorflow_probability.substrates.jax import distributions as tfd
 
+from sbijax._src.experimental.nn.make_score_network import make_score_model
 from sbijax._src.inference.likelihood.nle import nle
 from sbijax._src.inference.likelihood.snle import snle
-from sbijax._src.inference.posterior.cmpe import cmpe
 from sbijax._src.inference.posterior.fmpe import fmpe
 from sbijax._src.inference.posterior.npe import npe
+from sbijax._src.inference.posterior.npse import npse
 from sbijax._src.inference.ratio.nre import nre
 from sbijax._src.mcmc.nuts import nuts
 from sbijax._src.mcmc.sampler import make_sampler
-from sbijax._src.nn.make_consistency_model import make_cm
 from sbijax._src.nn.make_continuous_flow import make_cnf
 from sbijax._src.nn.make_flow import make_maf
 from sbijax._src.nn.make_mlp import make_mlp
@@ -52,11 +52,11 @@ def _batch(data, n=32):
 # registry of trainable objectives to check against the ObjectiveFns contract.
 # each entry builds an ObjectiveFns from a prior and records whether sampling
 # requires an injected MCMC sampler (nle/snle/nre) or is amortized (npe/fmpe/
-# cmpe).
+# npse).
 ESTIMATORS = {
   "npe": {"build": lambda p: npe(make_maf(2)), "mcmc": False},
   "fmpe": {"build": lambda p: fmpe(make_cnf(2)), "mcmc": False},
-  "cmpe": {"build": lambda p: cmpe(make_cm(2)), "mcmc": False},
+  "npse": {"build": lambda p: npse(make_score_model(2)), "mcmc": False},
   "nle": {"build": lambda p: nle(make_maf(2)), "mcmc": True},
   "snle": {"build": lambda p: snle(make_maf(2)), "mcmc": True},
   "nre": {"build": lambda p: nre(make_mlp()), "mcmc": True},

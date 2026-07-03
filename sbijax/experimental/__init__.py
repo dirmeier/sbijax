@@ -1,12 +1,12 @@
 """Experimental sbijax methods.
 
-NPSE (:cite:t:`sharrock2024sequential`) and AiO (:cite:t:`gloeckler2024allinone`)
-are functional factories that delegate to the ``fmpe`` core, plus a
-truncated-prior proposal for sequential inference.
+CMPE (:cite:t:`schmitt2023con`) and AiO (:cite:t:`gloeckler2024allinone`) are
+functional objective factories, plus a truncated-prior proposal for sequential
+inference.
 """
 
 from sbijax._src.experimental._truncated import make_truncated_proposal
 from sbijax._src.experimental.aio import aio
-from sbijax._src.experimental.npse import npse
+from sbijax._src.experimental.cmpe import cmpe
 
-__all__ = ["aio", "make_truncated_proposal", "npse"]
+__all__ = ["aio", "cmpe", "make_truncated_proposal"]

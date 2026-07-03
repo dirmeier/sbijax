@@ -5,7 +5,7 @@ import optax
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax._src.inference.posterior.cmpe import cmpe
+from sbijax._src.experimental.cmpe import cmpe
 from sbijax._src.nn.make_consistency_model import make_cm
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import ObjectiveFns
