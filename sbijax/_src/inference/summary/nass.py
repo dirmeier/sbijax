@@ -1,9 +1,9 @@
 """Neural approximate sufficient statistics.
 
 Implements the NASS method of :cite:t:`chen2023learning` as a functional
-:class:`~sbijax._src.inference.summary._summary_net.SummaryNet`. The network
-learns a summary of the data by maximising a Jensen-Shannon mutual-information
-bound; the JSD loss is reused from the existing implementation.
+:class:`~sbijax._src.train._types.SummaryFns`. The network learns a summary of
+the data by maximising a Jensen-Shannon mutual-information bound; the JSD loss
+is reused from the existing implementation.
 """
 
 import jax
@@ -38,6 +38,6 @@ def nass(network):
           ``critic`` methods
 
   Returns:
-      a :class:`~sbijax._src.inference.summary._summary_net.SummaryNet`
+      a :class:`~sbijax._src.train._types.SummaryFns`
   """
   return make_summary_net(network, _jsd_summary_loss)

@@ -25,7 +25,6 @@ from sbijax._src.inference.posterior.npe import npe
 from sbijax._src.inference.ratio.nre import nre
 from sbijax._src.inference.sequential import run_sequential
 from sbijax._src.inference.summary._compose import summarized_estimator
-from sbijax._src.inference.summary._summary_net import SummaryInfo, SummaryNet
 from sbijax._src.inference.summary.nass import nass
 from sbijax._src.inference.summary.nasss import nasss
 from sbijax._src.simulate.simulate import simulate, stack
@@ -33,8 +32,6 @@ from sbijax._src.simulate.simulate import simulate, stack
 __all__ = [
   "ABCSampler",
   "Estimator",
-  "SummaryInfo",
-  "SummaryNet",
   "abs_distance",
   "cmpe",
   "DiffEvolution",

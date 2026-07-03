@@ -1,9 +1,9 @@
 """Neural approximate slice sufficient statistics.
 
 Implements the NASSS method of :cite:t:`chen2021neural` as a functional
-:class:`~sbijax._src.inference.summary._summary_net.SummaryNet`. It differs from
-NASS only in the loss (a slice-based JSD bound with a secondary summary); the
-training and summarization logic are shared.
+:class:`~sbijax._src.train._types.SummaryFns`. It differs from NASS only in the
+loss (a slice-based JSD bound with a secondary summary); the training and
+summarization logic are shared.
 """
 
 import jax
@@ -57,6 +57,6 @@ def nasss(network):
           ``secondary_summary`` and ``critic`` methods
 
   Returns:
-      a :class:`~sbijax._src.inference.summary._summary_net.SummaryNet`
+      a :class:`~sbijax._src.train._types.SummaryFns`
   """
   return make_summary_net(network, _jsd_summary_loss)
