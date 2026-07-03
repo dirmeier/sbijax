@@ -39,6 +39,21 @@ def stack_data(data: PyTree, also_data: PyTree) -> PyTree:
   return stacked
 
 
+def flatten_chains(samples: PyTree) -> PyTree:
+  """Collapse the ``(n_chains, n_draws, dim)`` sample axes into ``(N, dim)``.
+
+  Args:
+      samples: a named pytree of posterior draws with a leading chain and draw
+          axis on every leaf
+
+  Returns:
+      the same pytree with each leaf reshaped to ``(n_chains * n_draws, dim)``
+  """
+  return jax.tree_util.tree_map(
+    lambda x: x.reshape(-1, x.shape[-1]), samples
+  )
+
+
 def as_inference_data(samples: PyTree, observed: jax.Array) -> xarray.DataTree:
   """Convert a PyTree to an inference data object.
 
