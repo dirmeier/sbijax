@@ -24,7 +24,7 @@ At a glance
     * - ``model.fit(key, data=data)``
       - ``params, info = est.fit(key, data)``
     * - ``model.sample_posterior(key, params, y)``
-      - ``idata = est.sample(key, params, y)``
+      - ``samples, info = est.sample(key, params, y)``
 
 Class names become factory functions
 -------------------------------------
@@ -107,19 +107,25 @@ bare loss array, use ``info.losses`` now.
     params, info = estimator.fit(jr.PRNGKey(1), data)
     losses = info.losses
 
-Sampling returns an ``InferenceData``
--------------------------------------
+``sample`` returns ``(samples, info)``
+--------------------------------------
 
-``sample`` (renamed from ``sample_posterior``) takes ``params`` explicitly and
-returns an arviz ``InferenceData`` directly (no diagnostics tuple).
+``sample`` returns a named pytree of draws (the same structure as the prior,
+e.g. ``{"theta": array}`` with leaf shape ``(n_chains, n_draws, dim)``) plus a
+small sampling-info record. There is no ``arviz`` / ``InferenceData``.
 
 .. code-block:: python
 
     # 0.3
-    idata, diagnostics = model.sample_posterior(jr.PRNGKey(2), params, y_observed)
+    idata, diagnostics = model.sample_posterior(key, params, y)
 
     # 0.4
-    idata = estimator.sample(jr.PRNGKey(2), params, y_observed)
+    samples, info = estimator.sample(key, params, y)
+    theta = samples["theta"]                     # (n_chains, n_draws, dim)
+
+Convergence diagnostics come from :func:`sbijax.ess` / :func:`sbijax.rhat`
+(re-exported from blackjax); plotting is no longer provided by sbijax -- build
+figures from ``samples`` directly.
 
 Sequential inference is a standalone driver
 -------------------------------------------
@@ -162,7 +168,7 @@ ABC samplers take ``(prior, simulator)`` and expose only ``sample``:
 
     # 0.4
     sampler = smcabc(prior, simulator_fn)
-    idata = sampler.sample(jr.PRNGKey(0), y_observed, summary=summary_fn, distance=distance_fn)
+    samples, info = sampler.sample(jr.PRNGKey(0), y_observed, summary=summary_fn, distance=distance_fn)
 
 Summary networks are unchanged in spirit -- ``fit`` then ``summarize``:
 
@@ -186,5 +192,5 @@ un-summarized observation):
     sn_params, _ = sn.fit(jr.PRNGKey(0), data)
 
     est = summarized_estimator(nle(prior, make_maf(2)), sn, sn_params)
-    params, info = est.fit(jr.PRNGKey(1), data)            # trains on summaries
-    idata = est.sample(jr.PRNGKey(2), params, y_observed)  # summarizes y_observed
+    params, info = est.fit(jr.PRNGKey(1), data)                      # trains on summaries
+    samples, info = est.sample(jr.PRNGKey(2), params, y_observed)   # summarizes y_observed

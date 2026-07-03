@@ -5,7 +5,7 @@
 
 The top-level module, ``sbijax``, contains all implemented methods for neural
 simulation-based inference and approximate Bayesian inference as well as
-functionality for visualization and other utility.
+diagnostics and other utility.
 
 Every method is a **factory function** returning a record of pure functions
 (:class:`Estimator`, :class:`ABCSampler` or :class:`SummaryNet`), following the
@@ -13,7 +13,7 @@ functional idiom of dm-haiku and blackjax. Parameters are threaded explicitly::
 
     est = nle(prior, make_maf(2))
     params, info = est.fit(key, data)
-    idata = est.sample(key, params, y_observed)
+    samples, info = est.sample(key, params, y_observed)
 
 .. autosummary::
     npe
@@ -31,11 +31,13 @@ functional idiom of dm-haiku and blackjax. Parameters are threaded explicitly::
     simulate
     stack
     sbc
+    ess
+    rhat
     Estimator
     ABCSampler
     SummaryNet
-    as_inference_data
-    inference_data_as_dictionary
+    MCMCSampleInfo
+    DirectSampleInfo
 
 Data pipeline
 -------------
@@ -98,19 +100,7 @@ Diagnostics
 -----------
 
 .. autofunction:: sbc
-
-Visualization
--------------
-
-.. autofunction:: plot_ess
-.. autofunction:: plot_loss_profile
-.. autofunction:: plot_rank
-.. autofunction:: plot_rhat_and_ress
-.. autofunction:: plot_posterior
-.. autofunction:: plot_trace
-
-Utility
--------
-
-.. autofunction:: as_inference_data
-.. autofunction:: inference_data_as_dictionary
+.. autofunction:: ess
+.. autofunction:: rhat
+.. autoclass:: MCMCSampleInfo
+.. autoclass:: DirectSampleInfo
