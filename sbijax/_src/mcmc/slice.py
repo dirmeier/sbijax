@@ -5,6 +5,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
+from sbijax._src.diagnostics.convergence import mcmc_convergence
 from sbijax._src.inference._sample_info import MCMCSampleInfo
 
 
@@ -89,7 +90,10 @@ def sample_with_slice(
     k: v.reshape(n_chains, (n_samples - n_warmup), -1)
     for k, v in samples.items()
   }
-  return samples, MCMCSampleInfo(acceptance_rate=jnp.array(jnp.nan))
+  rhat, ess = mcmc_convergence(samples, n_chains)
+  return samples, MCMCSampleInfo(
+    acceptance_rate=jnp.array(jnp.nan), rhat=rhat, ess=ess
+  )
 
 
 # pylint: disable=missing-function-docstring

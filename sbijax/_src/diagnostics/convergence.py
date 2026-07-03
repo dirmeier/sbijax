@@ -40,3 +40,22 @@ def ess(samples):
     lambda x: effective_sample_size(x, chain_axis=0, sample_axis=1),
     samples,
   )
+
+
+def mcmc_convergence(samples, n_chains):
+  """Convergence diagnostics for a set of MCMC draws, guarded on chain count.
+
+  R-hat is a between-chain statistic and is undefined for a single chain; ESS
+  is guarded together with it so both diagnostics travel as a pair.
+
+  Args:
+      samples: a named pytree with leaves of shape ``(n_chains, n_draws, dim)``
+      n_chains: the number of chains the draws were sampled from
+
+  Returns:
+      a tuple ``(rhat, ess)`` of per-dimension pytrees when ``n_chains > 1``,
+      otherwise ``(None, None)``
+  """
+  if n_chains < 2:
+    return None, None
+  return rhat(samples), ess(samples)

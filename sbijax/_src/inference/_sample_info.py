@@ -7,7 +7,7 @@ pair, not a concrete type — MCMC methods report sampling diagnostics, amortize
 methods report a trivial record.
 """
 
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import jax
 
@@ -17,9 +17,16 @@ class MCMCSampleInfo(NamedTuple):
 
   Attributes:
       acceptance_rate: mean post-warmup acceptance rate across chains and draws
+      rhat: per-dimension split-R-hat pytree (same structure as ``samples``), or
+          ``None`` when sampled with a single chain (R-hat is a between-chain
+          statistic and undefined for one chain)
+      ess: per-dimension effective-sample-size pytree, or ``None`` when sampled
+          with a single chain
   """
 
   acceptance_rate: jax.Array
+  rhat: Any = None
+  ess: Any = None
 
 
 class DirectSampleInfo(NamedTuple):

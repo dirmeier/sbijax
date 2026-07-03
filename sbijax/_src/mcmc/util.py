@@ -2,6 +2,7 @@ import jax
 from jax import numpy as jnp
 from jax import random as jr
 
+from sbijax._src.diagnostics.convergence import mcmc_convergence
 from sbijax._src.inference._sample_info import MCMCSampleInfo
 
 
@@ -53,4 +54,5 @@ def run_blackjax(rng_key, init_fn, prior, lp, *, n_chains, n_samples, n_warmup):
     states.position,
   )
   acceptance = jnp.mean(infos.acceptance_rate[n_warmup:, ...])
-  return thetas, MCMCSampleInfo(acceptance_rate=acceptance)
+  rhat, ess = mcmc_convergence(thetas, n_chains)
+  return thetas, MCMCSampleInfo(acceptance_rate=acceptance, rhat=rhat, ess=ess)
