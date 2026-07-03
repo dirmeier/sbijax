@@ -1,14 +1,12 @@
 """Neural ratio estimation.
 
 Implements the contrastive NRE method of :cite:t:`miller2022contrast` as a
-functional estimator. The network is a classifier whose logits define a
-likelihood-to-evidence ratio; the posterior is obtained by combining the ratio
-with the prior and drawing samples with the injected MCMC sampler.
+functional objective. The network is a classifier whose logits define a
+likelihood-to-evidence ratio; the posterior is obtained at sample time by
+handing the ratio log-density to an injected MCMC sampler that adds the prior.
 """
 
-# ruff: noqa: PLR0913
 from functools import partial
-from typing import NamedTuple
 
 import jax
 import optax
@@ -17,22 +15,7 @@ from jax import random as jr
 from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.inference._estimator import Estimator, next_round
-from sbijax._src.mcmc.nuts import sample_with_nuts
-from sbijax._src.util.dataloader import as_batch_iterators
-from sbijax._src.util.train import train_loop
-
-
-class NREInfo(NamedTuple):
-  """Diagnostics returned by :func:`nre`'s ``fit`` (DR-011).
-
-  Attributes:
-      round: the training round; ``fit`` reads this back to advance rounds
-      losses: a ``(n_epochs, 2)`` array of train/validation losses
-  """
-
-  round: int
-  losses: jax.Array
+from sbijax._src.train._types import ObjectiveFns, TrainFns, TrainingState
 
 
 def _get_prior_probs_marginal_and_joint(k, gamma):
@@ -73,9 +56,9 @@ def _marginal_joint_loss(gamma, num_classes, log_marg, log_joint):
   return p_marg * log_prob_marginal + p_joint * num_classes * log_prob_joint
 
 
-def _loss(params, rng_key, model, gamma, num_classes, **batch):
+def _classifier_loss(params, rng_key, model, gamma, num_classes, **batch):
   n, _ = batch["y"].shape
-  rng_key1, rng_key2, rng_key = jr.split(rng_key, 3)
+  rng_key1, rng_key2, _ = jr.split(rng_key, 3)
   log_marg = _as_logits(params, rng_key1, model, num_classes, **batch)
   log_joint = _as_logits(params, rng_key2, model, num_classes, **batch)
   log_marg = log_marg.reshape(n, num_classes + 1)[:, 1:]
@@ -84,99 +67,59 @@ def _loss(params, rng_key, model, gamma, num_classes, **batch):
   return -jnp.mean(loss)
 
 
-def nre(prior, network, *, sampler=sample_with_nuts, num_classes=10, gamma=1.0):
-  """Construct a neural ratio estimator.
+def nre(network, *, num_classes=10, gamma=1.0):
+  """Construct a neural ratio objective.
 
   Args:
-      prior: a ``tfd`` distribution serving as the prior over parameters
       network: a classifier network mapping ``concat(y, theta)`` to logits
-      sampler: an MCMC sampler used to draw from the posterior; defaults to NUTS
       num_classes: number of contrastive classes
       gamma: relative weight of the contrastive classes
 
   Returns:
-      an :class:`~sbijax._src.inference._estimator.Estimator`
+      an :class:`~sbijax._src.train._types.ObjectiveFns`
   """
 
-  def fit(
-    rng_key,
-    data,
-    *,
-    info=None,
-    optimizer=None,
-    n_iter=1000,
-    batch_size=100,
-    percentage_data_as_validation_set=0.1,
-    n_early_stopping_patience=25,
-    n_early_stopping_delta=1e-3,
-  ):
-    if optimizer is None:
-      optimizer = optax.adam(0.003)
-    itr_key, rng_key = jr.split(rng_key)
-    train_iter, val_iter = as_batch_iterators(
-      itr_key, data, batch_size, 1.0 - percentage_data_as_validation_set, True
+  def _loss(params, rng, batch):
+    return _classifier_loss(
+      params, rng, network, gamma=gamma, num_classes=num_classes, **batch
     )
-    init_key, rng_key = jr.split(rng_key)
-    init_batch = next(iter(train_iter))
+
+  def init_fn(optimizer, rng_key, batch):
     params = network.init(
-      init_key,
-      jnp.concatenate([init_batch["y"], init_batch["theta"]], axis=-1),
-    )
-
-    def loss_fn(params, rng, **batch):
-      return _loss(
-        params, rng, network, gamma=gamma, num_classes=num_classes, **batch
-      )
-
-    params, losses = train_loop(
       rng_key,
-      params=params,
-      optimizer=optimizer,
-      loss_fn=loss_fn,
-      validation_loss_fn=loss_fn,
-      train_iter=train_iter,
-      val_iter=val_iter,
-      n_iter=n_iter,
-      n_early_stopping_patience=n_early_stopping_patience,
-      n_early_stopping_delta=n_early_stopping_delta,
+      jnp.concatenate([batch["y"], batch["theta"]], axis=-1),
     )
-    return params, NREInfo(round=next_round(info), losses=losses)
+    return TrainingState(params=params, opt_state=optimizer.init(params))
 
-  def sample(
-    rng_key,
-    params,
-    observable,
-    *,
-    n_chains=4,
-    n_samples=2_000,
-    n_warmup=1_000,
-    **kwargs,
+  def step_fn(optimizer, rng_key, state, batch):
+    loss, grads = jax.value_and_grad(_loss)(state.params, rng_key, batch)
+    updates, opt_state = optimizer.update(
+      grads, state.opt_state, state.params
+    )
+    return {"loss": loss}, TrainingState(
+      optax.apply_updates(state.params, updates), opt_state
+    )
+
+  def eval_fn(rng_key, state, batch):
+    return {"loss": _loss(state.params, rng_key, batch)}
+
+  def sample_fn(
+    rng_key, params, observable, *, sampler=None, n_chains=4,
+    n_samples=2_000, n_warmup=1_000, **kwargs
   ):
-    """Draw posterior samples via MCMC.
-
-    Returns:
-        a tuple ``(samples, info)`` of the named posterior pytree and an
-        ``MCMCSampleInfo``
-    """
+    if sampler is None:
+      raise ValueError(
+        "nre sampling requires a sampler, e.g. make_sampler(nuts, prior=prior)"
+      )
     observable = jnp.atleast_2d(observable)
     classifier = partial(network.apply, params, is_training=False)
 
-    def log_density(theta):
-      lp_prior = prior.log_prob(theta)
+    def loglik_fn(theta):
       theta_flat, _ = ravel_pytree(theta)
       theta_flat = theta_flat.reshape(observable.shape[0], -1)
-      lp = classifier(jnp.concatenate([observable, theta_flat], axis=-1))
-      return jnp.sum(lp_prior) + jnp.sum(lp)
+      return classifier(jnp.concatenate([observable, theta_flat], axis=-1))
 
-    samples, info = sampler(
-      rng_key=rng_key,
-      lp=log_density,
-      prior=prior,
-      n_chains=n_chains,
-      n_samples=n_samples,
-      n_warmup=n_warmup,
-      **kwargs,
-    )
-    return samples, info
+    return sampler(rng_key, loglik_fn, n_chains=n_chains,
+                   n_samples=n_samples, n_warmup=n_warmup)
 
-  return Estimator(fit=fit, sample=sample)
+  return ObjectiveFns(TrainFns(init_fn, step_fn, eval_fn), sample_fn)

@@ -17,12 +17,12 @@ from sbijax._src.inference.abc._sabc_engine import (
 from sbijax._src.inference.abc._sampler import ABCSampler
 from sbijax._src.inference.abc.sabc import sabc
 from sbijax._src.inference.abc.smcabc import smcabc
-from sbijax._src.inference.likelihood.nle import NLEInfo, nle
+from sbijax._src.inference.likelihood.nle import nle
 from sbijax._src.inference.likelihood.snle import snle
 from sbijax._src.inference.posterior.cmpe import cmpe
 from sbijax._src.inference.posterior.fmpe import fmpe
 from sbijax._src.inference.posterior.npe import npe
-from sbijax._src.inference.ratio.nre import NREInfo, nre
+from sbijax._src.inference.ratio.nre import nre
 from sbijax._src.inference.sequential import run_sequential
 from sbijax._src.inference.summary._compose import summarized_estimator
 from sbijax._src.inference.summary._summary_net import SummaryInfo, SummaryNet
@@ -33,8 +33,6 @@ from sbijax._src.simulate.simulate import simulate, stack
 __all__ = [
   "ABCSampler",
   "Estimator",
-  "NLEInfo",
-  "NREInfo",
   "SummaryInfo",
   "SummaryNet",
   "abs_distance",
