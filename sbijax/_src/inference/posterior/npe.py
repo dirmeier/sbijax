@@ -1,242 +1,213 @@
 """Neural posterior estimation.
 
-Implements the NPE objective of :cite:t:`greenberg2019automatic` as a functional
-estimator. The network models the posterior directly in an unconstrained space
-via the prior's event-space bijector; ``sample`` draws from the flow and rejects
-draws outside the prior support. In round 0 the network is trained by maximum
-likelihood; in later rounds (driven by :func:`sbijax.run_sequential`) ``fit``
-switches to the atomic proposal-posterior loss, selected from the round carried
-in the ``Info`` threaded back into ``fit``.
+Implements the NPE objective of :cite:t:`greenberg2019automatic` as a
+functional estimator. The network models the posterior directly in the
+parameter space; no event-space bijectors are applied.
+
+In round 0 the network is trained by maximum likelihood (amortized).
+In later rounds (driven by :func:`sbijax.run_sequential`), call
+``obj.extra(prior)`` to obtain the atomic proposal-posterior objective
+(:cite:t:`greenberg2019automatic`) which corrects for the proposal no
+longer being the prior.
 """
 
 # ruff: noqa: PLR0913
 from functools import partial
-from typing import NamedTuple
 
 import jax
+import jax.scipy as jsp
 import optax
 from jax import numpy as jnp
 from jax import random as jr
-from jax import scipy as jsp
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.inference._estimator import Estimator, next_round
 from sbijax._src.inference._sample_info import DirectSampleInfo
-from sbijax._src.util.dataloader import as_batch_iterators
-from sbijax._src.util.train import train_loop
+from sbijax._src.train._types import ObjectiveFns, TrainFns, TrainingState
 
 
-def _to_unconstrained(theta, bijector, unravel_fn):
-  """Map raw (constrained) draws to the space the network models.
+def _maximum_likelihood_loss(params, _rng, network, **batch):
+  """Round-0 loss: maximum likelihood against draws from the prior.
 
-  Returns the unconstrained parameters passed to the network together with the
-  change-of-variables log-determinant, so ``network.log_prob + log_det`` is the
-  log posterior density in the constrained space.
+  Args:
+      params: the network parameter pytree
+      _rng: unused rng key (kept for a uniform ``(params, rng, **batch)``
+          signature)
+      network: a conditional density estimator with a ``log_prob`` method
+      **batch: must contain ``theta`` (flat ``(n, d)`` array) and ``y``
+          (observations ``(n, obs_dim)``)
+
+  Returns:
+      a scalar loss
   """
-  if bijector is None:
-    return theta, jnp.zeros(theta.shape[0])
-  theta_map = jax.vmap(unravel_fn)(theta)
-  theta_u = jax.vmap(lambda x: ravel_pytree(x)[0])(bijector.inverse(theta_map))
-  # broadcast to per-sample: an identity bijector returns a scalar ldj
-  log_det = jnp.broadcast_to(
-    bijector.inverse_log_det_jacobian(theta_map), (theta.shape[0],)
+  lp = network.apply(
+    params, None, method="log_prob", y=batch["theta"], x=batch["y"]
   )
-  return theta_u, log_det
+  return -jnp.mean(lp)
 
 
-def _maximum_likelihood_loss(
-  params, _rng, network, bijector, unravel_fn, **batch
-):
-  """Round-0 loss: maximum likelihood against draws from the prior."""
-  theta_u, log_det = _to_unconstrained(batch["theta"], bijector, unravel_fn)
-  lp = network.apply(params, None, method="log_prob", y=theta_u, x=batch["y"])
-  return -jnp.mean(lp + log_det)
+def _atomic_loss(params, rng, network, prior, num_atoms, **batch):
+  """Round->0 atomic proposal-posterior loss of NPE-C / APT.
 
+  Corrects for the proposal no longer being the prior by contrasting the
+  true parameter against ``num_atoms - 1`` others drawn from the batch,
+  reweighted by the prior.  Needs only the network, the prior and
+  ``num_atoms`` — no proposal density (:cite:t:`greenberg2019automatic`).
 
-def _atomic_loss(
-  params, rng, network, prior, bijector, unravel_fn, num_atoms, **batch
-):
-  """Round-``> 0`` atomic proposal-posterior loss of NPE-C / APT.
+  Args:
+      params: the network parameter pytree
+      rng: a jax random key
+      network: a conditional density estimator with a ``log_prob`` method
+      prior: a tfd distribution; only ``log_prob`` is called
+      num_atoms: number of atoms in the contrastive loss
+      **batch: must contain ``theta`` (flat ``(n, d)`` array) and ``y``
+          (observations ``(n, obs_dim)``)
 
-  Corrects for the proposal no longer being the prior by contrasting the true
-  parameter against ``num_atoms - 1`` others drawn from the batch, reweighted
-  by the prior. Needs only the network, prior and ``num_atoms`` -- no proposal
-  density (:cite:t:`greenberg2019automatic`).
+  Returns:
+      a scalar loss
   """
   theta, y = batch["theta"], batch["y"]
   n = theta.shape[0]
   m = min(num_atoms, n)
-  theta_u, log_det = _to_unconstrained(theta, bijector, unravel_fn)
-  # for each row, draw m-1 contrasting rows without replacement (exclude self)
+
+  # Unravel flat theta to the prior's pytree structure for log_prob.
+  _, unravel_fn = ravel_pytree(prior.sample(seed=jr.key(0)))
+
+  # For each row draw m-1 contrasting rows without replacement (exclude self).
   probs = jnp.ones((n, n)) * (1.0 - jnp.eye(n)) / (n - 1.0)
   choices = jax.vmap(
     lambda key, p: jr.choice(key, n, (m - 1,), replace=False, p=p)
   )(jr.split(rng, n), probs)
   idx = jnp.concatenate([jnp.arange(n)[:, None], choices], axis=1)
+
   lp_net = network.apply(
     params,
     None,
     method="log_prob",
-    y=theta_u[idx].reshape(n * m, -1),
+    y=theta[idx].reshape(n * m, -1),
     x=jnp.repeat(y, m, axis=0),
   ).reshape(n, m)
-  lp_post = lp_net + log_det[idx]
+
   lp_prior = prior.log_prob(
     jax.vmap(unravel_fn)(theta[idx].reshape(n * m, -1))
   ).reshape(n, m)
-  # importance-reweighted contrast; the true theta sits at atom index 0
-  unnormalized = lp_post - lp_prior
+
+  # Importance-reweighted contrast; the true theta sits at atom index 0.
+  unnormalized = lp_net - lp_prior
   log_prob = unnormalized[:, 0] - jsp.special.logsumexp(unnormalized, axis=-1)
   return -jnp.mean(log_prob)
 
 
-class NPEInfo(NamedTuple):
-  """Diagnostics returned by :func:`npe`'s ``fit`` (DR-011).
-
-  Attributes:
-      round: the training round; ``fit`` reads this back to advance rounds and
-          to select the loss (round 0 is maximum-likelihood, round > 0 is the
-          atomic proposal-posterior loss)
-      losses: a ``(n_epochs, 2)`` array of train/validation losses
-      num_atoms: the number of atoms used in the contrastive loss this round;
-          ``0`` in round 0, where the atomic loss is not used
-  """
-
-  round: int
-  losses: jax.Array
-  num_atoms: int
-
-
-def npe(prior, network, *, num_atoms=10, use_event_space_bijections=True):
+def npe(network, *, num_atoms=10):
   """Construct a neural posterior estimator.
 
-  In round 0 the network is trained by maximum likelihood against draws from
-  the prior. In later rounds (driven by :func:`sbijax.run_sequential`, which
-  simulates from the current posterior) ``fit`` switches to the atomic
-  proposal-posterior loss of :cite:t:`greenberg2019automatic`, correcting for
-  the proposal no longer being the prior. The atomic loss needs only the
-  network, the prior and ``num_atoms`` -- no proposal density is threaded in.
+  In round 0 use the returned :class:`~sbijax._src.train._types.ObjectiveFns`
+  directly for amortized maximum-likelihood training. For round > 0 (i.e.
+  when training on data simulated from a fitted posterior rather than the
+  prior), call ``obj.extra(prior)`` to obtain the atomic proposal-posterior
+  objective of :cite:t:`greenberg2019automatic`.
 
   Args:
-      prior: a ``tfd`` distribution serving as the prior over parameters
-      network: a conditional density estimator with ``log_prob`` and ``sample``
-          methods modelling the posterior
-      num_atoms: the number of atoms in the contrastive proposal-posterior loss
-          used in rounds > 0
-      use_event_space_bijections: if True, train in the prior's unconstrained
-          event space
+      network: a conditional density estimator with ``log_prob`` and
+          ``sample`` methods (e.g. from :func:`~sbijax._src.nn.make_flow`)
+      num_atoms: the number of atoms in the contrastive proposal-posterior
+          loss used by ``extra(prior)``
 
   Returns:
-      an :class:`~sbijax._src.inference._estimator.Estimator`
+      an :class:`~sbijax._src.train._types.ObjectiveFns`; its ``extra``
+      field is a callable ``(prior) -> ObjectiveFns`` for sequential rounds
   """
-  _, unravel_fn = ravel_pytree(prior.sample(seed=jr.PRNGKey(1)))
-  bijector = None
-  if use_event_space_bijections and hasattr(
-    prior, "experimental_default_event_space_bijector"
-  ):
-    bijector = prior.experimental_default_event_space_bijector()
 
-  def fit(
-    rng_key,
-    data,
-    *,
-    info=None,
-    optimizer=None,
-    n_iter=1000,
-    batch_size=100,
-    percentage_data_as_validation_set=0.1,
-    n_early_stopping_patience=10,
-    n_early_stopping_delta=1e-3,
-  ):
-    if optimizer is None:
-      optimizer = optax.adam(0.0003)
-    rnd = next_round(info)
-    itr_key, rng_key = jr.split(rng_key)
-    train_iter, val_iter = as_batch_iterators(
-      itr_key, data, batch_size, 1.0 - percentage_data_as_validation_set, True
-    )
-    init_key, rng_key = jr.split(rng_key)
-    init_batch = next(iter(train_iter))
-    params = network.init(
-      init_key,
-      method="log_prob",
-      y=init_batch["theta"],
-      x=init_batch["y"],
-    )
+  def _objective(loss_fn, extra):
+    def init_fn(optimizer, rng_key, batch):
+      """Initialise network params and optimizer state from a sample batch.
 
-    if rnd > 0:
-      loss_fn = partial(
-        _atomic_loss,
-        network=network,
-        prior=prior,
-        bijector=bijector,
-        unravel_fn=unravel_fn,
-        num_atoms=num_atoms,
+      Args:
+          optimizer: an optax optimizer
+          rng_key: a jax random key
+          batch: a ``{"theta", "y"}`` batch dict
+
+      Returns:
+          a :class:`~sbijax._src.train._types.TrainingState`
+      """
+      params = network.init(
+        rng_key, method="log_prob", y=batch["theta"], x=batch["y"]
       )
-    else:
-      loss_fn = partial(
-        _maximum_likelihood_loss,
-        network=network,
-        bijector=bijector,
-        unravel_fn=unravel_fn,
-      )
-    params, losses = train_loop(
-      rng_key,
-      params=params,
-      optimizer=optimizer,
-      loss_fn=loss_fn,
-      validation_loss_fn=loss_fn,
-      train_iter=train_iter,
-      val_iter=val_iter,
-      n_iter=n_iter,
-      n_early_stopping_patience=n_early_stopping_patience,
-      n_early_stopping_delta=n_early_stopping_delta,
-    )
-    return params, NPEInfo(
-      round=rnd, losses=losses, num_atoms=0 if rnd == 0 else num_atoms
-    )
+      return TrainingState(params=params, opt_state=optimizer.init(params))
 
-  def sample(
-    rng_key,
-    params,
-    observable,
-    *,
-    n_samples=4_000,
-    check_proposal_probs=True,
-    **kwargs,
-  ):
-    observable = jnp.atleast_2d(observable)
-    thetas = None
-    n_curr = n_samples
-    while n_curr > 0:
-      n_sim = 200
-      sample_key, rng_key = jr.split(rng_key)
-      proposal = network.apply(
+    def step_fn(optimizer, rng_key, state, batch):
+      """Apply one gradient update.
+
+      Args:
+          optimizer: an optax optimizer
+          rng_key: a jax random key
+          state: the current :class:`~sbijax._src.train._types.TrainingState`
+          batch: a ``{"theta", "y"}`` batch dict
+
+      Returns:
+          a tuple ``({"loss": scalar}, new_state)``
+      """
+      loss, grads = jax.value_and_grad(loss_fn)(
+        state.params, rng_key, **batch
+      )
+      updates, opt_state = optimizer.update(
+        grads, state.opt_state, state.params
+      )
+      return {"loss": loss}, TrainingState(
+        optax.apply_updates(state.params, updates), opt_state
+      )
+
+    def eval_fn(rng_key, state, batch):
+      """Evaluate the loss without updating parameters.
+
+      Args:
+          rng_key: a jax random key
+          state: the current :class:`~sbijax._src.train._types.TrainingState`
+          batch: a ``{"theta", "y"}`` batch dict
+
+      Returns:
+          ``{"loss": scalar}``
+      """
+      return {"loss": loss_fn(state.params, rng_key, **batch)}
+
+    def sample_fn(
+      rng_key, params, observable, *, sampler=None, n_samples=4_000, **kwargs
+    ):
+      """Draw posterior samples from the trained flow.
+
+      Args:
+          rng_key: a jax random key
+          params: the trained network parameters
+          observable: a 1-D (or 2-D with one row) observation array
+          sampler: unused; present for API symmetry
+          n_samples: number of posterior draws to return
+          **kwargs: ignored
+
+      Returns:
+          a tuple ``(samples, DirectSampleInfo)`` where ``samples`` is a
+          named pytree with each leaf shaped ``(1, n_samples, dim)``
+      """
+      observable = jnp.atleast_2d(observable)
+      thetas = network.apply(
         params,
-        sample_key,
+        rng_key,
         method="sample",
-        sample_shape=(n_sim,),
-        x=jnp.tile(observable, [n_sim, 1]),
+        sample_shape=(n_samples,),
+        x=jnp.tile(observable, [n_samples, 1]),
       )
-      if bijector is not None:
-        proposal = bijector.forward(jax.vmap(unravel_fn)(proposal))
-        proposal_probs = prior.log_prob(proposal)
-        proposal = jax.vmap(lambda x: ravel_pytree(x)[0])(proposal)
-      else:
-        proposal_probs = prior.log_prob(jax.vmap(unravel_fn)(proposal))
-      if check_proposal_probs:
-        proposal = proposal[jnp.isfinite(proposal_probs)]
-      thetas = proposal if thetas is None else jnp.vstack([thetas, proposal])
-      n_curr -= proposal.shape[0]
 
-    def reshape(p):
-      if p.ndim == 1:
-        p = p.reshape(p.shape[0], 1)
-      return p.reshape(1, *p.shape)
+      def reshape(p):
+        if p.ndim == 1:
+          p = p.reshape(p.shape[0], 1)
+        return p.reshape(1, *p.shape)
 
-    thetas = jax.tree_util.tree_map(
-      reshape, jax.vmap(unravel_fn)(thetas[:n_samples])
-    )
-    return thetas, DirectSampleInfo(n_samples=n_samples)
+      thetas = jax.tree_util.tree_map(reshape, {"theta": thetas})
+      return thetas, DirectSampleInfo(n_samples=n_samples)
 
-  return Estimator(fit=fit, sample=sample)
+    return ObjectiveFns(TrainFns(init_fn, step_fn, eval_fn), sample_fn, extra)
+
+  ml = partial(_maximum_likelihood_loss, network=network)
+  atomic = lambda prior: _objective(  # noqa: E731
+    partial(_atomic_loss, network=network, prior=prior, num_atoms=num_atoms),
+    extra=None,
+  )
+  return _objective(ml, extra=atomic)

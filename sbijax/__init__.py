@@ -21,7 +21,7 @@ from sbijax._src.inference.likelihood.nle import NLEInfo, nle
 from sbijax._src.inference.likelihood.snle import snle
 from sbijax._src.inference.posterior.cmpe import cmpe
 from sbijax._src.inference.posterior.fmpe import fmpe
-from sbijax._src.inference.posterior.npe import NPEInfo, npe
+from sbijax._src.inference.posterior.npe import npe
 from sbijax._src.inference.ratio.nre import NREInfo, nre
 from sbijax._src.inference.sequential import run_sequential
 from sbijax._src.inference.summary._compose import summarized_estimator
@@ -34,7 +34,6 @@ __all__ = [
   "ABCSampler",
   "Estimator",
   "NLEInfo",
-  "NPEInfo",
   "NREInfo",
   "SummaryInfo",
   "SummaryNet",
