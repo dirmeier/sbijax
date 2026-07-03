@@ -3,7 +3,9 @@
 __version__ = "0.4.0"
 
 from sbijax._src.diagnostics import sbc
+from sbijax._src.diagnostics.convergence import ess, rhat
 from sbijax._src.inference import Estimator, run_sequential
+from sbijax._src.inference._sample_info import DirectSampleInfo, MCMCSampleInfo
 from sbijax._src.inference.abc import ABCSampler, sabc, smcabc
 from sbijax._src.inference.abc._sabc_engine import (
   DiffEvolution,
@@ -36,8 +38,10 @@ from sbijax._src.simulate import simulate, stack
 __all__ = [
   "ABCSampler",
   "CMPEInfo",
+  "DirectSampleInfo",
   "Estimator",
   "FMPEInfo",
+  "MCMCSampleInfo",
   "NLEInfo",
   "NPEInfo",
   "NREInfo",
@@ -46,6 +50,7 @@ __all__ = [
   "abs_distance",
   "cmpe",
   "DiffEvolution",
+  "ess",
   "fmpe",
   "l2_distance",
   "MultiEps",
@@ -54,6 +59,7 @@ __all__ = [
   "nle",
   "npe",
   "nre",
+  "rhat",
   "run_sequential",
   "sabc",
   "sbc",
