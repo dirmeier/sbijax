@@ -24,7 +24,6 @@ def smcabc(prior, simulator, summary_fn, distance_fn):
   engine = _SMCABCEngine((prior, simulator), summary_fn, distance_fn)
 
   def sample(rng_key, observable, **kwargs):
-    result = engine.sample_posterior(rng_key, observable, **kwargs)
-    return result[0] if isinstance(result, tuple) else result
+    return engine.sample_posterior(rng_key, observable, **kwargs)
 
   return ABCSampler(sample=sample)

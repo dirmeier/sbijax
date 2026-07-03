@@ -26,7 +26,6 @@ def sabc(prior, simulator, *, summary_fn=lambda x: x, distance_fn=abs_distance):
   engine = _SABCEngine((prior, simulator), summary_fn, distance_fn)
 
   def sample(rng_key, observable, **kwargs):
-    idata, _ = engine.sample_posterior(rng_key, observable, **kwargs)
-    return idata
+    return engine.sample_posterior(rng_key, observable, **kwargs)
 
   return ABCSampler(sample=sample)

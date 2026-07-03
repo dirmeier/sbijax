@@ -19,7 +19,6 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.util.data import as_inference_data
 
 _CDF_INFLATE = 1.5
 
@@ -502,7 +501,8 @@ class SABC:
         delta: resampling temperature (positive).
 
     Returns:
-        a tuple ``(InferenceData, sabc_info)``.
+        a tuple ``(particles, sabc_info)`` where ``particles`` is a named
+        pytree of posterior samples and ``sabc_info`` contains diagnostics.
     """
     schedule = schedule or SingleEps()
     proposal = proposal or DiffEvolution()
@@ -526,6 +526,5 @@ class SABC:
 
     named = jax.vmap(unravel)(population)
     thetas = jax.tree_util.tree_map(lambda x: x.reshape(1, *x.shape), named)
-    idata = as_inference_data(thetas, jnp.squeeze(observable))
     info = sabc_info(epsilon_history=eps_hist, u_history=u_hist, rho=rho)
-    return idata, info
+    return thetas, info

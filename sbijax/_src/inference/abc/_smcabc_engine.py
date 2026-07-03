@@ -12,7 +12,7 @@ from jax.tree_util import tree_map
 from tensorflow_probability.substrates.jax import distributions as tfd
 from tqdm import tqdm
 
-from sbijax._src.util.data import _tree_stack, as_inference_data
+from sbijax._src.util.data import _tree_stack
 
 if TYPE_CHECKING:
   import chex
@@ -69,8 +69,9 @@ class SMCABC:
         cov_scale: scaling of the transition kernel covariance
 
     Returns:
-        an array of samples from the posterior distribution of dimension
-        (n_samples \times p)
+        a tuple ``(particles, smc_info)`` where ``particles`` is a named
+        pytree of posterior samples and ``smc_info`` holds per-round
+        particle lists and simulation counts.
     """
     observable = jnp.atleast_2d(observable)
 
@@ -107,9 +108,8 @@ class SMCABC:
       all_n_simulations.append(self.n_total_simulations)
 
     thetas = jax.tree_util.tree_map(lambda x: x.reshape(1, *x.shape), particles)
-    inference_data = as_inference_data(thetas, jnp.squeeze(observable))
     smc_info = namedtuple("smc_info", "particles n_simulations")
-    return inference_data, smc_info(all_particles, all_n_simulations)
+    return thetas, smc_info(all_particles, all_n_simulations)
 
   def _chol_factor(self, particles, cov_scale):
     particles = jax.vmap(lambda x: ravel_pytree(x)[0])(particles)
