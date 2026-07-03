@@ -60,8 +60,8 @@ def test_run_sequential_recovers_gaussian_posterior_mean():
     n_iter=1000,
     batch_size=100,
   )
-  idata = est.sample(jr.PRNGKey(1), params, y_obs, n_samples=2000)
-  post_mean = jnp.mean(idata["/posterior"]["theta"].data.reshape(-1, 2), axis=0)
+  samples, _ = est.sample(jr.PRNGKey(1), params, y_obs, n_samples=2000)
+  post_mean = jnp.mean(samples["theta"].reshape(-1, 2), axis=0)
   # a correct atomic round recovers a posterior near the analytic mean, and
   # much closer than the prior mean (0) is -- a gross event-space or sign bug
   # in the atomic loss would fail this.

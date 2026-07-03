@@ -29,8 +29,8 @@ def test_npse_fit_then_sample():
   data = simulate(jr.PRNGKey(0), prior, simulator, n=64)
   est = npse(prior, make_score_model(2))
   params, _ = est.fit(jr.PRNGKey(1), data, n_iter=2, batch_size=32)
-  idata = est.sample(jr.PRNGKey(2), params, jnp.zeros(2), n_samples=16)
-  theta = idata["/posterior"]["theta"].data
+  samples, _ = est.sample(jr.PRNGKey(2), params, jnp.zeros(2), n_samples=16)
+  theta = samples["theta"]
   assert theta.ndim == 3 and theta.shape[-1] == 2
 
 

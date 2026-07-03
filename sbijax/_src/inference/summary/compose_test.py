@@ -38,7 +38,7 @@ def test_summarized_estimator_fit_and_sample():
   assert info.round == 0
 
   # sample takes the *raw* 4-d observation; the adapter summarizes it
-  idata = est.sample(
+  samples, _ = est.sample(
     jr.PRNGKey(3),
     params,
     jnp.zeros(4),
@@ -46,5 +46,5 @@ def test_summarized_estimator_fit_and_sample():
     n_samples=30,
     n_warmup=10,
   )
-  theta = idata["/posterior"]["theta"].data
+  theta = samples["theta"]
   assert theta.ndim == 3 and theta.shape[-1] == 2

@@ -6,7 +6,7 @@ from sbijax._src.mcmc import sample_with_imh
 
 
 def test_rmh_sampler(prior_log_prob_tuple):
-  samples = sample_with_imh(
+  samples, _ = sample_with_imh(
     jr.PRNGKey(1),
     prior_log_prob_tuple[1],
     prior_log_prob_tuple[0](),

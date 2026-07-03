@@ -6,7 +6,7 @@ from sbijax._src.mcmc import sample_with_mala
 
 
 def test_mala_sampler(prior_log_prob_tuple):
-  samples = sample_with_mala(
+  samples, _ = sample_with_mala(
     jr.PRNGKey(1),
     prior_log_prob_tuple[1],
     prior_log_prob_tuple[0](),
