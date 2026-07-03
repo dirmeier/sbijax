@@ -8,6 +8,7 @@ from sbijax._src.diagnostics.sbc import sbc
 from sbijax._src.inference.posterior.npe import npe
 from sbijax._src.nn.make_flow import make_maf
 from sbijax._src.simulate.simulate import simulate
+from sbijax._src.train.fit import fit
 
 
 def _gaussian_problem():
@@ -25,14 +26,14 @@ def _gaussian_problem():
 
 def test_sbc_ranks_are_calibrated():
   prior, simulator = _gaussian_problem()
-  data = simulate(jr.PRNGKey(0), prior, simulator, n=2000)
-  est = npe(prior, make_maf(2))
-  params, _ = est.fit(jr.PRNGKey(1), data, n_iter=500, batch_size=100)
+  data = simulate(jr.key(0), prior, simulator, n=2000)
+  obj = npe(make_maf(2))
+  params, _ = fit(jr.key(1), obj, data, n_iter=500, batch_size=100)
 
   n_post = 200
   ranks = sbc(
-    jr.PRNGKey(2),
-    est,
+    jr.key(2),
+    obj,
     params,
     prior,
     simulator,

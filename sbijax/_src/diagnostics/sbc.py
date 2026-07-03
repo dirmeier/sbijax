@@ -13,21 +13,23 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
+from sbijax._src.train.sample import sample
 from sbijax._src.util.data import flatten_chains
 
 
 def sbc(
   rng_key,
-  estimator,
+  objective,
   params,
   prior,
   simulator,
   *,
+  sampler=None,
   n_simulations=100,
   n_posterior_samples=1_000,
   **sample_kwargs,
 ):
-  """Compute simulation-based calibration ranks for a fitted estimator.
+  """Compute simulation-based calibration ranks for a fitted objective.
 
   For each of ``n_simulations`` draws ``theta* ~ prior`` and
   ``y* ~ simulator(theta*)``, draws ``n_posterior_samples`` from the posterior
@@ -36,13 +38,17 @@ def sbc(
 
   Args:
       rng_key: a jax random key
-      estimator: a fitted :class:`~sbijax._src.inference._estimator.Estimator`
+      objective: an ``ObjectiveFns`` returned by a factory such as
+          :func:`~sbijax._src.inference.posterior.npe.npe`
       params: the fitted parameters
       prior: the prior distribution
       simulator: a callable ``(rng_key, theta) -> y``
+      sampler: a sampler from
+          :func:`~sbijax._src.mcmc.sampler.make_sampler`; required for
+          MCMC methods, ignored by amortized methods
       n_simulations: number of calibration draws
       n_posterior_samples: posterior draws per calibration draw
-      **sample_kwargs: forwarded to ``estimator.sample``
+      **sample_kwargs: forwarded to ``sample``
 
   Returns:
       an integer array of shape ``(n_simulations, n_dims)`` of ranks
@@ -52,10 +58,12 @@ def sbc(
     theta_key, y_key, post_key = jr.split(key, 3)
     theta_true = prior.sample(seed=theta_key, sample_shape=(1,))
     y = simulator(y_key, theta_true)
-    samples, _ = estimator.sample(
+    samples, _ = sample(
       post_key,
+      objective,
       params,
       y[0],
+      sampler=sampler,
       n_samples=n_posterior_samples,
       **sample_kwargs,
     )
