@@ -1,9 +1,10 @@
 """sbijax: Simulation-based inference in JAX."""
 
-__version__ = "0.3.6"
+__version__ = "0.4.0"
 
-from sbijax._src.abc.sabc import (
-  SABC,
+from sbijax._src.diagnostics.convergence import ess, rhat
+from sbijax._src.diagnostics.sbc import sbc
+from sbijax._src.inference.abc._sabc_engine import (
   DiffEvolution,
   MultiEps,
   SingleEps,
@@ -12,69 +13,47 @@ from sbijax._src.abc.sabc import (
   sq_distance,
   weighted_sq,
 )
-from sbijax._src.abc.smc_abc import SMCABC
-from sbijax._src.cmpe import CMPE
-from sbijax._src.fmpe import FMPE
-from sbijax._src.nass import NASS
-from sbijax._src.nasss import NASSS
-from sbijax._src.nle import NLE
-from sbijax._src.npe import NPE
-from sbijax._src.nre import NRE
-from sbijax._src.snle import SNLE
-from sbijax._src.util.data import (
-  as_inference_data,
-  inference_data_as_dictionary,
-)
+from sbijax._src.inference.abc.sabc import sabc
+from sbijax._src.inference.abc.smcabc import smcabc
+from sbijax._src.inference.likelihood.nle import nle
+from sbijax._src.inference.likelihood.snle import snle
+from sbijax._src.inference.posterior.fmpe import fmpe
+from sbijax._src.inference.posterior.npe import npe
+from sbijax._src.inference.posterior.npse import npse
+from sbijax._src.inference.ratio.nre import nre
+from sbijax._src.inference.sequential import run_sequential
+from sbijax._src.inference.summary._compose import summarized_estimator
+from sbijax._src.inference.summary.nass import nass
+from sbijax._src.inference.summary.nasss import nasss
+from sbijax._src.simulate.simulate import simulate, stack
+from sbijax._src.train.sample import sample
+from sbijax._src.train.train import train
 
 __all__ = [
-  "CMPE",
-  "FMPE",
-  "NASS",
-  "NASSS",
-  "NLE",
-  "NPE",
-  "NRE",
-  "SABC",
-  "SMCABC",
-  "SNLE",
-  "DiffEvolution",
-  "MultiEps",
-  "SingleEps",
   "abs_distance",
-  "as_inference_data",
-  "inference_data_as_dictionary",
+  "DiffEvolution",
+  "ess",
+  "train",
+  "fmpe",
   "l2_distance",
-  "plot_ess",
-  "plot_loss_profile",
-  "plot_posterior",
-  "plot_rank",
-  "plot_rhat_and_ress",
-  "plot_trace",
+  "MultiEps",
+  "nass",
+  "nasss",
+  "nle",
+  "npe",
+  "npse",
+  "nre",
+  "rhat",
+  "run_sequential",
+  "sabc",
+  "sample",
+  "sbc",
+  "SingleEps",
+  "simulate",
+  "smcabc",
+  "snle",
   "sq_distance",
+  "stack",
+  "summarized_estimator",
   "weighted_sq",
 ]
-
-_PLOT_FNS = frozenset(
-  {
-    "plot_ess",
-    "plot_loss_profile",
-    "plot_posterior",
-    "plot_rank",
-    "plot_rhat_and_ress",
-    "plot_trace",
-  }
-)
-
-
-def __getattr__(name):
-  """Lazily import plotting helpers so matplotlib stays optional."""
-  if name in _PLOT_FNS:
-    try:
-      from sbijax._src.plot import plot  # noqa: PLC0415
-    except ImportError as e:
-      raise ImportError(
-        f"`{name}` requires the optional plotting dependencies; install "
-        "them with `pip install sbijax[all]`."
-      ) from e
-    return getattr(plot, name)
-  raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
