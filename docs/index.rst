@@ -12,9 +12,9 @@
 ``Sbijax`` is a Python library for neural simulation-based inference and
 approximate Bayesian computation using `JAX <https://github.com/google/jax>`_.
 It implements recent methods, such as *Sequential Monte Carlo ABC*,
-*Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient Statistics*
-or *Consistency model posterior estimation*, as well as methods to compute model
-diagnostics and for visualizing posterior distributions.
+*Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient
+Statistics* or *Neural Posterior Score Estimation*, as well as calibration and
+convergence diagnostics.
 
 .. caution::
 
@@ -23,16 +23,18 @@ diagnostics and for visualizing posterior distributions.
 Example
 -------
 
-``Sbijax`` implements a fully functional API in the idiom of dm-haiku and
-blackjax: every method is a factory returning a record of pure functions, with
-parameters threaded explicitly. All a user needs to define is a prior, a
-simulator function and an inferential algorithm. For example, you can define a
-neural likelihood estimation method and generate posterior samples like this:
+``Sbijax`` implements a low-level, functional API in the idiom of dm-haiku and
+blackjax: every method is a factory that takes only the network and returns a
+record of pure functions, and training and sampling are free driver functions
+(:func:`~sbijax.train`, :func:`~sbijax.sample`). The prior and simulator define
+the data; the optimizer and sampler are injected at the driver that uses them.
+For example, neural likelihood estimation:
 
 .. code-block:: python
 
     from jax import numpy as jnp, random as jr
-    from sbijax import nle, simulate
+    from sbijax import nle, train, sample, simulate
+    from sbijax.mcmc import make_sampler, nuts
     from sbijax.nn import make_maf
     from tensorflow_probability.substrates.jax import distributions as tfd
 
@@ -45,15 +47,15 @@ neural likelihood estimation method and generate posterior samples like this:
         y = theta["theta"] + p.sample(seed=seed)
         return y
 
-    estimator = nle(prior, make_maf(2))
+    estimator = nle(make_maf(2))          # network only
 
     y_observed = jnp.array([-1.0, 1.0])
-    data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=10_000)
-    params, info = estimator.fit(jr.PRNGKey(2), data)
-    posterior = estimator.sample(jr.PRNGKey(3), params, y_observed)
-
-Migrating from the 0.3 object-oriented API? See the
-:doc:`migration guide <migration>`.
+    data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
+    params, info = train(jr.key(2), estimator, data)
+    samples, _ = sample(
+        jr.key(3), estimator, params, y_observed,
+        sampler=make_sampler(nuts, prior=prior),
+    )
 
 Installation
 ------------
@@ -97,6 +99,8 @@ License
     :hidden:
 
     🏡 Home <self>
+    🧭 Design philosophy <design>
+    🔧 Custom loops <custom_loops>
     🔀 Migration guide <migration>
     📚 References <references>
 
