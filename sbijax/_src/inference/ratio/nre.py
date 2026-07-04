@@ -78,7 +78,7 @@ def nre(network, *, num_classes=10, gamma=1.0):
       gamma: relative weight of the contrastive classes
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
 
   def _loss(params, rng, batch):

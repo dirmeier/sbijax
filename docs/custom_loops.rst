@@ -44,7 +44,7 @@ A custom training loop
     theta = jax.vmap(lambda t: ravel_pytree(t)[0])(data["theta"])
     xy = {"y": data["y"], "theta": theta}
 
-    def minibatches(xy, batch_size, key):
+    def get_batch(xy, batch_size, key):
         n = xy["y"].shape[0]
         perm = jr.permutation(key, n)
         for i in range(0, n - batch_size + 1, batch_size):
@@ -52,13 +52,13 @@ A custom training loop
             yield {k: v[idx] for k, v in xy.items()}
 
     # build the carry from a first batch, then jit the step
-    first = next(minibatches(xy, 128, jr.key(1)))
+    first = next(get_batch(xy, 128, jr.key(1)))
     state = obj.train.init_fn(optimizer, jr.key(2), first)
     step = jax.jit(lambda rng, s, b: obj.train.step_fn(optimizer, rng, s, b))
 
     key = jr.key(3)
     for epoch in range(100):
-        for batch in minibatches(xy, 128, jr.fold_in(key, epoch)):
+        for batch in get_batch(xy, 128, jr.fold_in(key, epoch)):
             key, step_key = jr.split(key)
             metrics, state = step(step_key, state, batch)
         # plug in your own validation / early stopping, e.g.:
@@ -80,7 +80,7 @@ call it directly:
 
 For **likelihood/ratio** methods the posterior is formed at sample time. The
 usual path is to pass a sampler from :func:`sbijax.mcmc.make_sampler`, but you can
-also drive a kernel yourself with the low-level :mod:`sbijax.mcmc` routines by
+also drive a kernel yourself with the low-level ``sbijax.mcmc`` routines by
 supplying your own log-density. For example, with the slice sampler:
 
 .. code-block:: python
@@ -102,7 +102,7 @@ supplying your own log-density. For example, with the slice sampler:
         n_chains=4, n_samples=2_000, n_warmup=1_000,
     )
 
-Any of the kernel handles -- ``nuts``, ``mala``, ``rmh``, ``imh`` -- can be passed
+Any of the algorithms -- ``nuts``, ``mala``, ``rmh``, ``imh`` -- can be passed
 to :func:`sbijax.mcmc.make_sampler`, which wraps exactly this pattern (target
 ``loglik + log p(theta)``, ``N(0, I)`` initialisation, chosen kernel) behind
 :func:`sbijax.sample`. Rolling it by hand lets you swap the kernel, change the

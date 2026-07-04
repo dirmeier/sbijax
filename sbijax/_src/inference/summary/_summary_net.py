@@ -19,7 +19,7 @@ def make_summary_net(network, jsd_loss):
       jsd_loss: a callable ``(params, rng, apply_fn, **batch) -> scalar``
 
   Returns:
-      a :class:`~sbijax._src.train._types.SummaryFns`
+      a ``SummaryFns``
   """
 
   def _loss(params, rng, batch):

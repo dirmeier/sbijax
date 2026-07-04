@@ -1,8 +1,8 @@
 """Compose a summary network with a downstream estimator.
 
-A :class:`~sbijax._src.train._types.SummaryFns` learns a low-dimensional
+A ``SummaryFns`` learns a low-dimensional
 statistic of the data; it does not produce a posterior. To infer, its summaries
-feed a downstream :class:`~sbijax._src.train._types.ObjectiveFns` (NLE, NRE,
+feed a downstream ``ObjectiveFns`` (NLE, NRE,
 ...). :func:`summarized_estimator` wires the two together so the summary
 transform is applied consistently to both the training batches and the
 observation -- the common failure mode is forgetting to summarize the
@@ -19,11 +19,11 @@ def summarized_estimator(estimator, summary_net, summary_params):
   """Adapt an objective to operate on learned summaries.
 
   Given a *pre-fitted* summary network, returns an
-  :class:`~sbijax._src.train._types.ObjectiveFns` whose training summarizes each
+  ``ObjectiveFns`` whose training summarizes each
   batch before delegating to the wrapped estimator and whose ``sample_fn``
   summarizes the observation before sampling. Because it returns an
   ``ObjectiveFns`` record it stays conformant and is driven by the generic
-  :func:`~sbijax._src.train.fit.fit` / sampling helpers.
+  :func:`~sbijax.train` / sampling helpers.
 
   Fit the summary network first, then wrap the estimator::
 
@@ -34,14 +34,14 @@ def summarized_estimator(estimator, summary_net, summary_params):
       samples, _ = est.sample_fn(key, params, y_observed, sampler=sampler)
 
   Args:
-      estimator: the downstream :class:`~sbijax._src.train._types.ObjectiveFns`
+      estimator: the downstream ``ObjectiveFns``
           consuming the summaries
       summary_net: a fitted
-          :class:`~sbijax._src.train._types.SummaryFns`
+          ``SummaryFns``
       summary_params: the summary network's fitted parameters
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
 
   def _summarize_batch(batch):

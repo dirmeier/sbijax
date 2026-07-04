@@ -5,7 +5,7 @@ Implements (truncated sequential) neural posterior score estimation
 :func:`~sbijax.fmpe` -- a score network trained by the score-matching loss and
 sampled by rejection -- so this factory delegates to it. The method's
 distinctive truncated-prior proposal for sequential rounds is provided by
-:func:`~sbijax._src.experimental._truncated.make_truncated_proposal` and passed
+:func:`~sbijax.experimental.make_truncated_proposal` and passed
 to :func:`~sbijax.run_sequential` via its ``proposal_fn`` hook.
 """
 
@@ -20,6 +20,6 @@ def npse(network):
           methods (e.g. :func:`sbijax.experimental.nn.make_score_model`)
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
   return fmpe(network)

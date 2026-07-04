@@ -1,5 +1,5 @@
-``sbijax.nn``
-=============
+sbijax.nn
+=========
 
 .. currentmodule:: sbijax.nn
 

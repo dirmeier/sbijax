@@ -421,7 +421,7 @@ class SABC:
           are reshaped to ``(B, 1)`` internally.
 
   This is the internal engine; the public interface is the functional
-  :func:`sbijax._src.inference.abc.sabc.sabc` factory.
+  :func:`sbijax.sabc` factory.
 
   References:
       Albert, Carlo, et al. "Simulated Annealing ABC with multiple summary

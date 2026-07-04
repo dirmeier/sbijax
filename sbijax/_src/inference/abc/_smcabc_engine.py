@@ -32,7 +32,7 @@ class SMCABC:
       distance_fn: distance function
 
   This is the internal engine; the public interface is the functional
-  :func:`sbijax._src.inference.abc.smcabc.smcabc` factory.
+  :func:`sbijax.smcabc` factory.
 
   References:
       Beaumont, Mark A, et al. "Adaptive approximate Bayesian computation". Biometrika, 2009.

@@ -11,10 +11,12 @@ from sbijax._src.mcmc.util import run_blackjax
 
 
 class Kernel(NamedTuple):
-  """A BlackJAX kernel handle.
+  """Identifies a BlackJAX MCMC algorithm (NUTS, MALA, RMH, IMH).
 
-  Attributes:
-      init_fn: ``(rng_key, initial_positions, lp) -> (initial_states, kernel)``
+  Wraps the algorithm's initializer so :func:`make_sampler` can build the
+  concrete kernel and initial chain states at sampling time. The single field
+  ``init_fn`` has signature
+  ``(rng_key, initial_positions, lp) -> (initial_states, kernel)``.
   """
 
   init_fn: Callable
@@ -36,7 +38,7 @@ def make_sampler(kernel, *, prior, **kernel_kwargs):
   """Build a posterior sampler from an MCMC ``kernel`` and a ``prior``.
 
   Args:
-      kernel: a :class:`Kernel` handle (e.g. ``sbijax.mcmc.nuts``)
+      kernel: a ``Kernel`` handle (e.g. ``sbijax.mcmc.nuts``)
       prior: the prior; used for the target density and Gaussian chain init
       **kernel_kwargs: forwarded to the kernel
 

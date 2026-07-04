@@ -1,5 +1,5 @@
-``sbijax.simulators``
-=====================
+sbijax.simulators
+=================
 
 .. currentmodule:: sbijax.simulators
 

@@ -23,6 +23,6 @@ def aio(network):
           ``log_prob`` methods
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
   return fmpe(network)

@@ -1,7 +1,7 @@
 """Simulated annealing approximate Bayesian computation.
 
 Implements the method of :cite:t:`albert2025simulated` as a functional
-:class:`~sbijax._src.inference.abc._sampler.ABCSampler`. The particle-annealing
+``ABCSampler``. The particle-annealing
 core is reused from the existing implementation; this factory exposes it behind
 a pure ``sample`` function taking the prior and simulator separately.
 """
@@ -21,7 +21,7 @@ def sabc(prior, simulator, *, summary_fn=lambda x: x, distance_fn=abs_distance):
       distance_fn: distance between simulated and observed summaries
 
   Returns:
-      an :class:`~sbijax._src.inference.abc._sampler.ABCSampler`
+      an ``ABCSampler``
   """
   engine = _SABCEngine((prior, simulator), summary_fn, distance_fn)
 

@@ -92,7 +92,7 @@ Training is a free driver; the optimizer is injected here
 
 ``train`` is a free function, not a method. The optimizer is passed to ``train``
 (defaulting to ``optax.adam(3e-4)``), never baked into the factory. It returns
-the fitted parameters plus a generic :class:`~sbijax.Info` (``round`` +
+the fitted parameters plus a generic ``Info`` (``round`` +
 ``losses``); the per-method ``*Info`` records are gone.
 
 .. code-block:: python

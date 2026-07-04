@@ -1,7 +1,7 @@
 """Sequential Monte Carlo approximate Bayesian computation.
 
 Implements the method of :cite:t:`beaumont2009adaptive` as a functional
-:class:`~sbijax._src.inference.abc._sampler.ABCSampler`. The SMC core is reused
+``ABCSampler``. The SMC core is reused
 from the existing implementation and exposed behind a pure ``sample`` function.
 """
 
@@ -19,7 +19,7 @@ def smcabc(prior, simulator, summary_fn, distance_fn):
       distance_fn: distance between simulated and observed summaries
 
   Returns:
-      an :class:`~sbijax._src.inference.abc._sampler.ABCSampler`
+      an ``ABCSampler``
   """
   engine = _SMCABCEngine((prior, simulator), summary_fn, distance_fn)
 

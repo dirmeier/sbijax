@@ -17,6 +17,6 @@ def snle(network):
           method that reduces the dimensionality of the data
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
   return nle(network)

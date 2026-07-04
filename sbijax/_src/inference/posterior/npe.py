@@ -100,7 +100,7 @@ def _atomic_loss(params, rng, network, prior, num_atoms, **batch):
 def npe(network, *, num_atoms=10):
   """Construct a neural posterior estimator.
 
-  In round 0 use the returned :class:`~sbijax._src.train._types.ObjectiveFns`
+  In round 0 use the returned ``ObjectiveFns``
   directly for amortized maximum-likelihood training. For round > 0 (i.e.
   when training on data simulated from a fitted posterior rather than the
   prior), call ``obj.extra(prior)`` to obtain the atomic proposal-posterior
@@ -108,12 +108,12 @@ def npe(network, *, num_atoms=10):
 
   Args:
       network: a conditional density estimator with ``log_prob`` and
-          ``sample`` methods (e.g. from :func:`~sbijax._src.nn.make_flow`)
+          ``sample`` methods (e.g. from :func:`~sbijax.nn.make_maf`)
       num_atoms: the number of atoms in the contrastive proposal-posterior
           loss used by ``extra(prior)``
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`; its ``extra``
+      an ``ObjectiveFns``; its ``extra``
       field is a callable ``(prior) -> ObjectiveFns`` for sequential rounds
   """
 
@@ -127,7 +127,7 @@ def npe(network, *, num_atoms=10):
           batch: a ``{"theta", "y"}`` batch dict
 
       Returns:
-          a :class:`~sbijax._src.train._types.TrainingState`
+          a ``TrainingState``
       """
       params = network.init(
         rng_key, method="log_prob", y=batch["theta"], x=batch["y"]
@@ -140,7 +140,7 @@ def npe(network, *, num_atoms=10):
       Args:
           optimizer: an optax optimizer
           rng_key: a jax random key
-          state: the current :class:`~sbijax._src.train._types.TrainingState`
+          state: the current ``TrainingState``
           batch: a ``{"theta", "y"}`` batch dict
 
       Returns:
@@ -159,7 +159,7 @@ def npe(network, *, num_atoms=10):
 
       Args:
           rng_key: a jax random key
-          state: the current :class:`~sbijax._src.train._types.TrainingState`
+          state: the current ``TrainingState``
           batch: a ``{"theta", "y"}`` batch dict
 
       Returns:

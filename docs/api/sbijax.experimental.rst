@@ -1,5 +1,5 @@
-``sbijax.experimental``
-=======================
+sbijax.experimental
+===================
 
 .. currentmodule:: sbijax.experimental
 

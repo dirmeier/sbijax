@@ -39,12 +39,12 @@ def sbc(
   Args:
       rng_key: a jax random key
       objective: an ``ObjectiveFns`` returned by a factory such as
-          :func:`~sbijax._src.inference.posterior.npe.npe`
+          :func:`~sbijax.npe`
       params: the fitted parameters
       prior: the prior distribution
       simulator: a callable ``(rng_key, theta) -> y``
       sampler: a sampler from
-          :func:`~sbijax._src.mcmc.sampler.make_sampler`; required for
+          :func:`~sbijax.mcmc.make_sampler`; required for
           MCMC methods, ignored by amortized methods
       n_simulations: number of calibration draws
       n_posterior_samples: posterior draws per calibration draw

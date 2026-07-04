@@ -1,6 +1,5 @@
 # sbijax <img src="https://raw.githubusercontent.com/dirmeier/sbijax/main/docs/_static/sticker.png" align="right" width="160px"/>
 
-[![active](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![ci](https://github.com/dirmeier/sbijax/actions/workflows/ci.yaml/badge.svg)](https://github.com/dirmeier/sbijax/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/dirmeier/sbijax/branch/main/graph/badge.svg?token=dn1xNBSalZ)](https://codecov.io/gh/dirmeier/sbijax)
 [![documentation](https://readthedocs.org/projects/sbijax/badge/?version=latest)](https://sbijax.readthedocs.io/en/latest/?badge=latest)
@@ -8,21 +7,18 @@
 
 > Simulation-based inference in JAX
 
-## About
-
 ``Sbijax`` is a Python library for neural simulation-based inference and
 approximate Bayesian computation using [JAX](https://github.com/google/jax).
-It implements recent methods, such as *Simulated-annealing ABC*,
+It implements recent methods, such as *Simulated Annealing ABC*,
 *Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient Statistics*
-or *Consistency model posterior estimation*, as well as methods to compute model
-diagnostics and for visualizing posterior distributions.
+or *Neural Posterior Score Estimation*.
 
 > [!CAUTION]
 > ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
 ## Quick start
 
-`Sbijax` implements a fully functional API in the idiom of dm-haiku and blackjax:
+`Sbijax` implements a fully functional API in the idiom of [Haiku](https://github.com/google-deepmind/dm-haiku):
 every method is a factory returning a record of pure functions, with parameters
 threaded explicitly. All a user needs to define is a prior, a simulator function
 and an inferential algorithm. For example, you can define a neural likelihood
@@ -30,9 +26,11 @@ estimation method and generate posterior samples like this:
 
 ```python
 from jax import numpy as jnp, random as jr
-from sbijax import nle, simulate
-from sbijax.nn import make_maf
 from tensorflow_probability.substrates.jax import distributions as tfd
+
+from sbijax import nle, train, sample, simulate
+from sbijax.mcmc import make_sampler, nuts
+from sbijax.nn import make_maf
 
 prior = tfd.JointDistributionNamed(dict(
     theta=tfd.Normal(jnp.zeros(2), jnp.ones(2))
@@ -43,21 +41,18 @@ def simulator_fn(seed, theta):
     y = theta["theta"] + p.sample(seed=seed)
     return y
 
-estimator = nle(prior, make_maf(2))
+estimator = nle(make_maf(2))
 
 y_observed = jnp.array([-1.0, 1.0])
-data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=10_000)
-params, info = estimator.fit(jr.PRNGKey(2), data)
-posterior = estimator.sample(jr.PRNGKey(3), params, y_observed)
+data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
+params, info = train(jr.key(2), estimator, data)
+samples, _ = sample(
+    jr.key(3), estimator, params, y_observed,
+    sampler=make_sampler(nuts, prior=prior),
+)
 ```
 
-Migrating from the 0.3 object-oriented API? See the [migration guide](https://sbijax.readthedocs.io/en/latest/migration.html).
-
 More self-contained examples can be found in [examples](https://github.com/dirmeier/sbijax/tree/main/examples).
-
-## Documentation
-
-Documentation can be found [here](https://sbijax.readthedocs.io/en/latest/).
 
 ## Installation
 
@@ -76,36 +71,9 @@ To install the latest GitHub <RELEASE>, use:
 pip install git+https://github.com/dirmeier/sbijax@<RELEASE>
 ```
 
-## Contributing
+## Documentation
 
-Contributions in the form of pull requests are more than welcome. A good way to start is to check out issues labelled
-[good first issue](https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
-
-In order to contribute:
-
-1) Clone `sbijax` and install `uv` from [here](https://docs.astral.sh/uv/getting-started/installation/).
-2) Install all dependencies using `uv sync --all-groups`.
-3) Install `pre-commit` and `gitlint` via:
-
-   ```shell
-   pre-commit install
-   gitlint install-hook
-   ```
-4) Create a new branch locally `git checkout -b feature/my-new-feature` or `git checkout -b issue/fixes-bug`.
-5) Implement your contribution and ideally a test case.
-6) Test, lint and format your contribution by running:
-
-   ```shell
-   uv run pytest                         # run the test suite
-   uv run ruff check sbijax examples     # lint
-   uv run ruff format sbijax examples    # format
-   uv run mypy sbijax                    # type-check
-   ```
-
-   The `pre-commit` hook installed in step 3 runs `ruff` and `mypy` on every
-   commit, so these checks also run automatically. To build the docs locally,
-   run `make html` from within the `docs` directory.
-7) Submit a PR 🙂.
+Documentation can be found [here](https://sbijax.readthedocs.io/en/latest/).
 
 ## Citing sbijax
 
@@ -123,4 +91,4 @@ If you find our work relevant to your research, please consider citing:
 ## Acknowledgements
 
 > [!NOTE]
-> 📝 The API of the package is heavily inspired by [`Haiku`](https://github.com/google-deepmind/dm-haiku) and [`BlackJAX`](https://github.com/blackjax-devs/blackjax).
+> 📝 The API of the package is heavily inspired by [`Haiku`](https://github.com/google-deepmind/dm-haiku).

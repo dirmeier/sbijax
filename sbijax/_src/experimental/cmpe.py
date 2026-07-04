@@ -46,8 +46,8 @@ def _discretization_schedule(n_iter, max_iter=1000):
 def cmpe(network, *, t_min=0.001, t_max=50.0):
   """Construct a consistency model posterior objective.
 
-  The returned :class:`~sbijax._src.train._types.ObjectiveFns` is trained via
-  the shared :func:`~sbijax._src.train.fit.fit` driver.  EMA params are
+  The returned ``ObjectiveFns`` is trained via
+  the shared :func:`~sbijax.train` driver.  EMA params are
   threaded through ``TrainingState.params`` as a dict:
   ``{"params": live_params, "ema_params": ema_params}``.
 
@@ -58,7 +58,7 @@ def cmpe(network, *, t_min=0.001, t_max=50.0):
       t_max: maximal time point for ODE integration
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
 
   def _loss(params_dict, rng_key, batch, is_training):

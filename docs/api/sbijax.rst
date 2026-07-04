@@ -1,5 +1,5 @@
-``sbijax``
-==========
+sbijax
+======
 
 .. currentmodule:: sbijax
 
@@ -19,7 +19,7 @@ methods, the sampler (which carries the prior) at ``sample``::
         key, est, params, y_observed, sampler=make_sampler(nuts, prior=prior)
     )
 
-See :doc:`design` for the full design and :doc:`migration` for moving from the
+See :doc:`/design` for the full design and :doc:`/migration` for moving from the
 class-based API.
 
 .. autosummary::
@@ -40,8 +40,6 @@ class-based API.
     simulate
     stack
     sbc
-    ess
-    rhat
 
 Data pipeline
 -------------
@@ -102,5 +100,3 @@ Diagnostics
 -----------
 
 .. autofunction:: sbc
-.. autofunction:: ess
-.. autofunction:: rhat

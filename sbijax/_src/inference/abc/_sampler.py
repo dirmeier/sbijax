@@ -8,7 +8,7 @@ class ABCSampler(NamedTuple):
   """A likelihood-free approximate Bayesian computation sampler.
 
   ABC methods do not train a network, so unlike an
-  :class:`~sbijax._src.inference._estimator.Estimator` they expose only a
+  ``Estimator`` they expose only a
   ``sample`` function that simulates during sampling.
 
   Attributes:

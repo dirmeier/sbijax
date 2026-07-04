@@ -2,15 +2,14 @@ Design philosophy
 =================
 
 ``sbijax`` is written in the function-first, low-level style of
-`dm-haiku <https://github.com/google-deepmind/dm-haiku>`_ and
-`BlackJAX <https://github.com/blackjax-devs/blackjax>`_. There are no estimator
+`Haiku <https://github.com/google-deepmind/dm-haiku>`_. There are no estimator
 classes and no hidden state: every method is a **factory that returns a record
 of pure functions**, and the training and sampling loops are **free functions**
 that operate on those records. This page explains the design and how it is
 implemented.
 
-The one-screen version
-----------------------
+Overview
+--------
 
 .. code-block:: python
 

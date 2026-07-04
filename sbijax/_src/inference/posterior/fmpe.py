@@ -16,7 +16,7 @@ def fmpe(network):
           methods
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
 
   def _loss(params, rng, batch, is_training):

@@ -29,7 +29,7 @@ def make_truncated_proposal(
   n_prior=1_000_000,
   max_iter=1_000,
 ):
-  """Build a truncated-prior ``proposal_fn`` for :func:`run_sequential`.
+  """Build a truncated-prior ``proposal_fn`` for :func:`~sbijax.run_sequential`.
 
   Args:
       prior: the prior distribution

@@ -11,7 +11,7 @@
 
 ``Sbijax`` is a Python library for neural simulation-based inference and
 approximate Bayesian computation using `JAX <https://github.com/google/jax>`_.
-It implements recent methods, such as *Sequential Monte Carlo ABC*,
+It implements recent methods, such as *Simulated Annealing ABC*,
 *Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient
 Statistics* or *Neural Posterior Score Estimation*, as well as calibration and
 convergence diagnostics.
@@ -47,7 +47,7 @@ For example, neural likelihood estimation:
         y = theta["theta"] + p.sample(seed=seed)
         return y
 
-    estimator = nle(make_maf(2))          # network only
+    estimator = nle(make_maf(2))
 
     y_observed = jnp.array([-1.0, 1.0])
     data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
@@ -99,13 +99,12 @@ License
     :hidden:
 
     🏡 Home <self>
-    🧭 Design philosophy <design>
-    🔧 Custom loops <custom_loops>
+    🧭 Design philosophy <design>    
     🔀 Migration guide <migration>
     📚 References <references>
 
 ..  toctree::
-    :caption: 🎓 Tutorials
+    :caption:  Tutorials
     :maxdepth: 1
     :hidden:
 
@@ -113,22 +112,11 @@ License
     A more detailed intro  <notebooks/more_detailed_intro>
     Examples <notebooks/examples>
     Inference using EEG data  <notebooks/eeg_data_example>
-
-..  toctree::
-    :caption: 🚀 Examples
-    :maxdepth: 1
-    :hidden:
-
+    🔧 Custom loops <custom_loops>
     Self-contained examples <examples>
 
 ..  toctree::
-    :caption: 🧱 API
+    :caption: API
     :maxdepth: 3
-    :hidden:
 
-    sbijax
-    sbijax.experimental
-    sbijax.mcmc
-    sbijax.nn
-    sbijax.simulators
-    sbijax.util
+    api/index

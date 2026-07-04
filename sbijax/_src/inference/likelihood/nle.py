@@ -2,7 +2,7 @@
 
 Implements the method introduced in :cite:t:`papama2019neural` as a functional
 objective: a factory that turns a conditional density network into an
-:class:`~sbijax._src.train._types.ObjectiveFns`. The network models the
+``ObjectiveFns``. The network models the
 likelihood ``p(y | theta)``; the posterior is obtained at sample time by
 handing the likelihood log-density to an injected MCMC sampler that adds the
 prior.
@@ -25,7 +25,7 @@ def nle(network):
       network: a conditional density estimator exposing a ``log_prob`` method
 
   Returns:
-      an :class:`~sbijax._src.train._types.ObjectiveFns`
+      an ``ObjectiveFns``
   """
 
   def _loss(params, rng, batch):  # noqa: ARG001
