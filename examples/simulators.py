@@ -25,7 +25,7 @@ def run():
     return jnp.sum(log_prior) + jnp.sum(log_lik)
 
   partial_joint_pdf = functools.partial(joint_pdf, y=y)
-  samples = sample_with_slice(
+  samples, _ = sample_with_slice(
     jr.key(2),
     partial_joint_pdf,
     prior,

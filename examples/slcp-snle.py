@@ -8,7 +8,6 @@ import argparse
 
 import haiku as hk
 import jax
-import matplotlib.pyplot as plt
 import optax
 import surjectors
 from jax import numpy as jnp
@@ -25,8 +24,8 @@ from surjectors.nn import MADE, make_mlp
 from surjectors.util import unstack
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import SNLE, inference_data_as_dictionary
-from sbijax.nn import make_maf
+from sbijax import run_sequential, sample, snle
+from sbijax.mcmc import make_sampler, nuts
 
 
 def prior_fn():
@@ -152,6 +151,7 @@ def make_model(dim, use_surjectors):
 
 
 def run(n_rounds, n_iter):
+  prior = prior_fn()
   y_obs = jnp.array(
     [
       [
@@ -166,42 +166,28 @@ def run(n_rounds, n_iter):
       ]
     ]
   )
-  fns = prior_fn(), simulator_fn
 
-  neural_network = make_maf(8, n_layer_dimensions=[8, 8, 5, 5, 5])
-  snl = SNLE(fns, neural_network)
-  optimizer = optax.adam(1e-3)
+  neural_network = make_model(8, use_surjectors=True)
+  estimator = snle(neural_network)
+  sampler = make_sampler(nuts, prior=prior)
 
-  data, params = None, {}
-  for i in range(n_rounds):
-    data, _ = snl.simulate_data_and_possibly_append(
-      jr.fold_in(jr.PRNGKey(1), i),
-      params=params,
-      observable=y_obs,
-      data=data,
-    )
-    params, info = snl.fit(
-      jr.fold_in(jr.PRNGKey(2), i),
-      data=data,
-      optimizer=optimizer,
-      n_iter=n_iter,
-    )
+  params, info = run_sequential(
+    jr.key(1),
+    estimator,
+    prior,
+    simulator_fn,
+    y_obs,
+    n_rounds=n_rounds,
+    n_simulations_per_round=2_000,
+    sampler=sampler,
+    optimizer=optax.adam(1e-3),
+    n_iter=n_iter,
+  )
 
-  sample_key, rng_key = jr.split(jr.PRNGKey(3))
-  inference_results, _ = snl.sample_posterior(sample_key, params, y_obs)
-
-  samples = inference_data_as_dictionary(inference_results.posterior)["theta"]
-  _, axes = plt.subplots(figsize=(12, 10), nrows=5, ncols=5)
-  for i in range(0, 5):
-    for j in range(0, 5):
-      ax = axes[i, j]
-      if i < j:
-        ax.axis("off")
-      else:
-        ax.hexbin(samples[..., j], samples[..., i], gridsize=50, bins="log")
-  for i in range(5):
-    axes[i, i].hist(samples[..., i], color="black")
-  plt.show()
+  samples, _ = sample(jr.key(3), estimator, params, y_obs, sampler=sampler)
+  theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":

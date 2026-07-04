@@ -2,3 +2,4 @@
 ==============
 
 .. bibliography:: references.bib
+   :all:
