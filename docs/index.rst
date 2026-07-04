@@ -11,10 +11,10 @@
 
 ``Sbijax`` is a Python library for neural simulation-based inference and
 approximate Bayesian computation using `JAX <https://github.com/google/jax>`_.
-It implements recent methods, such as *Sequential Monte Carlo ABC*,
-*Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient Statistics*
-or *Consistency model posterior estimation*, as well as methods to compute model
-diagnostics and for visualizing posterior distributions.
+It implements recent methods, such as *Simulated Annealing ABC*,
+*Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient
+Statistics* or *Neural Posterior Score Estimation*, as well as calibration and
+convergence diagnostics.
 
 .. caution::
 
@@ -23,36 +23,39 @@ diagnostics and for visualizing posterior distributions.
 Example
 -------
 
-``Sbijax`` implements a slim object-oriented API with functional elements stemming from
-JAX. All a user needs to define is a prior model, a simulator function and an inferential algorithm.
-For example, you can define a neural likelihood estimation method and generate posterior samples like this:
+``Sbijax`` implements a low-level, functional API in the idiom of dm-haiku and
+blackjax: every method is a factory that takes only the network and returns a
+record of pure functions, and training and sampling are free driver functions
+(:func:`~sbijax.train`, :func:`~sbijax.sample`). The prior and simulator define
+the data; the optimizer and sampler are injected at the driver that uses them.
+For example, neural likelihood estimation:
 
 .. code-block:: python
 
     from jax import numpy as jnp, random as jr
-    from sbijax import NLE
+    from sbijax import nle, train, sample, simulate
+    from sbijax.mcmc import make_sampler, nuts
     from sbijax.nn import make_maf
     from tensorflow_probability.substrates.jax import distributions as tfd
 
-    def prior_fn():
-        prior = tfd.JointDistributionNamed(dict(
-            theta=tfd.Normal(jnp.zeros(2), jnp.ones(2))
-        ), batch_ndims=0)
-        return prior
+    prior = tfd.JointDistributionNamed(dict(
+        theta=tfd.Normal(jnp.zeros(2), jnp.ones(2))
+    ), batch_ndims=0)
 
     def simulator_fn(seed, theta):
         p = tfd.Normal(jnp.zeros_like(theta["theta"]), 0.1)
         y = theta["theta"] + p.sample(seed=seed)
         return y
 
-
-    fns = prior_fn, simulator_fn
-    model = NLE(fns, make_maf(2))
+    estimator = nle(make_maf(2))
 
     y_observed = jnp.array([-1.0, 1.0])
-    data, _ = model.simulate_data(jr.PRNGKey(1))
-    params, _ = model.fit(jr.PRNGKey(2), data=data)
-    posterior, _ = model.sample_posterior(jr.PRNGKey(3), params, y_observed)
+    data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
+    params, info = train(jr.key(2), estimator, data)
+    samples, _ = sample(
+        jr.key(3), estimator, params, y_observed,
+        sampler=make_sampler(nuts, prior=prior),
+    )
 
 Installation
 ------------
@@ -86,13 +89,6 @@ In order to contribute:
 5) test it by calling ``make tests``, ``make lints`` and ``make format`` on the (Unix) command line,
 6) submit a PR 🙂
 
-Acknowledgements
-----------------
-
-.. note::
-
-    📝 The API of the package is heavily inspired by the excellent Pytorch-based `sbi <https://github.com/sbi-dev/sbi>`_ package.
-
 License
 -------
 
@@ -103,10 +99,12 @@ License
     :hidden:
 
     🏡 Home <self>
+    🧭 Design philosophy <design>    
+    🔀 Migration guide <migration>
     📚 References <references>
 
 ..  toctree::
-    :caption: 🎓 Tutorials
+    :caption:  Tutorials
     :maxdepth: 1
     :hidden:
 
@@ -114,22 +112,11 @@ License
     A more detailed intro  <notebooks/more_detailed_intro>
     Examples <notebooks/examples>
     Inference using EEG data  <notebooks/eeg_data_example>
-
-..  toctree::
-    :caption: 🚀 Examples
-    :maxdepth: 1
-    :hidden:
-
+    🔧 Custom loops <custom_loops>
     Self-contained examples <examples>
 
 ..  toctree::
-    :caption: 🧱 API
+    :caption: API
     :maxdepth: 3
-    :hidden:
 
-    sbijax
-    sbijax.experimental
-    sbijax.mcmc
-    sbijax.nn
-    sbijax.simulators
-    sbijax.util
+    api/index

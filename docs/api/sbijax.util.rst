@@ -1,5 +1,5 @@
-``sbijax.util``
-===============
+sbijax.util
+===========
 
 .. currentmodule:: sbijax.util
 

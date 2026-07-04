@@ -3,19 +3,20 @@
 Demonstrates NPSE on a simple mixture model.
 """
 
-import matplotlib.pyplot as plt
+import argparse
+
+import optax
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import plot_posterior
-from sbijax.experimental import NPSE
+from sbijax import npse, sample, simulate, train
 from sbijax.experimental.nn import make_score_model
 
 
 def prior_fn():
   prior = tfd.JointDistributionNamed(
-    {"theta": tfd.Normal(jnp.zeros(2), 1)}, batch_ndims=0
+    {"theta": tfd.Normal(jnp.zeros(2), jnp.array(1.0))}, batch_ndims=0
   )
   return prior
 
@@ -33,35 +34,28 @@ def simulator_fn(seed, theta):
 
 
 def run(n_iter):
-  y_observed = jnp.array([-2.0, 2.0])
-  fns = prior_fn(), simulator_fn
+  prior = prior_fn()
+  y_observed = jnp.array([-2.0, 1.0])
   neural_network = make_score_model(2)
-  model = NPSE(fns, neural_network)
+  estimator = npse(neural_network)
 
-  data, params = None, None
-  for i in range(2):
-    data, _ = model.simulate_data_and_possibly_append(
-      jr.PRNGKey(1),
-      params=params,
-      observable=y_observed,
-      data=data,
-      n_simulations=10_000,
-    )
-    params, info = model.fit(
-      jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter
-    )
-  inference_result, _ = model.sample_posterior(
-    jr.PRNGKey(3), params, y_observed
+  data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
+  params, info = train(
+    jr.key(2),
+    estimator,
+    data,
+    optimizer=optax.adam(3e-4),
+    n_early_stopping_patience=25,
+    n_iter=n_iter,
   )
-
-  plot_posterior(inference_result)
-  plt.show()
+  samples, _ = sample(jr.key(3), estimator, params, y_observed)
+  theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":
-  import argparse
-
   parser = argparse.ArgumentParser()
-  parser.add_argument("--n-iter", type=int, default=1_000)
+  parser.add_argument("--n-iter", type=int, default=10)
   args = parser.parse_args()
   run(args.n_iter)

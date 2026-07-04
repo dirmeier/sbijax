@@ -1,24 +1,13 @@
 html[data-theme="light"] {
-    --pst-color-primary: rgb(121, 40, 161);
+    /* --pst-color-primary: rgb(121, 40, 161); */
+    /* --pst-color-primary:#b26679;
     --pst-color-primary-bg: #ffe9dd;
     --pst-color-secondary: #b26679;
-    --pst-color-inline-code-links: #b26679;
+    --pst-color-inline-code-links: #b26679; */
 }
 
 pre > span {
     line-height: 20px;
-}
-
-span.kn {
-     color: rgb(0, 120, 161) !important;
-}
-
-span.ml, span.mi, span.nb {
-     color: lightcoral !important;
-}
-
-span.k, span.nn {
-     color: rgb(168, 70, 185) !important;
 }
 
 h1 > code > span {
@@ -34,9 +23,6 @@ pre {
 h1 {
     margin-bottom: 50px;
 }
-h3, h2, h1 {
-
-}
 
 nav > li > a > code.literal {
     padding-top: 0;
@@ -49,18 +35,18 @@ nav.bd-links p.caption {
     text-transform: uppercase;
 }
 
-code.literal {
+/* code.literal {
   background-color: white;
   border: 0;
   border-radius: 0;
-}
+} */
 
 a > code {
     font-weight: 575;
 }
 
 a:hover {
-      text-decoration-thickness: 1px !important;
+    text-decoration-thickness: 1px !important;
 }
 
 ul.bd-breadcrumbs li.breadcrumb-item a:hover {

@@ -3,12 +3,13 @@
 Demonstrates NLE on a simple mixture model.
 """
 
-import matplotlib.pyplot as plt
+import optax
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import NLE, plot_posterior
+from sbijax import nle, sample, simulate, train
+from sbijax.mcmc import make_sampler, nuts
 from sbijax.nn import make_mdn, make_spf
 
 
@@ -32,23 +33,32 @@ def simulator_fn(seed, theta):
 
 
 def run(use_spf, n_iter):
+  prior = prior_fn()
   y_observed = jnp.array([-2.0, 1.0])
-  fns = prior_fn(), simulator_fn
   neural_network = (
     make_spf(2, -5.0, 5.0, n_params=10) if use_spf else make_mdn(2, 10)
   )
-  model = NLE(fns, neural_network)
+  estimator = nle(neural_network)
 
-  data, _ = model.simulate_data(jr.PRNGKey(1), n_simulations=10_000)
-  params, info = model.fit(
-    jr.PRNGKey(2), data=data, n_early_stopping_patience=25, n_iter=n_iter
+  data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
+  params, info = train(
+    jr.key(2),
+    estimator,
+    data,
+    optimizer=optax.adam(3e-4),
+    n_early_stopping_patience=25,
+    n_iter=n_iter,
   )
-  inference_result, _ = model.sample_posterior(
-    jr.PRNGKey(3), params, y_observed
+  samples, _ = sample(
+    jr.key(3),
+    estimator,
+    params,
+    y_observed,
+    sampler=make_sampler(nuts, prior=prior),
   )
-
-  plot_posterior(inference_result)
-  plt.show()
+  theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
+  print("posterior mean:", jnp.mean(theta, axis=0))
+  print("posterior std: ", jnp.std(theta, axis=0))
 
 
 if __name__ == "__main__":
