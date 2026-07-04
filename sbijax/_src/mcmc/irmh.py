@@ -2,6 +2,7 @@ import blackjax as bj
 import jax
 from jax import random as jr
 
+from sbijax._src.mcmc.sampler import Kernel
 from sbijax._src.mcmc.util import run_blackjax
 
 
@@ -71,3 +72,6 @@ def _mh_init(_rng_key, initial_positions, lp):
   kernel = bj.irmh(lp, _irmh_proposal_distribution(initial_positions))
   initial_state = jax.vmap(kernel.init)(initial_positions)
   return initial_state, kernel.step
+
+
+imh = Kernel(init_fn=_mh_init)
