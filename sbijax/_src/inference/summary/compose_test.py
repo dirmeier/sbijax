@@ -13,8 +13,8 @@ from sbijax._src.nn.make_flow import make_maf
 from sbijax._src.nn.make_nass_network import make_nass_net
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import ObjectiveFns
-from sbijax._src.train.fit import fit
 from sbijax._src.train.sample import sample
+from sbijax._src.train.train import train
 
 
 def _problem():
@@ -35,12 +35,12 @@ def test_summarized_estimator_fit_and_sample():
   data = simulate(jr.key(0), prior, simulator, n=256)
 
   sn = nass(make_nass_net(2, [64, 64]))
-  sn_params, _ = fit(jr.key(1), sn, data, n_iter=2, batch_size=128)
+  sn_params, _ = train(jr.key(1), sn, data, n_iter=2, batch_size=128)
 
   # the downstream estimator models the 2-d summary, not the 4-d data
   est = summarized_estimator(nle(make_maf(2)), sn, sn_params)
   assert isinstance(est, ObjectiveFns)
-  params, _ = fit(jr.key(2), est, data, n_iter=2, batch_size=128)
+  params, _ = train(jr.key(2), est, data, n_iter=2, batch_size=128)
 
   # sample takes the *raw* 4-d observation; the adapter summarizes it
   samples, _ = sample(

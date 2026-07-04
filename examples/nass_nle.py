@@ -11,7 +11,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import fit, nass, nle, sample, simulate, summarized_estimator
+from sbijax import nass, nle, sample, simulate, summarized_estimator, train
 from sbijax.mcmc import make_sampler, nuts
 from sbijax.nn import make_maf, make_nass_net
 
@@ -33,12 +33,12 @@ def run():
   data = simulate(jr.key(0), prior, simulator_fn, n=5_000)
 
   summary_net = nass(make_nass_net(2, [64, 64]))
-  summary_params, _ = fit(jr.key(1), summary_net, data)
+  summary_params, _ = train(jr.key(1), summary_net, data)
 
   estimator = summarized_estimator(
     nle(make_maf(2)), summary_net, summary_params
   )
-  params, info = fit(jr.key(2), estimator, data)
+  params, info = train(jr.key(2), estimator, data)
   print(f"trained for {info.losses.shape[0]} epochs")
 
   y_observed = jnp.tile(jnp.array([-1.0, 1.0]), 4)

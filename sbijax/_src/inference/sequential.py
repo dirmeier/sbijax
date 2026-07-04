@@ -5,8 +5,8 @@ import jax
 from jax import random as jr
 
 from sbijax._src.simulate.simulate import simulate, stack
-from sbijax._src.train.fit import fit
 from sbijax._src.train.sample import sample
+from sbijax._src.train.train import train
 from sbijax._src.util.data import flatten_chains
 
 
@@ -44,7 +44,7 @@ def run_sequential(
   n_simulations_per_round,
   sampler=None,
   proposal_fn=None,
-  **fit_kwargs,
+  **train_kwargs,
 ):
   """Run multi-round sequential inference.
 
@@ -64,7 +64,7 @@ def run_sequential(
       sampler: a sampler (from ``make_sampler``) for MCMC-based objectives
       proposal_fn: optional ``(objective, params, observable, sampler) ->
           ((rng, n) -> theta)``; defaults to sampling the fitted posterior
-      **fit_kwargs: forwarded to ``fit`` each round
+      **train_kwargs: forwarded to ``train`` each round
 
   Returns:
       ``(params, Info)`` from the final round
@@ -73,7 +73,7 @@ def run_sequential(
     proposal_fn = _posterior_proposal
   data, params, info = None, None, None
   for _ in range(n_rounds):
-    sim_key, fit_key, rng_key = jr.split(rng_key, 3)
+    sim_key, train_key, rng_key = jr.split(rng_key, 3)
     obj_r = (
       objective
       if (info is None or objective.extra is None)
@@ -88,5 +88,5 @@ def run_sequential(
       sim_key, prior, simulator, proposal=proposal, n=n_simulations_per_round
     )
     data = round_data if data is None else stack(data, round_data)
-    params, info = fit(fit_key, obj_r, data, info=info, **fit_kwargs)
+    params, info = train(train_key, obj_r, data, info=info, **train_kwargs)
   return params, info

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 # ruff: noqa: PLR0913
-def fit(
+def train(
   rng_key,
   objective,
   data,

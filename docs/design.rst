@@ -16,7 +16,7 @@ The one-screen version
 
     import optax
     from jax import numpy as jnp, random as jr
-    from sbijax import npe, nle, fit, sample, simulate
+    from sbijax import npe, nle, train, sample, simulate
     from sbijax.mcmc import make_sampler, nuts
     from sbijax.nn import make_maf
 
@@ -26,15 +26,15 @@ The one-screen version
     # the prior is used only to generate data
     data = simulate(jr.key(0), prior, simulator, n=10_000)
 
-    # `fit` is a free driver; the optimizer is injected here
-    params, info = fit(jr.key(1), obj, data, optimizer=optax.adam(3e-4))
+    # `train` is a free driver; the optimizer is injected here
+    params, info = train(jr.key(1), obj, data, optimizer=optax.adam(3e-4))
 
     # `sample` is a free driver; for amortized posteriors nothing else is needed
     samples, sinfo = sample(jr.key(2), obj, params, y_obs)
 
     # for likelihood/ratio methods the sampler (kernel + prior) is injected here
     lik = nle(make_maf(2))
-    params, _ = fit(jr.key(1), lik, data, optimizer=optax.adam(3e-4))
+    params, _ = train(jr.key(1), lik, data, optimizer=optax.adam(3e-4))
     samples, _ = sample(
         jr.key(2), lik, params, y_obs, sampler=make_sampler(nuts, prior=prior)
     )
@@ -47,7 +47,7 @@ and friends carry no prior, no optimizer, and no sampler. Every *choice about
 how* is injected at the driver that owns it. This mirrors ``hk.transform(f)``,
 which knows nothing about optax or your data.
 
-**Two free, symmetric drivers.** ``fit(rng, obj, data, *, optimizer=...)`` and
+**Two free, symmetric drivers.** ``train(rng, obj, data, *, optimizer=...)`` and
 ``sample(rng, obj, params, observable, *, sampler=...)`` both take the objective
 first and their "how" as a keyword. This is exactly BlackJAX's split: the record
 carries the *bound* primitives (``SamplingAlgorithm.init``/``step``) while the
@@ -62,7 +62,7 @@ at sample time, so the prior travels inside the sampler. A trained likelihood
 can therefore be reused under different priors without retraining -- the point
 of the method.
 
-**One generic training loop.** Because ``fit`` is a single function, there is no
+**One generic training loop.** Because ``train`` is a single function, there is no
 per-method training code and no per-method ``Info`` record. Each objective
 contributes only its loss (via ``step_fn``/``eval_fn``), its parameter init, and
 its ``sample_fn``.
@@ -93,7 +93,7 @@ it. The prior, optimizer, and sampler enter at the driver that uses each.
         evalf["eval_fn(rng, state, batch)"]
       end
       subgraph drivers["free generic drivers"]
-        fitd["fit(rng, obj, data, *, optimizer)"]
+        fitd["train(rng, obj, data, *, optimizer)"]
         sampd["sample(rng, obj, params, y, *, sampler)"]
         seqd["run_sequential(rng, obj, prior, simulator, y)"]
       end
@@ -138,7 +138,7 @@ The records
      - ``sabc`` / ``smcabc``
      - ``sample``.
    * - ``Info``
-     - ``fit``
+     - ``train``
      - ``round``, ``losses`` (an ``(n_epochs, 2)`` train/validation history).
 
 These records are return values -- you receive instances from the factories and
@@ -149,7 +149,7 @@ Primitive contracts
 --------------------
 
 The bound primitives on a trainable record share these signatures. The optimizer
-is a *leading* argument of ``init_fn``/``step_fn``; ``fit`` binds it by closure
+is a *leading* argument of ``init_fn``/``step_fn``; ``train`` binds it by closure
 before jitting (a ``GradientTransformation`` closed over jits fine -- only
 *storing* it in the threaded ``TrainingState`` would not).
 
@@ -164,7 +164,7 @@ before jitting (a ``GradientTransformation`` closed over jits fine -- only
 ``metrics`` is a ``dict`` with at least ``{"loss": ...}``. Amortized posterior
 methods draw from the flow and ignore ``sampler``; likelihood/ratio methods
 require it. Summary networks reuse the ``TrainFns`` seam and are trained by the
-*same* ``fit``, exposing ``summarize_fn`` instead of ``sample_fn``. ABC samplers
+*same* ``train``, exposing ``summarize_fn`` instead of ``sample_fn``. ABC samplers
 do no training and expose only ``sample``.
 
 .. mermaid::
@@ -187,18 +187,18 @@ do no training and expose only ``sample``.
 Training flow
 -------------
 
-``fit`` reads ``obj.train``, builds a ``TrainingState`` with ``init_fn``, and
+``train`` reads ``obj.train``, builds a ``TrainingState`` with ``init_fn``, and
 threads it through ``step_fn``/``eval_fn`` across epochs with early stopping and
-best-parameter tracking. ``TrainingState`` never escapes ``fit``; the returned
+best-parameter tracking. ``TrainingState`` never escapes ``train``; the returned
 artifact is ``params``.
 
 .. mermaid::
 
     sequenceDiagram
       participant U as caller
-      participant F as fit (free)
+      participant F as train (free)
       participant T as obj.train
-      U->>F: fit(rng, obj, data, optimizer)
+      U->>F: train(rng, obj, data, optimizer)
       F->>T: init_fn(optimizer, rng, batch)
       T-->>F: state
       loop epochs / batches
@@ -262,12 +262,12 @@ same objective.
     sequenceDiagram
       participant U as caller
       participant R as run_sequential
-      participant F as fit
+      participant F as train
       U->>R: run_sequential(rng, obj, prior, simulator, y, n_rounds, sampler)
       loop round r
         Note over R: obj_r = obj (r==0) or obj.extra(prior) (r>0, npe atomic)
         R->>R: simulate(prior, simulator, proposal)
-        R->>F: fit(rng, obj_r, all_data, info=info, optimizer)
+        R->>F: train(rng, obj_r, all_data, info=info, optimizer)
         F-->>R: params, info
         Note over R: proposal := sample(rng, obj, params, y, sampler)
       end

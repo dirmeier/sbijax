@@ -11,7 +11,7 @@ from sbijax._src.inference.summary.nasss import nasss
 from sbijax._src.nn.make_nass_network import make_nass_net, make_nasss_net
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import Info, SummaryFns
-from sbijax._src.train.fit import fit
+from sbijax._src.train.train import train
 
 
 def _problem():
@@ -39,7 +39,7 @@ def test_fit_then_summarize(name):
   data = simulate(jr.key(0), prior, simulator, n=256)
   obj = SUMMARY_NETS[name]()
   assert isinstance(obj, SummaryFns)
-  params, info = fit(jr.key(1), obj, data, n_iter=2, batch_size=128)
+  params, info = train(jr.key(1), obj, data, n_iter=2, batch_size=128)
   assert params is not None
   # SummaryFns share the generic Info; assert the loss history shape (DR-011).
   assert isinstance(info, Info)

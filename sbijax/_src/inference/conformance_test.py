@@ -22,8 +22,8 @@ from sbijax._src.nn.make_flow import make_maf
 from sbijax._src.nn.make_mlp import make_mlp
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import Info, ObjectiveFns, TrainingState
-from sbijax._src.train.fit import fit
 from sbijax._src.train.sample import sample
+from sbijax._src.train.train import train
 
 
 def _problem():
@@ -69,7 +69,7 @@ def test_fit_returns_params_and_info(name):
   data = simulate(jr.key(0), prior, simulator, n=200)
   obj = ESTIMATORS[name]["build"](prior)
   assert isinstance(obj, ObjectiveFns)
-  params, info = fit(jr.key(1), obj, data, n_iter=2, batch_size=100)
+  params, info = train(jr.key(1), obj, data, n_iter=2, batch_size=100)
   assert params is not None
   # structural Info contract (DR-011): every Info exposes an int ``round`` and
   # a ``(n_epochs, 2)`` train/validation loss history.
@@ -97,7 +97,7 @@ def test_sample_returns_named_pytree_and_info(name):
   prior, simulator = _problem()
   data = simulate(jr.key(0), prior, simulator, n=200)
   obj = ESTIMATORS[name]["build"](prior)
-  params, _ = fit(jr.key(1), obj, data, n_iter=2, batch_size=100)
+  params, _ = train(jr.key(1), obj, data, n_iter=2, batch_size=100)
   if ESTIMATORS[name]["mcmc"]:
     sampler = make_sampler(nuts, prior=prior)
     kwargs = {"n_chains": 2, "n_samples": 30, "n_warmup": 10}

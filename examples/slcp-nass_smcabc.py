@@ -11,7 +11,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import fit, nass, simulate, smcabc
+from sbijax import nass, simulate, smcabc, train
 from sbijax.nn import make_nass_net
 
 
@@ -78,7 +78,7 @@ def run(n_rounds, n_iter):
 
   summary_net = nass(make_nass_net(5, (64, 64)))
   data = simulate(jr.key(1), prior, simulator_fn, n=20_000)
-  params_nass, _ = fit(
+  params_nass, _ = train(
     jr.key(2), summary_net, data, n_early_stopping_patience=25, n_iter=n_iter
   )
 

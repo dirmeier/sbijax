@@ -26,14 +26,14 @@ from sbijax._src.inference.summary._compose import summarized_estimator
 from sbijax._src.inference.summary.nass import nass
 from sbijax._src.inference.summary.nasss import nasss
 from sbijax._src.simulate.simulate import simulate, stack
-from sbijax._src.train.fit import fit
 from sbijax._src.train.sample import sample
+from sbijax._src.train.train import train
 
 __all__ = [
   "abs_distance",
   "DiffEvolution",
   "ess",
-  "fit",
+  "train",
   "fmpe",
   "l2_distance",
   "MultiEps",

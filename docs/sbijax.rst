@@ -9,12 +9,12 @@ diagnostics and other utility.
 
 Every method is a **factory function** that takes only the network and returns a
 record of pure functions, following the low-level functional idiom of dm-haiku
-and blackjax. Training and sampling are **free driver functions** (:func:`fit`,
-:func:`sample`); the optimizer is injected at ``fit`` and, for likelihood/ratio
+and blackjax. Training and sampling are **free driver functions** (:func:`train`,
+:func:`sample`); the optimizer is injected at ``train`` and, for likelihood/ratio
 methods, the sampler (which carries the prior) at ``sample``::
 
     est = nle(make_maf(2))
-    params, info = fit(key, est, data, optimizer=optax.adam(3e-4))
+    params, info = train(key, est, data, optimizer=optax.adam(3e-4))
     samples, info = sample(
         key, est, params, y_observed, sampler=make_sampler(nuts, prior=prior)
     )
@@ -34,7 +34,7 @@ class-based API.
     nass
     nasss
     summarized_estimator
-    fit
+    train
     sample
     run_sequential
     simulate
@@ -90,7 +90,7 @@ Trainable objectives are trained and sampled with the two free drivers. The
 sampler for likelihood/ratio methods is built with
 :func:`sbijax.mcmc.make_sampler`.
 
-.. autofunction:: fit
+.. autofunction:: train
 .. autofunction:: sample
 
 Sequential inference

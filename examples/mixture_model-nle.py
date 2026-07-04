@@ -8,7 +8,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import fit, nle, sample, simulate
+from sbijax import nle, sample, simulate, train
 from sbijax.mcmc import make_sampler, nuts
 from sbijax.nn import make_mdn, make_spf
 
@@ -41,7 +41,7 @@ def run(use_spf, n_iter):
   estimator = nle(neural_network)
 
   data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
-  params, info = fit(
+  params, info = train(
     jr.key(2),
     estimator,
     data,

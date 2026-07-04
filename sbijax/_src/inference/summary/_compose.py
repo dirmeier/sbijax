@@ -28,9 +28,9 @@ def summarized_estimator(estimator, summary_net, summary_params):
   Fit the summary network first, then wrap the estimator::
 
       sn = nass(make_nass_net(2, [64, 64]))
-      sn_params, _ = fit(key, sn, data)
+      sn_params, _ = train(key, sn, data)
       est = summarized_estimator(nle(make_maf(2)), sn, sn_params)
-      params, info = fit(key, est, data)           # trains on summaries
+      params, info = train(key, est, data)           # trains on summaries
       samples, _ = est.sample_fn(key, params, y_observed, sampler=sampler)
 
   Args:

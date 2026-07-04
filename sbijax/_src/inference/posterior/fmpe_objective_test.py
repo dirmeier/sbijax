@@ -7,8 +7,8 @@ from sbijax._src.inference.posterior.fmpe import fmpe
 from sbijax._src.nn.make_continuous_flow import make_cnf
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import ObjectiveFns
-from sbijax._src.train.fit import fit
 from sbijax._src.train.sample import sample
+from sbijax._src.train.train import train
 
 
 def test_fmpe_objective_trains_and_samples():
@@ -24,7 +24,7 @@ def test_fmpe_objective_trains_and_samples():
   obj = fmpe(make_cnf(2))
   assert isinstance(obj, ObjectiveFns)
   data = simulate(jr.key(0), prior, sim, n=200)
-  params, _ = fit(
+  params, _ = train(
     jr.key(1), obj, data, optimizer=optax.adam(3e-4), n_iter=2, batch_size=100
   )
   samples, _ = sample(jr.key(2), obj, params, jnp.zeros(2), n_samples=64)

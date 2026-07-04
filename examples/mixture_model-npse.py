@@ -10,7 +10,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import fit, npse, sample, simulate
+from sbijax import npse, sample, simulate, train
 from sbijax.experimental.nn import make_score_model
 
 
@@ -40,7 +40,7 @@ def run(n_iter):
   estimator = npse(neural_network)
 
   data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
-  params, info = fit(
+  params, info = train(
     jr.key(2),
     estimator,
     data,

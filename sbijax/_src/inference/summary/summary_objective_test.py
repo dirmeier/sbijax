@@ -6,7 +6,7 @@ from sbijax._src.inference.summary.nass import nass
 from sbijax._src.nn.make_nass_network import make_nass_net
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import SummaryFns
-from sbijax._src.train.fit import fit
+from sbijax._src.train.train import train
 
 
 def test_nass_summaryfns_trains_and_summarizes():
@@ -22,6 +22,6 @@ def test_nass_summaryfns_trains_and_summarizes():
   obj = nass(make_nass_net(2, (16, 16)))
   assert isinstance(obj, SummaryFns)
   data = simulate(jr.key(0), prior, sim, n=200)
-  params, _ = fit(jr.key(1), obj, data, n_iter=2, batch_size=100)
+  params, _ = train(jr.key(1), obj, data, n_iter=2, batch_size=100)
   s = obj.summarize_fn(params, data["y"])
   assert s.shape[-1] == 2

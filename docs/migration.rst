@@ -4,7 +4,7 @@ Migration guide: 0.3 → 0.4
 ``sbijax`` 0.4 replaces the object-oriented estimator classes with a **low-level
 functional API**: every method is a factory that returns a record of pure
 functions, and training and sampling are **free driver functions**
-(:func:`sbijax.fit`, :func:`sbijax.sample`) that operate on that record. See
+(:func:`sbijax.train`, :func:`sbijax.sample`) that operate on that record. See
 :doc:`design` for the full rationale. This is a breaking release; this guide
 maps the old API onto the new one.
 
@@ -21,7 +21,7 @@ At a glance
     * - ``model.simulate_data(key)``
       - ``simulate(key, prior, simulator, n=...)``
     * - ``model.fit(key, data=data)``
-      - ``params, info = fit(key, obj, data, optimizer=...)``
+      - ``params, info = train(key, obj, data, optimizer=...)``
     * - ``model.sample_posterior(key, params, y)``
       - ``samples, info = sample(key, obj, params, y, sampler=...)``
 
@@ -90,7 +90,7 @@ Data simulation is a standalone module
 Training is a free driver; the optimizer is injected here
 ---------------------------------------------------------
 
-``fit`` is a free function, not a method. The optimizer is passed to ``fit``
+``train`` is a free function, not a method. The optimizer is passed to ``train``
 (defaulting to ``optax.adam(3e-4)``), never baked into the factory. It returns
 the fitted parameters plus a generic :class:`~sbijax.Info` (``round`` +
 ``losses``); the per-method ``*Info`` records are gone.
@@ -101,8 +101,8 @@ the fitted parameters plus a generic :class:`~sbijax.Info` (``round`` +
     params, losses = model.fit(jr.PRNGKey(1), data=data)
 
     # 0.4
-    from sbijax import fit
-    params, info = fit(jr.key(1), estimator, data, optimizer=optax.adam(3e-4))
+    from sbijax import train
+    params, info = train(jr.key(1), estimator, data, optimizer=optax.adam(3e-4))
     losses = info.losses
 
 Sampling is a free driver; the prior travels in the sampler
@@ -161,7 +161,7 @@ Sequential inference
 --------------------
 
 Multi-round inference is still :func:`sbijax.run_sequential`, now driving the
-free ``fit``/``sample`` internally. Pass a ``sampler`` for likelihood/ratio
+free ``train``/``sample`` internally. Pass a ``sampler`` for likelihood/ratio
 methods; NPE switches to its atomic proposal-posterior loss in rounds > 0
 automatically.
 
@@ -177,18 +177,18 @@ automatically.
 Summary networks
 ----------------
 
-Summary networks are trained by the same ``fit`` and expose ``summarize_fn``:
+Summary networks are trained by the same ``train`` and expose ``summarize_fn``:
 
 .. code-block:: python
 
-    from sbijax import nass, fit, summarized_estimator
+    from sbijax import nass, train, summarized_estimator
 
     sn = nass(make_nass_net(2, [64, 64]))
-    sn_params, _ = fit(jr.key(0), sn, data)
+    sn_params, _ = train(jr.key(0), sn, data)
     summaries = sn.summarize_fn(sn_params, data["y"])
 
     # chain a summary net into a downstream estimator
     est = summarized_estimator(nle(make_maf(2)), sn, sn_params)
-    params, _ = fit(jr.key(1), est, data)
+    params, _ = train(jr.key(1), est, data)
     samples, _ = sample(jr.key(2), est, params, y_obs,
                         sampler=make_sampler(nuts, prior=prior))
