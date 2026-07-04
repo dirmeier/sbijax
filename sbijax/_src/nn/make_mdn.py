@@ -7,7 +7,6 @@ from jax import numpy as jnp
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 
-# pylint: disable=too-many-arguments
 def make_mdn(
   n_dimension: int,
   n_components: int,
@@ -16,13 +15,13 @@ def make_mdn(
 ):
   """Create a mixture density network.
 
-  The MDN uses `n_components` mixture components each modelling the
-  distribution of a `n_dimension`al data point.
+  The MDN uses ``n_components`` mixture components each modelling the
+  distribution of an ``n_dimension``-dimensional data point.
 
   Args:
       n_dimension: dimensionality of data
       n_components: number of mixture components
-      hidden_sizes: sizes of hidden layers for each normalizing flow. E.g.,
+      hidden_sizes: sizes of hidden layers for each normalizing flow, e.g.,
           when the hidden sizes are a tuple (64, 64), then each maf layer
           uses a MADE with two layers of size 64 each
       activation: a jax activation function
