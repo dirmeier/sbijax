@@ -9,27 +9,26 @@ import tasks
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax import SABC, MultiEps, abs_distance, inference_data_as_dictionary
+from sbijax import MultiEps, abs_distance, sabc
 
 
 def run(name: str, seed: int, budget: dict, out: str) -> None:
   """Run sbijax SABC on task ``name`` and write samples + timing to ``out``."""
   prior, simulator, _ = tasks.build_jax_task(name)
   observed = jnp.asarray(tasks.load_observed(name))
-  model = SABC((lambda: prior, simulator), distance_fn=abs_distance)
+  sampler = sabc(prior, simulator, distance_fn=abs_distance)
 
   def sample_to_numpy(key):
-    idata, _ = model.sample_posterior(
+    particles, _ = sampler.sample(
       key,
       observed,
       n_particles=budget["n_particles"],
       n_simulation=budget["n_simulation"],
       schedule=MultiEps(v=1.0),
     )
-    d = inference_data_as_dictionary(idata.posterior)
     cols = [
-      np.asarray(d[k]).reshape(-1, np.asarray(d[k]).shape[-1])
-      for k in sorted(d)
+      np.asarray(particles[k]).reshape(-1, np.asarray(particles[k]).shape[-1])
+      for k in sorted(particles)
     ]
     return np.concatenate(cols, 1)
 
