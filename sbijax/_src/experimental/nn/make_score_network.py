@@ -172,14 +172,14 @@ class _ScoreNet(hk.Module):
 
 # ruff: noqa: PLR0913,D417
 class ScoreModel(hk.Module):
-  """Conventional score model.
+  """Score model.
 
   Args:
       n_dimension: the dimensionality of the modelled space
       transform: a haiku module. The transform is a callable that has to
-          take as input arguments named 'theta', 'time', 'context' and
-          **kwargs. Theta, time and context are two-dimensional arrays
-          with the same batch dimensions.
+          take as input arguments named ``theta``, ``time``, ``context`` and
+          additional keyword arguments. Theta, time and context are
+          two-dimensional arrays with the same batch dimensions.
   """
 
   def __init__(
