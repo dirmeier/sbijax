@@ -7,18 +7,25 @@ The top-level module, ``sbijax``, contains all implemented methods for neural
 simulation-based inference and approximate Bayesian inference as well as
 diagnostics and other utility.
 
-Every method is a **factory function** returning a record of pure functions
-(:class:`Estimator`, :class:`ABCSampler` or :class:`SummaryNet`), following the
-functional idiom of dm-haiku and blackjax. Parameters are threaded explicitly::
+Every method is a **factory function** that takes only the network and returns a
+record of pure functions, following the low-level functional idiom of dm-haiku
+and blackjax. Training and sampling are **free driver functions** (:func:`fit`,
+:func:`sample`); the optimizer is injected at ``fit`` and, for likelihood/ratio
+methods, the sampler (which carries the prior) at ``sample``::
 
-    est = nle(prior, make_maf(2))
-    params, info = est.fit(key, data)
-    samples, info = est.sample(key, params, y_observed)
+    est = nle(make_maf(2))
+    params, info = fit(key, est, data, optimizer=optax.adam(3e-4))
+    samples, info = sample(
+        key, est, params, y_observed, sampler=make_sampler(nuts, prior=prior)
+    )
+
+See :doc:`design` for the full design and :doc:`migration` for moving from the
+class-based API.
 
 .. autosummary::
     npe
     fmpe
-    cmpe
+    npse
     nle
     snle
     nre
@@ -27,17 +34,14 @@ functional idiom of dm-haiku and blackjax. Parameters are threaded explicitly::
     nass
     nasss
     summarized_estimator
+    fit
+    sample
     run_sequential
     simulate
     stack
     sbc
     ess
     rhat
-    Estimator
-    ABCSampler
-    SummaryNet
-    MCMCSampleInfo
-    DirectSampleInfo
 
 Data pipeline
 -------------
@@ -50,7 +54,7 @@ Posterior estimation
 
 .. autofunction:: npe
 .. autofunction:: fmpe
-.. autofunction:: cmpe
+.. autofunction:: npse
 
 Likelihood estimation
 ---------------------
@@ -79,22 +83,20 @@ A summary network is chained into a downstream estimator with:
 
 .. autofunction:: summarized_estimator
 
+Training and sampling
+---------------------
+
+Trainable objectives are trained and sampled with the two free drivers. The
+sampler for likelihood/ratio methods is built with
+:func:`sbijax.mcmc.make_sampler`.
+
+.. autofunction:: fit
+.. autofunction:: sample
+
 Sequential inference
 --------------------
 
 .. autofunction:: run_sequential
-
-Interfaces
-----------
-
-..  autoclass:: Estimator
-    :members: fit, sample
-
-..  autoclass:: ABCSampler
-    :members: sample
-
-..  autoclass:: SummaryNet
-    :members: fit, summarize
 
 Diagnostics
 -----------
@@ -102,5 +104,3 @@ Diagnostics
 .. autofunction:: sbc
 .. autofunction:: ess
 .. autofunction:: rhat
-.. autoclass:: MCMCSampleInfo
-.. autoclass:: DirectSampleInfo

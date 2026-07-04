@@ -24,7 +24,8 @@ from surjectors.nn import MADE, make_mlp
 from surjectors.util import unstack
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import run_sequential, snle
+from sbijax import run_sequential, sample, snle
+from sbijax.mcmc import make_sampler, nuts
 
 
 def prior_fn():
@@ -167,22 +168,23 @@ def run(n_rounds, n_iter):
   )
 
   neural_network = make_model(8, use_surjectors=True)
-  estimator = snle(prior, neural_network)
-  optimizer = optax.adam(1e-3)
+  estimator = snle(neural_network)
+  sampler = make_sampler(nuts, prior=prior)
 
   params, info = run_sequential(
-    jr.PRNGKey(1),
+    jr.key(1),
     estimator,
     prior,
     simulator_fn,
     y_obs,
     n_rounds=n_rounds,
     n_simulations_per_round=2_000,
-    optimizer=optimizer,
+    sampler=sampler,
+    optimizer=optax.adam(1e-3),
     n_iter=n_iter,
   )
 
-  samples, _ = estimator.sample(jr.PRNGKey(3), params, y_obs)
+  samples, _ = sample(jr.key(3), estimator, params, y_obs, sampler=sampler)
   theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
   print("posterior mean:", jnp.mean(theta, axis=0))
   print("posterior std: ", jnp.std(theta, axis=0))

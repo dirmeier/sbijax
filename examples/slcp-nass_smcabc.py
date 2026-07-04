@@ -11,7 +11,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import nass, simulate, smcabc
+from sbijax import fit, nass, simulate, smcabc
 from sbijax.nn import make_nass_net
 
 
@@ -77,17 +77,17 @@ def run(n_rounds, n_iter):
   )
 
   summary_net = nass(make_nass_net(5, (64, 64)))
-  data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=20_000)
-  params_nass, _ = summary_net.fit(
-    jr.PRNGKey(2), data, n_early_stopping_patience=25, n_iter=n_iter
+  data = simulate(jr.key(1), prior, simulator_fn, n=20_000)
+  params_nass, _ = fit(
+    jr.key(2), summary_net, data, n_early_stopping_patience=25, n_iter=n_iter
   )
 
   def summary_fn(y):
-    return summary_net.summarize(params_nass, y)
+    return summary_net.summarize_fn(params_nass, y)
 
   smc = smcabc(prior, simulator_fn, summary_fn, distance_fn)
   particles, _ = smc.sample(
-    jr.PRNGKey(3),
+    jr.key(3),
     y_observed,
     n_rounds=n_rounds,
     n_particles=5_000,

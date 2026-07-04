@@ -42,7 +42,7 @@ def run(n_rounds):
 
   smc = smcabc(prior, simulator_fn, summary_fn, distance_fn)
   particles, _ = smc.sample(
-    jr.PRNGKey(1),
+    jr.key(1),
     y_observed,
     n_rounds=1,
     n_particles=1000,

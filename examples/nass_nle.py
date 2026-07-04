@@ -11,7 +11,8 @@ from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import nass, nle, simulate, summarized_estimator
+from sbijax import fit, nass, nle, sample, simulate, summarized_estimator
+from sbijax.mcmc import make_sampler, nuts
 from sbijax.nn import make_maf, make_nass_net
 
 
@@ -29,19 +30,25 @@ def simulator_fn(seed, theta):
 
 def run():
   prior = prior_fn()
-  data = simulate(jr.PRNGKey(0), prior, simulator_fn, n=5_000)
+  data = simulate(jr.key(0), prior, simulator_fn, n=5_000)
 
   summary_net = nass(make_nass_net(2, [64, 64]))
-  summary_params, _ = summary_net.fit(jr.PRNGKey(1), data)
+  summary_params, _ = fit(jr.key(1), summary_net, data)
 
   estimator = summarized_estimator(
-    nle(prior, make_maf(2)), summary_net, summary_params
+    nle(make_maf(2)), summary_net, summary_params
   )
-  params, info = estimator.fit(jr.PRNGKey(2), data)
+  params, info = fit(jr.key(2), estimator, data)
   print(f"trained for {info.losses.shape[0]} epochs")
 
   y_observed = jnp.tile(jnp.array([-1.0, 1.0]), 4)
-  samples, _ = estimator.sample(jr.PRNGKey(3), params, y_observed)
+  samples, _ = sample(
+    jr.key(3),
+    estimator,
+    params,
+    y_observed,
+    sampler=make_sampler(nuts, prior=prior),
+  )
   theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
   print("posterior mean:", jnp.mean(theta, axis=0))
 

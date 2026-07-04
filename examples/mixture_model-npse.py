@@ -1,16 +1,17 @@
-"""Consistency model posterior estimation example.
+"""Neural posterior score estimation example.
 
-Demonstrates CMPE on a simple mixture model.
+Demonstrates NPSE on a simple mixture model.
 """
 
 import argparse
 
+import optax
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import cmpe, simulate
-from sbijax.nn import make_cm
+from sbijax import fit, npse, sample, simulate
+from sbijax.experimental.nn import make_score_model
 
 
 def prior_fn():
@@ -35,14 +36,19 @@ def simulator_fn(seed, theta):
 def run(n_iter):
   prior = prior_fn()
   y_observed = jnp.array([-2.0, 1.0])
-  neural_network = make_cm(2, 64)
-  model = cmpe(prior, neural_network)
+  neural_network = make_score_model(2)
+  estimator = npse(neural_network)
 
-  data = simulate(jr.PRNGKey(1), prior, simulator_fn, n=10_000)
-  params, info = model.fit(
-    jr.PRNGKey(2), data, n_early_stopping_patience=25, n_iter=n_iter
+  data = simulate(jr.key(1), prior, simulator_fn, n=10_000)
+  params, info = fit(
+    jr.key(2),
+    estimator,
+    data,
+    optimizer=optax.adam(3e-4),
+    n_early_stopping_patience=25,
+    n_iter=n_iter,
   )
-  samples, _ = model.sample(jr.PRNGKey(3), params, y_observed)
+  samples, _ = sample(jr.key(3), estimator, params, y_observed)
   theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
   print("posterior mean:", jnp.mean(theta, axis=0))
   print("posterior std: ", jnp.std(theta, axis=0))

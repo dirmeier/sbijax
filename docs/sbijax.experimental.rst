@@ -6,16 +6,18 @@
 ``sbijax.experimental`` contains experimental code that might get ported to the
 main code base or possibly deleted again.
 
-``npse`` and ``aio`` are functional factories that delegate to the ``fmpe``
-core; ``make_truncated_proposal`` builds the truncated-prior proposal they use
-with :func:`sbijax.run_sequential`.
+``cmpe`` (consistency-model posterior estimation) and ``aio`` are functional
+factories; ``aio`` delegates to the ``fmpe`` core, and
+``make_truncated_proposal`` builds the truncated-prior proposal used with
+:func:`sbijax.run_sequential`. The score networks below are consumed by
+:func:`sbijax.npse`, which now lives in the main package.
 
 .. autosummary::
-    npse
+    cmpe
     aio
     make_truncated_proposal
 
-.. autofunction:: npse
+.. autofunction:: cmpe
 
 .. autofunction:: aio
 

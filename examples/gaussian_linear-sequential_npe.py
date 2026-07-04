@@ -10,7 +10,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax import npe, run_sequential
+from sbijax import npe, run_sequential, sample
 from sbijax.nn import make_maf
 
 
@@ -27,14 +27,13 @@ def simulator_fn(seed, theta):
   return y
 
 
-
 def run():
   prior = prior_fn()
-  estimator = npe(prior, make_maf(5))
+  estimator = npe(make_maf(5))
   y_observed = jnp.linspace(-2.0, 2.0, 5)
 
   params, info = run_sequential(
-    jr.PRNGKey(0),
+    jr.key(0),
     estimator,
     prior,
     simulator_fn,
@@ -44,7 +43,7 @@ def run():
   )
   print(f"finished round {info.round}")
 
-  samples, _ = estimator.sample(jr.PRNGKey(1), params, y_observed)
+  samples, _ = sample(jr.key(1), estimator, params, y_observed)
   theta = samples["theta"].reshape(-1, samples["theta"].shape[-1])
   print("posterior mean:", jnp.mean(theta, axis=0))
 
