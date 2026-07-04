@@ -2,6 +2,7 @@ import blackjax as bj
 import jax
 from jax import random as jr
 
+from sbijax._src.mcmc.sampler import Kernel
 from sbijax._src.mcmc.util import run_blackjax
 
 
@@ -33,16 +34,19 @@ def sample_with_mala(
       ...     return jnp.sum(lp_data) + jnp.sum(lp_prior)
       ...
       >>> prop_posterior_lp = ft.partial(log_prob, y=jnp.array([-1.0, 1.0]))
-      >>> samples = sample_with_mala(jr.PRNGKey(0), prop_posterior_lp, prior)
+      >>> samples = sample_with_mala(jr.key(0), prop_posterior_lp, prior)
 
   Returns:
-      a JAX pytree with keys corresponding to the variables names
-      and tensor values of dimension `n_chains x n_samples x dim_variable`
+      a tuple ``(samples, info)``: a named pytree with leaves of shape
+      ``n_chains x (n_samples - n_warmup) x dim`` and an
+      ``MCMCSampleInfo`` with the mean post-warmup acceptance rate
   """
+  init_key, run_key = jr.split(rng_key)
+  initial_positions = prior.sample(seed=init_key, sample_shape=(n_chains,))
   return run_blackjax(
-    rng_key,
+    run_key,
     _mala_init,
-    prior,
+    initial_positions,
     lp,
     n_chains=n_chains,
     n_samples=n_samples,
@@ -51,10 +55,10 @@ def sample_with_mala(
 
 
 # pylint: disable=missing-function-docstring,no-member
-def _mala_init(rng_key, n_chains, prior, lp):
-  init_key, rng_key = jr.split(rng_key)
-  initial_positions = prior.sample(seed=init_key, sample_shape=(n_chains,))
-
+def _mala_init(_rng_key, initial_positions, lp):
   kernel = bj.mala(lp, 0.1)
   initial_state = jax.vmap(kernel.init)(initial_positions)
   return initial_state, kernel.step
+
+
+mala = Kernel(init_fn=_mala_init)

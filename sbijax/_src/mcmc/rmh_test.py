@@ -2,11 +2,11 @@
 import chex
 from jax import random as jr
 
-from sbijax._src.mcmc import sample_with_rmh
+from sbijax._src.mcmc.rmh import sample_with_rmh
 
 
 def test_rmh_sampler(prior_log_prob_tuple):
-  samples = sample_with_rmh(
+  samples, _ = sample_with_rmh(
     jr.PRNGKey(1),
     prior_log_prob_tuple[1],
     prior_log_prob_tuple[0](),

@@ -2,7 +2,23 @@ import blackjax as bj
 import jax
 from jax import random as jr
 
+from sbijax._src.mcmc.sampler import Kernel
 from sbijax._src.mcmc.util import run_blackjax
+
+
+def _nuts_init(rng_key, initial_positions, lp):
+  n_chains = jax.tree_util.tree_leaves(initial_positions)[0].shape[0]
+  init_keys = jr.split(rng_key, n_chains)
+  warmup = bj.window_adaptation(bj.nuts, lp)
+  initial_states, kernel_params = jax.vmap(
+    lambda seed, param: warmup.run(seed, param)[0]
+  )(init_keys, initial_positions)
+  kernel_params = {k: v[0] for k, v in kernel_params.items()}
+  _, kernel = bj.nuts(lp, **kernel_params)
+  return initial_states, kernel
+
+
+nuts = Kernel(init_fn=_nuts_init)
 
 
 # ruff: noqa: PLR0913, D417
@@ -33,35 +49,21 @@ def sample_with_nuts(
       ...     return jnp.sum(lp_data) + jnp.sum(lp_prior)
       ...
       >>> prop_posterior_lp = ft.partial(log_prob, y=jnp.array([-1.0, 1.0]))
-      >>> samples = sample_with_nuts(jr.PRNGKey(0), prop_posterior_lp, prior)
+      >>> samples = sample_with_nuts(jr.key(0), prop_posterior_lp, prior)
 
   Returns:
-      a JAX pytree with keys corresponding to the variables names
-      and tensor values of dimension `n_chains x n_samples x dim_variable`
+      a tuple ``(samples, info)``: a named pytree with leaves of shape
+      ``n_chains x (n_samples - n_warmup) x dim`` and an
+      ``MCMCSampleInfo`` with the mean post-warmup acceptance rate
   """
+  init_key, run_key = jr.split(rng_key)
+  initial_positions = prior.sample(seed=init_key, sample_shape=(n_chains,))
   return run_blackjax(
-    rng_key,
+    run_key,
     _nuts_init,
-    prior,
+    initial_positions,
     lp,
     n_chains=n_chains,
     n_samples=n_samples,
     n_warmup=n_warmup,
   )
-
-
-# pylint: disable=missing-function-docstring
-def _nuts_init(rng_key, n_chains, prior, lp):
-  init_key, rng_key = jr.split(rng_key)
-  initial_positions = prior.sample(seed=init_key, sample_shape=(n_chains,))
-
-  init_keys = jr.split(rng_key, n_chains)
-  warmup = bj.window_adaptation(bj.nuts, lp)
-  initial_states, kernel_params = jax.vmap(
-    lambda seed, param: warmup.run(seed, param)[0]
-  )(init_keys, initial_positions)
-
-  kernel_params = {k: v[0] for k, v in kernel_params.items()}
-  _, kernel = bj.nuts(lp, **kernel_params)
-
-  return initial_states, kernel
