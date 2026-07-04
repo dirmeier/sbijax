@@ -99,7 +99,7 @@ License
     :hidden:
 
     🏡 Home <self>
-    🧭 Design philosophy <design>    
+    🧭 Design philosophy <design>
     🔀 Migration guide <migration>
     📚 References <references>
 
