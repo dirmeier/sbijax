@@ -100,7 +100,7 @@ disallow_untyped_calls = false
 addopts = [
     "-v",
     "--doctest-modules",
-    "--cov=sabc",
+    "--cov=sbijax",
     "--cov-report=xml",
     "--strict-markers",
     "--strict-config",
