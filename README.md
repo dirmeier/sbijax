@@ -75,17 +75,37 @@ pip install git+https://github.com/dirmeier/sbijax@<RELEASE>
 
 Documentation can be found [here](https://sbijax.readthedocs.io/en/latest/).
 
-## Citing sbijax
+## Contributing
 
-If you find our work relevant to your research, please consider citing:
+Contributions in the form of pull requests are more than welcome. A good way to
+start is to check out issues labelled
+[good first issue](https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
-```
-@article{dirmeier2024simulation,
-  title={Simulation-based inference with the Python Package sbijax},
-  author={Dirmeier, Simon and Ulzega, Simone and Mira, Antonietta and Albert, Carlo},
-  journal={arXiv preprint arXiv:2409.19435},
-  year={2024}
-}
+In order to contribute:
+
+1) Clone `sbijax` and install `uv` from [here](https://docs.astral.sh/uv/getting-started/installation/).
+2) Install all dependencies using `uv sync --all-groups`.
+3) Install the Git hooks:
+   ```bash
+   uv run pre-commit install -t pre-commit -t commit-msg
+   ```
+4) Create a new branch locally, e.g. `git checkout -b feature/my-new-feature`.
+5) Implement your contribution and ideally a test case.
+6) Check your work (see below).
+7) Submit a PR 🙂.
+
+### Development commands
+
+The project uses `uv` for everything (there is no `Makefile`):
+
+```bash
+uv sync --all-groups
+uv run pre-commit run --all-files
+uv run pytest
+uv run ruff check sbijax examples
+uv run ruff check --fix sbijax examples
+uv run ruff format sbijax examples
+uv run mypy sbijax examples
 ```
 
 ## Acknowledgements

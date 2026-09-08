@@ -25,7 +25,7 @@ dependencies = [
     "dm-haiku>=0.0.16",
     "einops>=0.8.2",
     "optax>=0.2.8",
-    "surjectors>=0.3.3",
+    "surjectors>=0.4.0",
     "tqdm>=4.64.1",
     "jaxlib>=0.10.1",
     "jax>=0.10.1",
@@ -150,4 +150,4 @@ ignore-variadic-names = true
 convention = "google"
 
 [tool.uv]
-upgrade-package = ["jax", "jaxlib", "dm-haiku", "optax", "distrax"]
+upgrade-package = ["jax", "jaxlib", "dm-haiku", "optax", "distrax", "surjectors"]
