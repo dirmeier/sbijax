@@ -82,12 +82,33 @@ Contributions in the form of pull requests are more than welcome. A good way to 
 
 In order to contribute:
 
-1) Clone :code:`sbijax` and install :code:`uv` from `here <https://docs.astral.sh/uv/getting-started/installation/>`_,
-2) install all dependencies using ```uv sync``,
-3) create a new branch locally :code:`git checkout -b feature/my-new-feature` or :code:`git checkout -b issue/fixes-bug`,
-4) implement your contribution and ideally a test case,
-5) test it by calling ``make tests``, ``make lints`` and ``make format`` on the (Unix) command line,
-6) submit a PR 🙂
+1) Clone :code:`sbijax` and install :code:`uv` from `here <https://docs.astral.sh/uv/getting-started/installation/>`_.
+2) Install all dependencies using ``uv sync --all-groups``.
+3) Install the Git hooks:
+
+   .. code-block:: bash
+
+       uv run pre-commit install -t pre-commit -t commit-msg
+
+4) Create a new branch locally :code:`git checkout -b feature/my-new-feature` or :code:`git checkout -b issue/fixes-bug`.
+5) Implement your contribution and ideally a test case.
+6) Check your work (see below).
+7) Submit a PR 🙂
+
+Development commands
+--------------------
+
+The project uses ``uv`` for everything (there is no ``Makefile``):
+
+.. code-block:: bash
+
+    uv sync --all-groups
+    uv run pytest
+    uv run ruff check sbijax examples
+    uv run ruff check --fix sbijax examples
+    uv run ruff format sbijax examples
+    uv run mypy sbijax examples
+    uv run pre-commit run --all-files
 
 License
 -------
