@@ -74,11 +74,18 @@ To install the latest GitHub <RELEASE>, just call the following on the command l
 
 See also the installation instructions for `JAX <https://github.com/google/jax>`_, if you plan to use :code:`sbijax` on GPU/TPU.
 
-Contributing
-------------
+Contributing and Support
+-------------------------
 
-Contributions in the form of pull requests are more than welcome. A good way to start is to check out issues labelled
-`"good first issue" <https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22>`_.
+If you have questions, encounter problems, or need support with this software, please use the following channels:
+
+* **Questions & Discussions:** For general questions, usage help, or architectural discussions, please open a new thread in our `GitHub Discussions <https://github.com/dirmeier/sbijax/discussions>`_ tab.
+* **Bug Reports & Feature Requests:** To report a bug, software problem, or suggest a new feature, please submit an issue via our `GitHub Issue Tracker <https://github.com/dirmeier/sbijax/issues>`_. Please check existing issues before opening a new one to ensure it hasn't already been reported.
+
+Code contributions in the form of pull requests are more than welcome. A good way to
+start is to check out issues labelled
+`good first issue <https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22>`_. If you are unsure, if starting to work on a PR makes
+sense, feel free to open an issue or discussion thread.
 
 In order to contribute:
 

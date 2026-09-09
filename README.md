@@ -16,7 +16,7 @@ or *Neural Posterior Score Estimation*.
 > [!CAUTION]
 > ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
-## Quick start
+## Quickstart
 
 `Sbijax` implements a fully functional API in the idiom of [Haiku](https://github.com/google-deepmind/dm-haiku):
 every method is a factory returning a record of pure functions, with parameters
@@ -75,11 +75,17 @@ pip install git+https://github.com/dirmeier/sbijax@<RELEASE>
 
 Documentation can be found [here](https://sbijax.readthedocs.io/en/latest/).
 
-## Contributing
+## Contributing and Support
 
-Contributions in the form of pull requests are more than welcome. A good way to
+If you have questions, encounter problems, or need support with this software, please use the following channels:
+
+* **Questions & Discussions:** For general questions, usage help, or architectural discussions, please open a new thread in our [GitHub Discussions](https://github.com/dirmeier/sbijax/discussions) tab.
+* **Bug Reports & Feature Requests:** To report a bug, software problem, or suggest a new feature, please submit an issue via our [GitHub Issue Tracker](https://github.com/dirmeier/sbijax/issues). Please check existing issues before opening a new one to ensure it hasn't already been reported.
+
+Code contributions in the form of pull requests are more than welcome. A good way to
 start is to check out issues labelled
-[good first issue](https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+[good first issue](https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). If you are unsure, if starting to work on a PR makes
+sense, feel free to open an issue or discussion thread.
 
 In order to contribute:
 
