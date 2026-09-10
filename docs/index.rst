@@ -20,15 +20,14 @@ convergence diagnostics.
 
     ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
-Example
--------
+Quickstart
+----------
 
 ``Sbijax`` implements a low-level, functional API in the idiom of dm-haiku and
-blackjax: every method is a factory that takes only the network and returns a
-record of pure functions, and training and sampling are free driver functions
-(:func:`~sbijax.train`, :func:`~sbijax.sample`). The prior and simulator define
-the data; the optimizer and sampler are injected at the driver that uses them.
-For example, neural likelihood estimation:
+blackjax: every method is a factory returning a tuple of pure functions. 
+All a user needs to define is a prior function, a simulator function
+and an inferential algorithm. For example, you can define a
+neural likelihood estimation method and generate posterior samples like this:
 
 .. code-block:: python
 
@@ -56,6 +55,45 @@ For example, neural likelihood estimation:
         jr.key(3), estimator, params, y_observed,
         sampler=make_sampler(nuts, prior=prior),
     )
+
+Workflow
+--------
+
+Every method in ``sbijax`` takes the same two user-supplied inputs:
+
+* a **prior**: a ``tensorflow_probability.substrates.jax`` (``tfd``) distribution,
+  e.g. a :code:`tfd.JointDistributionNamed`, exposing ``.sample`` and ``.log_prob``
+* a **simulator**: a plain function ``(rng_key, theta) -> y`` that draws one
+  synthetic observation given a parameter draw ``theta``
+
+From these two, the same pipeline applies to every neural estimator (NLE, NPE,
+FMPE, NPSE, NRE, SNLE):
+
+.. mermaid::
+
+    %%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 60, "rankSpacing": 60, "htmlLabels": true, }, "themeVariables": {"fontFamily": "Helvetica, Arial, sans-serif", "fontSize": "20px", "nodePadding": "20px"}}}%%
+    flowchart LR
+        P([prior]) -->|simulate| D[(data)]
+        M([simulator]) -->|simulate| D
+        D -->|"nle/npe/fmpe/..."| O([objective])
+        O -->|train| T([params])
+        T -->|sample| R([posterior])
+
+        classDef input fill:#e8eef7,stroke:#5b7fa6,stroke-width:1.5px,color:#1c2b3a,font-weight:600;
+        classDef data fill:#fbf3e3,stroke:#c99a3c,stroke-width:1.5px,color:#3a2f1c,font-weight:600;
+        classDef obj fill:#eaf3ea,stroke:#4c8c5a,stroke-width:1.5px,color:#1c3a22,font-weight:600;
+        classDef out fill:#f6e8ee,stroke:#a65b82,stroke-width:1.5px,color:#3a1c2b,font-weight:600;
+        class P,M input
+        class D data
+        class O obj
+        class T,R out
+
+1. ``simulate(rng_key, prior, simulator, n)`` draws ``n`` prior/simulation pairs.
+2. A factory (``nle``, ``npe``, ``fmpe``, ...) wraps a neural network into an
+   ``ObjectiveFns`` record of pure functions.
+3. ``train(rng_key, objective, data)`` fits it, returning ``params``.
+4. ``sample(rng_key, objective, params, observable)`` draws posterior samples
+   (MCMC-based methods also take ``sampler=make_sampler(nuts, prior=prior)``).
 
 Installation
 ------------
@@ -103,9 +141,9 @@ In order to contribute:
 7) Submit a PR 🙂
 
 Development commands
---------------------
+====================
 
-The project uses ``uv`` for everything (there is no ``Makefile``):
+The project uses ``uv`` for everything:
 
 .. code-block:: bash
 
@@ -145,6 +183,7 @@ License
 
 ..  toctree::
     :caption: API
-    :maxdepth: 3
+    :maxdepth: 2
+    :hidden:
 
     api/index
