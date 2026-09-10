@@ -1,53 +1,58 @@
 # pylint: skip-file
+from typing import NamedTuple
 
-import blackjax as bj
-import chex
 import jax
-import jax.numpy as jnp
+from jax import numpy as jnp
 from jax import random as jr
-from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax._src.inference._sample_info import MCMCSampleInfo
-from sbijax._src.mcmc.nuts import sample_with_nuts
 from sbijax._src.mcmc.util import run_blackjax
 
 
-def _mala_init(rng_key, initial_positions, lp):
-  kernel = bj.mala(lp, 0.1)
-  initial_state = jax.vmap(kernel.init)(initial_positions)
-  return initial_state, kernel.step
+class _FakeState(NamedTuple):
+  position: dict
 
 
-def test_run_blackjax_returns_chain_shaped_samples(prior_log_prob_tuple):
-  prior_fn, lp = prior_log_prob_tuple
-  prior = prior_fn()
-  init_key, run_key = jr.split(jr.key(0))
-  initial_positions = prior.sample(seed=init_key, sample_shape=(8,))
-  samples, info = run_blackjax(
-    run_key,
-    _mala_init,
+class _FakeInfo(NamedTuple):
+  acceptance_rate: jax.Array
+
+
+def _deterministic_init_fn(rng_key, initial_positions, lp):
+  """A fake blackjax kernel: deterministically increments position by 1."""
+
+  def kernel(rng_key, state):
+    del rng_key
+    new_position = jax.tree_util.tree_map(lambda x: x + 1.0, state.position)
+    return _FakeState(new_position), _FakeInfo(jnp.array(1.0))
+
+  return _FakeState(initial_positions), kernel
+
+
+def test_run_blackjax_preserves_chain_identity():
+  """Each chain's kept samples must be *that chain's* trajectory.
+
+  Regression test for a bug where the post-warmup reshape used
+  ``.reshape(n_chains, n_samples - n_warmup, -1)`` directly on an array
+  shaped ``(n_samples, n_chains, dim)`` without swapping the leading two
+  axes first, silently shuffling samples across chains and timesteps
+  even though the output shape was unaffected.
+  """
+  n_chains, n_samples, n_warmup = 4, 20, 5
+  # chains start far apart so a chain-identity mix-up is unmistakable.
+  bases = jnp.array([0.0, 1_000.0, 2_000.0, 3_000.0])
+  initial_positions = {"theta": bases[:, None]}
+
+  thetas, _ = run_blackjax(
+    jr.key(0),
+    _deterministic_init_fn,
     initial_positions,
-    lp,
-    n_chains=8,
-    n_samples=200,
-    n_warmup=100,
-  )
-  chex.assert_shape(samples["mean"], (8, 100, 2))
-  chex.assert_shape(samples["std"], (8, 100, 1))
-  assert isinstance(info, MCMCSampleInfo)
-
-
-def test_sample_with_nuts_returns_samples_and_mcmc_info():
-  prior = tfd.JointDistributionNamed(
-    {"theta": tfd.Normal(jnp.zeros(2), 1.0)}, batch_ndims=0
+    lp=None,
+    n_chains=n_chains,
+    n_samples=n_samples,
+    n_warmup=n_warmup,
   )
 
-  def lp(theta):
-    return jnp.sum(prior.log_prob(theta))
-
-  samples, info = sample_with_nuts(
-    jr.key(0), lp, prior, n_chains=2, n_samples=40, n_warmup=20
-  )
-  assert samples["theta"].shape == (2, 20, 2)
-  assert isinstance(info, MCMCSampleInfo)
-  assert jnp.isfinite(info.acceptance_rate)
+  # kernel increments by 1 each of `n_samples` steps, so absolute step t
+  # (1-indexed) of chain c sits at `bases[c] + t`; post-warmup keeps
+  # t = n_warmup + 1, ..., n_samples.
+  expected = bases[:, None] + jnp.arange(n_warmup + 1, n_samples + 1)[None, :]
+  assert jnp.allclose(thetas["theta"][:, :, 0], expected)

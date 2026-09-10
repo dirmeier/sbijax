@@ -45,7 +45,9 @@ def run_blackjax(
   )
   _ = states.position[first_key].block_until_ready()
   thetas = jax.tree_util.tree_map(
-    lambda x: x[n_warmup:, ...].reshape(n_chains, n_samples - n_warmup, -1),
+    lambda x: jnp.swapaxes(x[n_warmup:, ...], 0, 1).reshape(
+      n_chains, n_samples - n_warmup, -1
+    ),
     states.position,
   )
   acceptance = jnp.mean(infos.acceptance_rate[n_warmup:, ...])

@@ -56,10 +56,25 @@ More self-contained examples can be found in [examples](https://github.com/dirme
 
 Every method in `sbijax` takes the same two user-supplied inputs:
 
-* a **prior**: a `tensorflow_probability.substrates.jax` (`tfd`) distribution,
-  e.g. a `tfd.JointDistributionNamed`, exposing `.sample` and `.log_prob`
-* a **simulator**: a plain function `(rng_key, theta) -> y` that draws one
-  synthetic observation given a parameter draw `theta`
+* a **prior**: needs a `.sample(seed=rng_key)` method returning a pytree, a
+  batched form `.sample(seed=rng_key, sample_shape=(n,))`, and a
+  `.log_prob(theta)` method accepting that same pytree structure. A pytree
+  here just means a (possibly nested) dict of arrays, e.g. what the `prior`
+  in the example above returns from `.sample(...)`:
+
+  ```python
+  {"theta": Array([0.62, 0.84])}
+  ```
+
+  Nothing checks that the prior is literally a
+  `tensorflow_probability.substrates.jax` (`tfd`) distribution, but every
+  example uses a `tfd.JointDistributionNamed`, which gives you both methods
+  for free
+* a **simulator**: a plain function `(seed, theta) -> y`. Use those exact
+  argument names (or `**kwargs`) — ABC methods (`sabc`/`smcabc`) call it by
+  keyword internally. `simulate`/`run_sequential` always call it with a
+  **batched** `theta` (a leading axis of size `n`), so it needs to handle a
+  batch of parameter draws, not a single one
 
 From these two, the same pipeline applies to every neural estimator (NLE, NPE,
 FMPE, NPSE, NRE, SNLE):
