@@ -29,11 +29,10 @@ bibliography: paper.bib
 
 # Summary
 
-Neural simulation-based inference (SBI) describes an emerging family of methods for Bayesian inference for simulator models that use neural networks as surrogate models.
-Here we introduce `sbijax`, a Python package that implements a wide variety of state-of-the-art methods in neural simulation-based inference using a user-friendly
-programming interface. sbijax offers high-level functionality to quickly construct SBI estimators, and compute and visualize posterior distributions with only a few lines of code.
+Neural simulation-based inference (SBI) describes an emerging family of methods for Bayesian inference for simulator models that use neural networks as surrogate models. Here we introduce sbijax, a Python package that implements a wide variety of state-of-the-art methods in neural simulation-based inference using a user-friendly programming interface. 
+Targeted at domain scientists in, e.g., computational physics or computational biology, and SBI researchers, sbijax offers high-level functionality to quickly construct SBI estimators and compute posterior distributions with only a few lines of code.
 In addition, the package provides functionality for conventional approximate Bayesian computation, to compute model diagnostics, and to automatically estimate summary
-statistics. By virtue of being entirely written in `JAX`, sbijax is extremely computationally efficient, allowing rapid training of neural networks and executing code automatically in parallel on both CPU and GPU.
+statistics. By virtue of being entirely written in JAX, sbijax is extremely computationally efficient, allowing rapid training of neural networks and executing code automatically in parallel on both CPU and GPU.
 
 # Statement of Need
 
