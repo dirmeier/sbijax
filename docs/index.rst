@@ -24,7 +24,7 @@ Quickstart
 ----------
 
 ``Sbijax`` implements a low-level, functional API in the idiom of dm-haiku and
-blackjax: every method is a factory returning a tuple of pure functions. 
+blackjax: every method is a factory returning a tuple of pure functions.
 All a user needs to define is a prior function, a simulator function
 and an inferential algorithm. For example, you can define a
 neural likelihood estimation method and generate posterior samples like this:
@@ -191,7 +191,7 @@ License
 
     Getting started <notebooks/getting_started>
     A more detailed intro  <notebooks/more_detailed_intro>
-    SLCP <notebooks/examples>    
+    SLCP <notebooks/examples>
     🔧 Custom loops <custom_loops>
     Self-contained examples <examples>
 
