@@ -64,3 +64,12 @@ nav.bd-links li > a:hover {
 button.theme-switch-button {
     display: none !important;
 }
+
+pre.mermaid {
+    background-color: transparent !important;
+}
+
+html body pre.mermaid > svg {
+    height: auto !important;
+    max-height: 420px;
+}

@@ -20,15 +20,14 @@ convergence diagnostics.
 
     ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
 
-Example
--------
+Quickstart
+----------
 
 ``Sbijax`` implements a low-level, functional API in the idiom of dm-haiku and
-blackjax: every method is a factory that takes only the network and returns a
-record of pure functions, and training and sampling are free driver functions
-(:func:`~sbijax.train`, :func:`~sbijax.sample`). The prior and simulator define
-the data; the optimizer and sampler are injected at the driver that uses them.
-For example, neural likelihood estimation:
+blackjax: every method is a factory returning a tuple of pure functions.
+All a user needs to define is a prior function, a simulator function
+and an inferential algorithm. For example, you can define a
+neural likelihood estimation method and generate posterior samples like this:
 
 .. code-block:: python
 
@@ -57,6 +56,60 @@ For example, neural likelihood estimation:
         sampler=make_sampler(nuts, prior=prior),
     )
 
+Workflow
+--------
+
+Every method in ``sbijax`` takes the same two user-supplied inputs:
+
+* a **prior**: needs a ``.sample(seed=rng_key)`` method returning a pytree, a
+  batched form ``.sample(seed=rng_key, sample_shape=(n,))``, and a
+  ``.log_prob(theta)`` method accepting that same pytree structure. A pytree
+  here just means a (possibly nested) dict of arrays, e.g. what the
+  ``prior`` in the example above returns from ``.sample(...)``:
+
+  .. code-block:: python
+
+      {"theta": Array([0.62, 0.84])}
+
+  Nothing checks that the prior is literally a
+  ``tensorflow_probability.substrates.jax`` (``tfd``) distribution, but every
+  example uses a :code:`tfd.JointDistributionNamed`, which gives you both
+  methods for free
+* a **simulator**: a plain function ``(seed, theta) -> y``. Use those exact
+  argument names (or ``**kwargs``) — ABC methods (``sabc``/``smcabc``) call it
+  by keyword internally. ``simulate``/``run_sequential`` always call it with a
+  **batched** ``theta`` (a leading axis of size ``n``), so it needs to handle
+  a batch of parameter draws, not a single one
+
+From these two, the same pipeline applies to every neural estimator (NLE, NPE,
+FMPE, NPSE, NRE, SNLE):
+
+.. mermaid::
+
+    %%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 60, "rankSpacing": 60, "htmlLabels": true, }, "themeVariables": {"fontFamily": "Helvetica, Arial, sans-serif", "fontSize": "20px", "nodePadding": "20px"}}}%%
+    flowchart LR
+        P([prior]) -->|simulate| D[(data)]
+        M([simulator]) -->|simulate| D
+        D -->|"nle/npe/fmpe/..."| O([objective])
+        O -->|train| T([params])
+        T -->|sample| R([posterior])
+
+        classDef input fill:#e8eef7,stroke:#5b7fa6,stroke-width:1.5px,color:#1c2b3a,font-weight:600;
+        classDef data fill:#fbf3e3,stroke:#c99a3c,stroke-width:1.5px,color:#3a2f1c,font-weight:600;
+        classDef obj fill:#eaf3ea,stroke:#4c8c5a,stroke-width:1.5px,color:#1c3a22,font-weight:600;
+        classDef out fill:#f6e8ee,stroke:#a65b82,stroke-width:1.5px,color:#3a1c2b,font-weight:600;
+        class P,M input
+        class D data
+        class O obj
+        class T,R out
+
+1. ``simulate(rng_key, prior, simulator, n)`` draws ``n`` prior/simulation pairs.
+2. A factory (``nle``, ``npe``, ``fmpe``, ...) wraps a neural network into an
+   ``ObjectiveFns`` record of pure functions.
+3. ``train(rng_key, objective, data)`` fits it, returning ``params``.
+4. ``sample(rng_key, objective, params, observable)`` draws posterior samples
+   (MCMC-based methods also take ``sampler=make_sampler(nuts, prior=prior)``).
+
 Installation
 ------------
 
@@ -74,20 +127,48 @@ To install the latest GitHub <RELEASE>, just call the following on the command l
 
 See also the installation instructions for `JAX <https://github.com/google/jax>`_, if you plan to use :code:`sbijax` on GPU/TPU.
 
-Contributing
-------------
+Contributing and Support
+-------------------------
 
-Contributions in the form of pull requests are more than welcome. A good way to start is to check out issues labelled
-`"good first issue" <https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22>`_.
+If you have questions, encounter problems, or need support with this software, please use the following channels:
+
+* **Questions & Discussions:** For general questions, usage help, or architectural discussions, please open a new thread in our `GitHub Discussions <https://github.com/dirmeier/sbijax/discussions>`_ tab.
+* **Bug Reports & Feature Requests:** To report a bug, software problem, or suggest a new feature, please submit an issue via our `GitHub Issue Tracker <https://github.com/dirmeier/sbijax/issues>`_. Please check existing issues before opening a new one to ensure it hasn't already been reported.
+
+Code contributions in the form of pull requests are more than welcome. A good way to
+start is to check out issues labelled
+`good first issue <https://github.com/dirmeier/sbijax/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22>`_. If you are unsure, if starting to work on a PR makes
+sense, feel free to open an issue or discussion thread.
 
 In order to contribute:
 
-1) Clone :code:`sbijax` and install :code:`uv` from `here <https://docs.astral.sh/uv/getting-started/installation/>`_,
-2) install all dependencies using ```uv sync``,
-3) create a new branch locally :code:`git checkout -b feature/my-new-feature` or :code:`git checkout -b issue/fixes-bug`,
-4) implement your contribution and ideally a test case,
-5) test it by calling ``make tests``, ``make lints`` and ``make format`` on the (Unix) command line,
-6) submit a PR 🙂
+1) Clone :code:`sbijax` and install :code:`uv` from `here <https://docs.astral.sh/uv/getting-started/installation/>`_.
+2) Install all dependencies using ``uv sync --all-groups``.
+3) Install the Git hooks:
+
+   .. code-block:: bash
+
+       uv run pre-commit install -t pre-commit -t commit-msg
+
+4) Create a new branch locally :code:`git checkout -b feature/my-new-feature` or :code:`git checkout -b issue/fixes-bug`.
+5) Implement your contribution and ideally a test case.
+6) Check your work (see below).
+7) Submit a PR 🙂
+
+Development commands
+====================
+
+The project uses ``uv`` for everything:
+
+.. code-block:: bash
+
+    uv sync --all-groups
+    uv run pytest
+    uv run ruff check sbijax examples
+    uv run ruff check --fix sbijax examples
+    uv run ruff format sbijax examples
+    uv run mypy sbijax examples
+    uv run pre-commit run --all-files
 
 License
 -------
@@ -110,13 +191,13 @@ License
 
     Getting started <notebooks/getting_started>
     A more detailed intro  <notebooks/more_detailed_intro>
-    Examples <notebooks/examples>
-    Inference using EEG data  <notebooks/eeg_data_example>
+    SLCP <notebooks/examples>
     🔧 Custom loops <custom_loops>
     Self-contained examples <examples>
 
 ..  toctree::
     :caption: API
-    :maxdepth: 3
+    :maxdepth: 2
+    :hidden:
 
     api/index

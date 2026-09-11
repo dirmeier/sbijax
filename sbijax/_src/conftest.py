@@ -5,6 +5,11 @@ from jax import config
 from jax import numpy as jnp
 from tensorflow_probability.substrates.jax import distributions as tfd
 
+try:
+  import jrnmm  # noqa: F401
+except ImportError:
+  collect_ignore_glob = ["simulators/jansen_rit.py"]
+
 
 def pytest_runtest_setup(item):
   """Reset x64 before each test.

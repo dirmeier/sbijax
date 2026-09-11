@@ -142,7 +142,7 @@ def _make_maf(
       1,
     )
     td = TransformedDistribution(base_distribution, chain)
-    return td(method, **kwargs)
+    return getattr(td, method)(**kwargs)
 
   return _flow
 
@@ -274,6 +274,6 @@ def _make_spf(
       1,
     )
     td = TransformedDistribution(base_distribution, chain)
-    return td(method, **kwargs)
+    return getattr(td, method)(**kwargs)
 
   return _flow

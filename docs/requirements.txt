@@ -4,6 +4,7 @@ ipython
 nbsphinx
 pandas
 scikit-learn
+seaborn
 session_info
 sphinx
 sphinx-autobuild

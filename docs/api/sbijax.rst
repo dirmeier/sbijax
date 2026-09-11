@@ -40,6 +40,8 @@ class-based API.
     simulate
     stack
     sbc
+    rhat
+    ess
 
 Data pipeline
 -------------
@@ -100,3 +102,7 @@ Diagnostics
 -----------
 
 .. autofunction:: sbc
+
+.. autofunction:: rhat
+
+.. autofunction:: ess

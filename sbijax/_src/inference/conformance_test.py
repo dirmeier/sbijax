@@ -18,7 +18,7 @@ from sbijax._src.inference.ratio.nre import nre
 from sbijax._src.mcmc.nuts import nuts
 from sbijax._src.mcmc.sampler import make_sampler
 from sbijax._src.nn.make_continuous_flow import make_cnf
-from sbijax._src.nn.make_flow import make_maf
+from sbijax._src.nn.make_flow import make_maf, make_spf
 from sbijax._src.nn.make_mlp import make_mlp
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import Info, ObjectiveFns, TrainingState
@@ -55,6 +55,7 @@ def _batch(data, n=32):
 # npse).
 ESTIMATORS = {
   "npe": {"build": lambda p: npe(make_maf(2)), "mcmc": False},
+  "npe_spf": {"build": lambda p: npe(make_spf(2, -5.0, 5.0)), "mcmc": False},
   "fmpe": {"build": lambda p: fmpe(make_cnf(2)), "mcmc": False},
   "npse": {"build": lambda p: npse(make_score_model(2)), "mcmc": False},
   "nle": {"build": lambda p: nle(make_maf(2)), "mcmc": True},
