@@ -163,7 +163,8 @@ The project uses ``uv`` for everything:
 .. code-block:: bash
 
     uv sync --all-groups
-    uv run pytest
+    uv run pytest # runs only fast tests
+    uv run pytest -m slow # runs all tests
     uv run ruff check sbijax examples
     uv run ruff check --fix sbijax examples
     uv run ruff format sbijax examples

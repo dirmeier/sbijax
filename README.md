@@ -158,7 +158,8 @@ The project uses `uv` for everything:
 ```bash
 uv sync --all-groups
 uv run pre-commit run --all-files
-uv run pytest
+uv run pytest # only runs fast tests
+uv run pytest -m slow # runs all tests
 uv run ruff check sbijax examples
 uv run ruff check --fix sbijax examples
 uv run ruff format sbijax examples

@@ -104,7 +104,11 @@ addopts = [
     "--cov-report=xml",
     "--strict-markers",
     "--strict-config",
-    "-ra"
+    "-ra",
+    "-m", "not slow"
+]
+markers = [
+    "slow: trains a model to convergence and checks posterior recovery"
 ]
 testpaths = [
     "sbijax"
