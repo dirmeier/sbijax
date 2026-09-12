@@ -117,3 +117,59 @@ def test_sample_returns_named_pytree_and_info(name):
 def test_npe_extra_is_objective():
   prior, _ = _problem()
   assert isinstance(npe(make_maf(2)).extra(prior), ObjectiveFns)
+
+
+def _multi_leaf_problem():
+  """A prior whose flat and named parameter layouts differ."""
+  prior = tfd.JointDistributionNamed(
+    {
+      "variance": tfd.InverseGamma(
+        concentration=3.0 * jnp.ones(1), scale=2.0 * jnp.ones(1)
+      ),
+      "mean": lambda variance: tfd.Normal(jnp.zeros(2), jnp.sqrt(variance)),
+    },
+    batch_ndims=0,
+  )
+
+  def simulator(seed, theta):
+    p = tfd.Normal(jnp.zeros_like(theta["mean"]), jnp.sqrt(theta["variance"]))
+    return theta["mean"] + p.sample(seed=seed)
+
+  return prior, simulator
+
+
+# one estimator per sampling family; the parameter vector is 3-d (mean, mean,
+# variance) while the data stays 2-d, so posterior and likelihood networks are
+# sized differently
+MULTI_LEAF_ESTIMATORS = {
+  "npe": {"build": lambda: npe(make_maf(3)), "mcmc": False},
+  "fmpe": {"build": lambda: fmpe(make_cnf(3)), "mcmc": False},
+  "nle": {"build": lambda: nle(make_maf(2)), "mcmc": True},
+}
+
+
+@pytest.mark.parametrize("name", list(MULTI_LEAF_ESTIMATORS))
+def test_sample_names_draws_after_a_multi_leaf_prior(name):
+  # the amortized sample_fns emit the flat parameter vector under a single
+  # "theta" key because they never see the prior; passing prior= to the driver
+  # is what makes every method agree on the prior's structure
+  prior, simulator = _multi_leaf_problem()
+  obj = MULTI_LEAF_ESTIMATORS[name]["build"]()
+  data = simulate(jr.key(0), prior, simulator, n=200)
+  params, _ = train(jr.key(1), obj, data, n_iter=2, batch_size=100)
+  if MULTI_LEAF_ESTIMATORS[name]["mcmc"]:
+    kwargs = {
+      "sampler": make_sampler(nuts, prior=prior),
+      "n_chains": 2,
+      "n_samples": 30,
+      "n_warmup": 10,
+    }
+  else:
+    kwargs = {"n_samples": 64}
+  samples, _ = sample(
+    jr.key(2), obj, params, jnp.zeros(2), prior=prior, **kwargs
+  )
+
+  assert set(samples) == {"mean", "variance"}
+  assert samples["mean"].shape[-1] == 2
+  assert samples["variance"].shape[-1] == 1

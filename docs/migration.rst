@@ -110,8 +110,8 @@ Sampling is a free driver; the prior travels in the sampler
 
 ``sample`` (renamed from ``sample_posterior``) is a free function taking
 ``params`` explicitly and returning ``(samples, info)`` -- a named pytree of
-draws (``{"theta": array}``, leaves of shape ``(n_chains, n_draws, dim)``) plus a
-small sampling record. There is no ``arviz`` / ``InferenceData``.
+draws with leaves of shape ``(n_chains, n_draws, dim)`` plus a small sampling
+record. There is no ``arviz`` / ``InferenceData``.
 
 For **amortized** posterior methods (``npe``/``fmpe``/``npse``), sampling needs
 nothing but ``params``:
@@ -121,6 +121,16 @@ nothing but ``params``:
     from sbijax import sample
     samples, info = sample(jr.key(2), estimator, params, y_obs)
     theta = samples["theta"]              # (n_chains, n_draws, dim)
+
+These methods never see the prior, so they return the flattened parameter
+vector under a single ``"theta"`` key. Pass ``prior=`` to name the leaves after
+the prior instead, which is what the likelihood, ratio and ABC methods already
+do -- it matters as soon as the prior has more than one leaf:
+
+.. code-block:: python
+
+    samples, info = sample(jr.key(2), estimator, params, y_obs, prior=prior)
+    samples["mean"], samples["variance"]  # instead of one flat "theta"
 
 For **likelihood/ratio** methods (``nle``/``nre``), the posterior is formed at
 sample time, so the prior travels inside a sampler built with
