@@ -76,9 +76,7 @@ density estimation [@dirmeier2024surjectors], `TensorFlow Probability` [@dillon2
 While a plethora of different models has been proposed in the recent literature, the development of adequate software packages has not followed at the same pace,
 and only few packages exist that allow modelers to use these methods. Most prominently, the Python package `sbi` [@tejero-cantero2020sbi]
 implements several approaches for neural simulation-based inference, such as a neural posterior, likelihood-ratio, and likelihood estimation [@cranmer2020frontier] utilizing a `PyTorch` backend [@paszke2019pytorch].
-The package additionally provides an API for model diagnostics, such as posterior predictive checks, effective sample size computations and simulation-based calibration.
-However, the package lacks implementations of recent developments which pose the state-of-the-art in the field, such as by @chen2023learning, @dirmeier2025simulationbased or @albert2025simulated.
-For approximate Bayesian computation, several Python packages are available. In particular `abcpy` [@dutta2021abcpy] implements a multitude of different ABC algorithms.
+The package additionally provides an API for model diagnostics, such as posterior predictive checks, effective sample size computations and simulation-based calibration. However, the package lacks implementations of recent developments which pose the state-of-the-art in the field, such as by @chen2023learning, @dirmeier2025simulationbased or @albert2025simulated.`BayesFlow` [@bayesflow_2023_software] offers a wide variety of neural methods, but is similarly limited in the set of estimators it is implementing. For approximate Bayesian computation, several Python packages are available. In particular `abcpy` [@dutta2021abcpy] implements a multitude of different ABC algorithms.
 However, none of these packages implement modern (neural) SBI methods.
 
 # Software design
