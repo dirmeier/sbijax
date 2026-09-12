@@ -10,27 +10,38 @@ from sbijax._src.train.train import train
 from sbijax._src.util.data import flatten_chains
 
 
-def _posterior_proposal(objective, params, observable, sampler):
-  """Wrap the current posterior as a proposal ``(rng, n) -> theta``."""
+def _posterior_proposal(prior):
+  """Build the default ``proposal_fn``, closing over the prior.
 
-  def proposal(rng_key, n):
-    # One chain with n_samples=2n / n_warmup=n yields exactly n post-warmup
-    # draws for MCMC methods and >= n for amortized; the extra kwargs are
-    # ignored by amortized sample_fns.
-    samples, _ = sample(
-      rng_key,
-      objective,
-      params,
-      observable,
-      sampler=sampler,
-      n_samples=2 * n,
-      n_warmup=n,
-      n_chains=1,
-    )
-    theta = flatten_chains(samples)
-    return jax.tree_util.tree_map(lambda x: x[:n], theta)
+  The prior is needed so the drawn parameters carry its pytree structure: the
+  simulator and ``stack`` both expect it, and the amortized estimators would
+  otherwise hand back a flat ``"theta"`` vector. ``make_truncated_proposal``
+  closes over the prior the same way, so the public ``proposal_fn`` contract
+  stays ``(objective, params, observable, sampler)``.
+  """
 
-  return proposal
+  def proposal_fn(objective, params, observable, sampler):
+    def proposal(rng_key, n):
+      # One chain with n_samples=2n / n_warmup=n yields exactly n post-warmup
+      # draws for MCMC methods and >= n for amortized; the extra kwargs are
+      # ignored by amortized sample_fns.
+      samples, _ = sample(
+        rng_key,
+        objective,
+        params,
+        observable,
+        sampler=sampler,
+        prior=prior,
+        n_samples=2 * n,
+        n_warmup=n,
+        n_chains=1,
+      )
+      theta = flatten_chains(samples)
+      return jax.tree_util.tree_map(lambda x: x[:n], theta)
+
+    return proposal
+
+  return proposal_fn
 
 
 def run_sequential(
@@ -70,7 +81,7 @@ def run_sequential(
       ``(params, Info)`` from the final round
   """
   if proposal_fn is None:
-    proposal_fn = _posterior_proposal
+    proposal_fn = _posterior_proposal(prior)
   data, params, info = None, None, None
   for _ in range(n_rounds):
     sim_key, train_key, rng_key = jr.split(rng_key, 3)

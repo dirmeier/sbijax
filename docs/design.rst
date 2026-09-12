@@ -239,10 +239,15 @@ reusable under different priors and kernels.
 Samples and diagnostics
 -----------------------
 
-``sample`` returns ``(samples, info)`` where ``samples`` is the named prior
-pytree (``{"theta": array}``, leaves of shape ``(n_chains, n_draws, dim)``) and
-``info`` is a small sampling record (mean acceptance and, for multi-chain MCMC,
-``rhat``/``ess``). There is no ``arviz``/``InferenceData`` and no plotting in the
+``sample`` returns ``(samples, info)`` where ``samples`` is a named pytree of
+draws with leaves of shape ``(n_chains, n_draws, dim)`` and ``info`` is a small
+sampling record (mean acceptance and, for multi-chain MCMC,
+``rhat``/``ess``). The likelihood, ratio and ABC methods name those leaves
+after the prior, since they have it in hand; the amortized methods emit the
+flattened parameter vector under a single ``"theta"`` key unless you pass
+``prior=`` to :func:`sbijax.sample`, which reshapes them to match. For a prior
+that is itself one ``"theta"`` leaf the two layouts coincide.
+There is no ``arviz``/``InferenceData`` and no plotting in the
 library -- build figures from the returned arrays and check convergence with
 :func:`sbijax.ess` / :func:`sbijax.rhat` (thin re-exports of BlackJAX
 diagnostics). Calibration is available through :func:`sbijax.sbc`.
