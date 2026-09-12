@@ -96,20 +96,17 @@ This allows users to construct models directly with `Haiku`, and to incorporate 
  [@deepmind2020jax] and `surjectors` [@dirmeier2024surjectors].
  As a result, model definitions remain flexible and low-level, while seamlessly interoperating with the broader `JAX` ecosystem.
 
-3) Support for extensibility and research.
+3) A deliberately low-level interface.
+An inference workflow typically written as a short sequence of ordinary function calls, where the inputs and outputs of every step, e.g., the simulated data set and the network parameters, are managed by the developer explicitly. This asks developers to be deliberate about the workflow they are executing rather than calling the member functions of an object whose internal state is (often) opaque to them. We consider this trade-off worthwhile for a scientific software tool, since it makes a method transparent to the practitioner using it (albeit it induces some additional complexity) and straightforward to modify for a researcher extending it.
+
+4) Support for extensibility and research.
 `sbijax` is structured to facilitate experimentation with new SBI methods.
 Its modular design allows components such as neural architectures, training objectives, and sampling strategies to be easily replaced or extended, making it suitable as both a research framework and a practical toolbox.
 Since every method reduces to the same small set of primitives, namely an initialization, a gradient step, an evaluation step and a sampling function, a newly implemented objective can be trained and sampled from with the existing drivers without any further changes.
 
-4) Accessibility for domain scientists.
+5) Accessibility for domain scientists.
 In addition to its flexibility, `sbijax` includes pre-implemented models with sensible defaults, enabling use without in-depth expertise in deep learning.
 In the simplest case, users only need to define a prior and a simulator to run inference workflows—often in as few as five lines of code.
-
-5) A deliberately low-level interface.
-`sbijax` adopts the idiom of the wider `JAX` ecosystem, e.g., of `Haiku` [@haiku2020github], `Distrax` and `Optax` [@deepmind2020jax], or `BlackJAX` [@cabezas2024blackjax]. All of these expose explicit functions and explicit state variables.
-An inference workflow typically written as a short sequence of ordinary function calls, where the inputs and outputs of every step, e.g., the simulated data set and the network parameters, are managed by the developer explicitly.
-This asks developers to be deliberate about the workflow they are executing rather than calling the member functions of an object whose internal state is (often) opaque to them.
-We consider this trade-off worthwhile for a scientific software tool, since it makes a method transparent to the practitioner using it (albeit it induces some additional complexity) and straightforward to modify for a researcher extending it.
 
 # Research impact statement
 
