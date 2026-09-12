@@ -194,6 +194,7 @@ License
     A more detailed intro  <notebooks/more_detailed_intro>
     SLCP <notebooks/examples>
     🔧 Custom loops <custom_loops>
+    Using Flax linen networks <notebooks/flax_linen>
     Self-contained examples <examples>
 
 ..  toctree::

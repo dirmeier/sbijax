@@ -1,4 +1,6 @@
 -e .
+1
+flax
 ipykernel
 ipython
 nbsphinx
