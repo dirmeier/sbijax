@@ -19,10 +19,6 @@ A trainable objective ``obj`` exposes bound pure functions:
     obj.train.eval_fn(rng, state, batch)            -> metrics
     obj.sample_fn(rng, params, observable, *, sampler=None) -> (samples, info)
 
-Note ``sample_fn`` is the raw primitive: the amortized objectives return draws
-as a flat ``{"theta": array}`` here. The ``prior=`` argument that names them
-after the prior lives on the :func:`sbijax.sample` driver, not on this seam.
-
 ``TrainingState`` is an opaque carry; ``params`` is what you extract at the end.
 A ``batch`` is a dict ``{"y": array, "theta": array}`` with the parameters
 flattened to a ``(batch_size, dim)`` array -- :func:`sbijax.simulate` returns
