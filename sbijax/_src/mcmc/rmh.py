@@ -59,9 +59,9 @@ def sample_with_rmh(
 # pylint: disable=missing-function-docstring,no-member
 def _mh_init(_rng_key, initial_positions, lp):
   flat_ip = jax.vmap(lambda x: ravel_pytree(x)[0])(initial_positions)
-  kernel = bj.rmh(
+  kernel = bj.additive_step_random_walk(
     lp,
-    bj.mcmc.random_walk.normal(jnp.full_like(flat_ip.shape[-1], 0.25)),
+    bj.mcmc.random_walk.normal(jnp.full((flat_ip.shape[-1],), 0.25)),
   )
   initial_state = jax.vmap(kernel.init)(initial_positions)
   return initial_state, kernel.step

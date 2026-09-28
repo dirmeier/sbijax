@@ -30,3 +30,25 @@ def test_npe_objective_amortized_and_atomic():
   params, _ = train(jr.key(2), obj.extra(prior), data, n_iter=2, batch_size=100)
   samples, _ = sample(jr.key(3), obj, params, jnp.zeros(2), n_samples=64)
   assert samples["theta"].shape == (1, 64, 2)
+
+
+def test_npe_sample_rejects_draws_outside_the_prior_support():
+  prior = tfd.JointDistributionNamed(
+    {"theta": tfd.Uniform(jnp.zeros(2), jnp.ones(2))}, batch_ndims=0
+  )
+
+  def sim(seed, theta):
+    return theta["theta"] + tfd.Normal(0.0, 1.0).sample(
+      theta["theta"].shape, seed=seed
+    )
+
+  obj = npe(make_maf(2))
+  data = simulate(jr.key(0), prior, sim, n=200)
+  params, _ = train(jr.key(1), obj, data, n_iter=2, batch_size=100)
+  samples, info = sample(
+    jr.key(2), obj, params, jnp.zeros(2), prior=prior, n_samples=256
+  )
+  theta = samples["theta"]
+  assert theta.shape == (1, 256, 2)
+  assert jnp.all((theta >= 0.0) & (theta <= 1.0))
+  assert info.acceptance_rate < 1.0

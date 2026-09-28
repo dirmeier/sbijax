@@ -21,7 +21,7 @@ from jax import numpy as jnp
 from jax import random as jr
 from jax._src.flatten_util import ravel_pytree
 
-from sbijax._src.inference._sample_info import DirectSampleInfo
+from sbijax._src.inference.posterior._sampling import reject_outside_support
 from sbijax._src.train._types import ObjectiveFns, TrainFns, TrainingState
 
 
@@ -167,7 +167,9 @@ def npe(network, *, num_atoms=10):
       """
       return {"loss": loss_fn(state.params, rng_key, **batch)}
 
-    def sample_fn(rng_key, params, observable, *, n_samples=4_000, **kwargs):
+    def sample_fn(
+      rng_key, params, observable, *, n_samples=4_000, prior=None, **kwargs
+    ):
       """Draw posterior samples from the trained flow.
 
       Args:
@@ -176,6 +178,7 @@ def npe(network, *, num_atoms=10):
           observable: a 1-D (or 2-D with one row) observation array
           sampler: unused; present for API symmetry
           n_samples: number of posterior draws to return
+          prior: the prior whose support the draws must lie in, or ``None``
           **kwargs: ignored
 
       Returns:
@@ -183,21 +186,17 @@ def npe(network, *, num_atoms=10):
           named pytree with each leaf shaped ``(1, n_samples, dim)``
       """
       observable = jnp.atleast_2d(observable)
-      thetas = network.apply(
-        params,
-        rng_key,
-        method="sample",
-        sample_shape=(n_samples,),
-        x=jnp.tile(observable, [n_samples, 1]),
-      )
 
-      def reshape(p):
-        if p.ndim == 1:
-          p = p.reshape(p.shape[0], 1)
-        return p.reshape(1, *p.shape)
+      def draw_fn(rng_key, n):
+        return network.apply(
+          params,
+          rng_key,
+          method="sample",
+          sample_shape=(n,),
+          x=jnp.tile(observable, [n, 1]),
+        )
 
-      thetas = jax.tree_util.tree_map(reshape, {"theta": thetas})
-      return thetas, DirectSampleInfo(n_samples=n_samples)
+      return reject_outside_support(rng_key, draw_fn, n_samples, prior)
 
     return ObjectiveFns(TrainFns(init_fn, step_fn, eval_fn), sample_fn, extra)
 

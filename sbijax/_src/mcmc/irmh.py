@@ -1,6 +1,9 @@
 import blackjax as bj
 import jax
+from jax import numpy as jnp
 from jax import random as jr
+from jax import scipy as jsp
+from jax.flatten_util import ravel_pytree
 
 from sbijax._src.mcmc.sampler import Kernel
 from sbijax._src.mcmc.util import run_blackjax
@@ -54,22 +57,35 @@ def sample_with_imh(
   )
 
 
-# ruff: noqa: E731
-def _irmh_proposal_distribution(initial_positions):
-  shape = lambda p: () if p.ndim == 1 else (p.shape[-1],)
+def _irmh_proposal(initial_positions):
+  """Build a standard normal proposal over the position and its log-density."""
+  position = jax.tree_util.tree_map(lambda x: x[0], initial_positions)
+  flat_position, unravel_fn = ravel_pytree(position)
 
-  def fn(rng_key):
-    return {
-      k: jax.random.normal(rng_key, shape=shape(v))
-      for k, v in initial_positions.items()
-    }
+  def proposal_distribution(rng_key):
+    return unravel_fn(
+      jr.normal(rng_key, flat_position.shape, flat_position.dtype)
+    )
 
-  return fn
+  # blackjax evaluates this as the log-density of moving from the first state
+  # to the second, so an independent proposal scores the second state
+  def proposal_logdensity_fn(_state, other_state):
+    flat, _ = ravel_pytree(other_state.position)
+    return jnp.sum(jsp.stats.norm.logpdf(flat))
+
+  return proposal_distribution, proposal_logdensity_fn
 
 
 # pylint: disable=missing-function-docstring,no-member
 def _mh_init(_rng_key, initial_positions, lp):
-  kernel = bj.irmh(lp, _irmh_proposal_distribution(initial_positions))
+  proposal_distribution, proposal_logdensity_fn = _irmh_proposal(
+    initial_positions
+  )
+  kernel = bj.irmh(
+    lp,
+    proposal_distribution,
+    proposal_logdensity_fn=proposal_logdensity_fn,
+  )
   initial_state = jax.vmap(kernel.init)(initial_positions)
   return initial_state, kernel.step
 

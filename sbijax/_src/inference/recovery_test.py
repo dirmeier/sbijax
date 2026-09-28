@@ -202,14 +202,7 @@ ESTIMATORS = {
   "smcabc": {
     "build": lambda p: smcabc(p.prior, p.simulator, lambda x: x, _l2),
     "kind": "abc",
-    # ess_min sits just below n_particles so the final round resamples: the
-    # engine returns particles without their log-weights, and an unweighted
-    # ECDF of weighted particles would not estimate the posterior.
-    "sample_kwargs": {
-      "n_rounds": 10,
-      "n_particles": 5_000,
-      "ess_min": 4_500,
-    },
+    "sample_kwargs": {"n_rounds": 10, "n_particles": 5_000},
   },
 }
 
