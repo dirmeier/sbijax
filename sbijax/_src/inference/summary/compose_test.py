@@ -50,7 +50,7 @@ def test_summarized_estimator_fit_and_sample():
     jnp.zeros(4),
     sampler=make_sampler(nuts, prior=prior),
     n_chains=2,
-    n_samples=30,
+    n_samples=20,
     n_warmup=10,
   )
   assert samples["theta"].shape == (2, 20, 2)

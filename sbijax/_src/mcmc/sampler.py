@@ -15,7 +15,9 @@ class Kernel(NamedTuple):
   Wraps the algorithm's initializer so :func:`make_sampler` can build the
   concrete kernel and initial chain states at sampling time. The single field
   ``init_fn`` has signature
-  ``(rng_key, initial_positions, lp) -> (initial_states, kernel)``.
+  ``(rng_key, initial_positions, lp, n_warmup, **kernel_kwargs) ->
+  (states, kernel)`` where ``states`` are the chain states after the warmup
+  and ``kernel(keys, states)`` advances every chain by one step.
   """
 
   init_fn: Callable
@@ -64,6 +66,7 @@ def make_sampler(kernel, *, prior, **kernel_kwargs):
       n_chains=n_chains,
       n_samples=n_samples,
       n_warmup=n_warmup,
+      **kernel_kwargs,
     )
 
   return sampler

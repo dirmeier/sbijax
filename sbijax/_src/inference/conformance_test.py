@@ -101,7 +101,7 @@ def test_sample_returns_named_pytree_and_info(name):
   params, _ = train(jr.key(1), obj, data, n_iter=2, batch_size=100)
   if ESTIMATORS[name]["mcmc"]:
     sampler = make_sampler(nuts, prior=prior)
-    kwargs = {"n_chains": 2, "n_samples": 30, "n_warmup": 10}
+    kwargs = {"n_chains": 2, "n_samples": 20, "n_warmup": 10}
   else:
     sampler = None
     kwargs = {"n_samples": 64}
@@ -161,7 +161,7 @@ def test_sample_names_draws_after_a_multi_leaf_prior(name):
     kwargs = {
       "sampler": make_sampler(nuts, prior=prior),
       "n_chains": 2,
-      "n_samples": 30,
+      "n_samples": 20,
       "n_warmup": 10,
     }
   else:

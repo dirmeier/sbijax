@@ -3,7 +3,7 @@ import jax
 from jax import random as jr
 
 from sbijax._src.mcmc.sampler import Kernel
-from sbijax._src.mcmc.util import run_blackjax
+from sbijax._src.mcmc.util import burn_in, run_blackjax
 
 
 # ruff: noqa: PLR0913, D417
@@ -17,8 +17,9 @@ def sample_with_mala(
       lp: the logdensity you wish to sample from
       prior: a function that returns a prior sample
       n_chains: number of chains to sample
-      n_samples: number of samples per chain
+      n_samples: number of samples per chain returned after the warmup
       n_warmup: number of samples to discard
+      **kwargs: the kernel's step size ``step_size`` (default 0.1)
 
   Examples:
       >>> import functools as ft
@@ -38,7 +39,7 @@ def sample_with_mala(
 
   Returns:
       a tuple ``(samples, info)``: a named pytree with leaves of shape
-      ``n_chains x (n_samples - n_warmup) x dim`` and an
+      ``n_chains x n_samples x dim`` and an
       ``MCMCSampleInfo`` with the mean post-warmup acceptance rate
   """
   init_key, run_key = jr.split(rng_key)
@@ -51,14 +52,16 @@ def sample_with_mala(
     n_chains=n_chains,
     n_samples=n_samples,
     n_warmup=n_warmup,
+    **kwargs,
   )
 
 
 # pylint: disable=missing-function-docstring,no-member
-def _mala_init(_rng_key, initial_positions, lp):
-  kernel = bj.mala(lp, 0.1)
-  initial_state = jax.vmap(kernel.init)(initial_positions)
-  return initial_state, kernel.step
+def _mala_init(rng_key, initial_positions, lp, n_warmup, step_size=0.1):
+  kernel = bj.mala(lp, step_size)
+  step = jax.vmap(kernel.step)
+  initial_states = jax.vmap(kernel.init)(initial_positions)
+  return burn_in(rng_key, step, initial_states, n_warmup), step
 
 
 mala = Kernel(init_fn=_mala_init)

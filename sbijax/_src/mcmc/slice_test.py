@@ -15,7 +15,7 @@ def test_sample_with_slice_returns_samples_and_info():
     return jnp.sum(prior.log_prob(theta))
 
   samples, info = sample_with_slice(
-    jr.PRNGKey(0), lp, prior, n_chains=2, n_samples=40, n_warmup=20
+    jr.PRNGKey(0), lp, prior, n_chains=2, n_samples=20, n_warmup=20
   )
   assert samples["theta"].shape == (2, 20, 2)
   assert isinstance(info, MCMCSampleInfo)
