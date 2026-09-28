@@ -70,8 +70,8 @@ class SMCABC:
 
     Returns:
         a tuple ``(particles, smc_info)`` where ``particles`` is a named
-        pytree of posterior samples and ``smc_info`` holds per-round
-        particle lists and simulation counts.
+        pytree of equally weighted posterior samples and ``smc_info`` holds
+        per-round particle lists and simulation counts.
     """
     observable = jnp.atleast_2d(observable)
 
@@ -95,7 +95,9 @@ class SMCABC:
         cov_scale,
       )
       curr_ess = ess(log_weights)
-      if curr_ess < ess_min:
+      # the particles are posterior draws only after resampling by their
+      # weights, so the final round always resamples
+      if curr_ess < ess_min or n == n_rounds - 1:
         resample_key, rng_key = jr.split(rng_key)
         particles[list(particles.keys())[0]]
         particles, log_weights = self._resample(
@@ -133,7 +135,7 @@ class SMCABC:
       lambda x: x[sort_idx][:n_particles], particles
     )
     log_weights = -jnp.log(jnp.full(n_particles, n_particles))
-    initial_epsilon = distances[-1]
+    initial_epsilon = jnp.max(distances)
 
     return particles, log_weights, initial_epsilon
 

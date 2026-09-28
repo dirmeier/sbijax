@@ -19,20 +19,19 @@ def sample(
       observable: the observation to condition on
       sampler: a sampler from :func:`~sbijax.mcmc.make_sampler`
           (required for MCMC methods, ignored by amortized methods)
-      prior: the prior the draws should be named after. The amortized
-          estimators return the flattened parameter vector under a single
-          ``"theta"`` key, since they never see the prior; passing it here
+      prior: the prior of the model. The amortized estimators reject draws
+          outside its support and return the flattened parameter vector
+          under a single ``"theta"`` key; passing the prior here also
           reshapes them into the prior's pytree, matching what the MCMC and
-          ABC methods return. Without it the flat layout is preserved.
+          ABC methods return. Without it no draw is rejected and the flat
+          layout is preserved.
       **kwargs: forwarded to ``sample_fn``
 
   Returns:
       ``(samples, info)``
   """
-  # consumed here rather than forwarded: every amortized sample_fn ends in
-  # **kwargs and would silently swallow it
   samples, info = objective.sample_fn(
-    rng_key, params, observable, sampler=sampler, **kwargs
+    rng_key, params, observable, sampler=sampler, prior=prior, **kwargs
   )
   if prior is not None:
     samples = unravel_draws(samples, prior)

@@ -33,15 +33,14 @@ def test_sample_dispatches_to_sample_fn():
   samples, info = sample(0, obj, {"p": 1}, "y", sampler="S", n_samples=7)
   assert samples == "drew"
   assert info == ("info", "S")
-  assert seen == {"n_samples": 7}
+  assert seen == {"n_samples": 7, "prior": None}
 
 
-def test_sample_does_not_forward_prior_to_sample_fn():
-  # every amortized sample_fn ends in **kwargs and would swallow a forwarded
-  # prior without effect, so the driver has to consume it instead
+def test_sample_forwards_prior_to_sample_fn():
   obj, seen = _objective({"theta": jnp.zeros((1, 4, 3))})
-  sample(0, obj, {}, "y", prior=_nig_prior(), n_samples=4)
-  assert "prior" not in seen
+  prior = _nig_prior()
+  sample(0, obj, {}, "y", prior=prior, n_samples=4)
+  assert seen["prior"] is prior
 
 
 def test_sample_names_flat_draws_after_the_prior():

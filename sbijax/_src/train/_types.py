@@ -37,8 +37,8 @@ class ObjectiveFns(NamedTuple):
 
   Attributes:
       train: the :class:`TrainFns` primitives
-      sample_fn: ``(rng_key, params, observable, *, sampler=None, **kwargs) ->
-          (samples, info)``
+      sample_fn: ``(rng_key, params, observable, *, sampler=None, prior=None,
+          **kwargs) -> (samples, info)``
       extra: optional ``(prior) -> ObjectiveFns`` builder for a round > 0
           objective (NPE atomic loss); ``None`` otherwise
   """

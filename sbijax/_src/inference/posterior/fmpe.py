@@ -50,9 +50,11 @@ def fmpe(network):
   def eval_fn(rng_key, state, batch):
     return {"loss": _loss(state.params, rng_key, batch, False)}
 
-  def sample_fn(rng_key, params, observable, *, n_samples=4_000, **kwargs):
+  def sample_fn(
+    rng_key, params, observable, *, n_samples=4_000, prior=None, **kwargs
+  ):
     return rejection_sample_flow(
-      rng_key, network, params, observable, n_samples
+      rng_key, network, params, observable, n_samples, prior
     )
 
   return ObjectiveFns(TrainFns(init_fn, step_fn, eval_fn), sample_fn)

@@ -34,6 +34,9 @@ class DirectSampleInfo(NamedTuple):
 
   Attributes:
       n_samples: the number of posterior draws returned
+      acceptance_rate: the fraction of draws that fell inside the prior's
+          support
   """
 
   n_samples: int
+  acceptance_rate: float = 1.0
