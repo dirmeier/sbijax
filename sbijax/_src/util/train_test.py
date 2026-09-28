@@ -5,16 +5,17 @@ import optax
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._src.util.dataloader import DataLoader
+from sbijax._src.util.dataloader import as_batch_iterator
 from sbijax._src.util.train import train_loop
 
 
+def _loader(n, theta_dim, batch_size):
+  data = {"y": jnp.ones((n, 1)), "theta": jnp.zeros((n, theta_dim))}
+  return as_batch_iterator(jr.key(0), data, batch_size, shuffle=False)
+
+
 def _quadratic_iters():
-  batches = [
-    {"y": jnp.ones((4, 1)), "theta": jnp.zeros((4, 2))},
-    {"y": jnp.ones((4, 1)), "theta": jnp.zeros((4, 2))},
-  ]
-  itr = DataLoader(batches, num_samples=8)
+  itr = _loader(8, 2, batch_size=4)
   return itr, itr
 
 
@@ -68,13 +69,8 @@ def test_train_loop_early_stops_on_plateau():
 
 def test_train_loop_validation_loss_is_sample_weighted():
   # two batches of different sizes: weighted mean must respect batch sizes
-  train_batches = [{"y": jnp.ones((6, 1)), "theta": jnp.zeros((6, 1))}]
-  val_batches = [
-    {"y": jnp.ones((6, 1)), "theta": jnp.zeros((6, 1))},
-    {"y": jnp.ones((2, 1)), "theta": jnp.zeros((2, 1))},
-  ]
-  train_iter = DataLoader(train_batches, num_samples=6)
-  val_iter = DataLoader(val_batches, num_samples=8)
+  train_iter = _loader(6, 1, batch_size=6)
+  val_iter = _loader(8, 1, batch_size=6)
   params = {"w": jnp.array([0.0])}
 
   def loss_fn(params, rng, **batch):
