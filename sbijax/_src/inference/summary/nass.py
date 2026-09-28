@@ -1,6 +1,6 @@
 """Neural approximate sufficient statistics.
 
-Implements the NASS method of :cite:t:`chen2023learning` as a functional
+Implements the NASS method of :cite:t:`chen2021neural` as a functional
 ``SummaryFns``. The network learns a summary of
 the data by maximising a Jensen-Shannon mutual-information bound; the JSD loss
 is reused from the existing implementation.

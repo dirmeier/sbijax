@@ -1,6 +1,6 @@
 """Neural approximate slice sufficient statistics.
 
-Implements the NASSS method of :cite:t:`chen2021neural` as a functional
+Implements the NASSS method of :cite:t:`chen2023learning` as a functional
 ``SummaryFns``. It differs from NASS only in the
 loss (a slice-based JSD bound with a secondary summary); the training and
 summarization logic are shared.
@@ -32,17 +32,16 @@ def _jsd_summary_loss(params, rng_key, apply_fn, **batch):
     params, method="secondary_summary", y=summr, theta=phi
   )
   theta_prime = jnp.sum(theta * phi, axis=1).reshape(-1, 1)
-  idx_pos = jnp.tile(jnp.arange(n), 10)
   perm_key, rng_key = jr.split(rng_key)
-  idx_neg = jax.vmap(lambda x: jr.permutation(x, n))(
-    jr.split(perm_key, 10)
+  # permute within each slice's block of n rows, so that every negative pair
+  # shares its direction phi
+  idx_neg = (
+    jax.vmap(lambda x: jr.permutation(x, n))(jr.split(perm_key, 10))
+    + jnp.arange(10)[:, None] * n
   ).reshape(-1)
   f_pos = apply_fn(params, method="critic", y=second_summr, theta=theta_prime)
   f_neg = apply_fn(
-    params,
-    method="critic",
-    y=second_summr[idx_pos],
-    theta=theta_prime[idx_neg],
+    params, method="critic", y=second_summr, theta=theta_prime[idx_neg]
   )
   a, b = -jax.nn.softplus(-f_pos), jax.nn.softplus(f_neg)
   mi = a.mean() - b.mean()

@@ -363,7 +363,7 @@ class ScoreModel(hk.Module):
           is_training=is_training,
         )
         ret = drift - 0.5 * diffusion**2 * score
-        return ret.squeeze()
+        return ret[0]
 
       drift, vjp_fn = jax.vjp(drift_fn, inputs_t)
       (dfdtheta,) = jax.vmap(vjp_fn)(jnp.eye(inputs_t.shape[0]))

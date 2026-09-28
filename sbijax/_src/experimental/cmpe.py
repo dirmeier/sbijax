@@ -122,8 +122,8 @@ def cmpe(
     )
 
   def eval_fn(rng_key, state, batch):
-    n_intervals = _n_intervals(state.opt_state.step)
-    return {"loss": _loss(state.params, rng_key, batch, n_intervals, False)}
+    # a fixed grid keeps validation losses comparable across stages
+    return {"loss": _loss(state.params, rng_key, batch, s1, False)}
 
   def sample_fn(
     rng_key, params, observable, *, n_samples=4_000, prior=None, **kwargs
