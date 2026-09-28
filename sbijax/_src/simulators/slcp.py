@@ -51,7 +51,7 @@ def slcp():
     xs = jnp.empty_like(us)
     xs = xs.at[..., 0].set(s0 * us[..., 0] + m0)
     y = xs.at[..., 1].set(
-      s1 * (r * us[..., 0] + jnp.sqrt(10 - r**2) * us[..., 1]) + m1
+      s1 * (r * us[..., 0] + jnp.sqrt(1 - r**2) * us[..., 1]) + m1
     )
     y = y.reshape((*theta.shape[:1], 8))
     return y

@@ -22,7 +22,8 @@ def mixture_model_with_distractors():
 
   def prior_fn():
     return tfd.JointDistributionNamed(
-      {"theta": tfd.Uniform(jnp.array([-10.0]), jnp.array([10.0]))}
+      {"theta": tfd.Uniform(jnp.array([-10.0]), jnp.array([10.0]))},
+      batch_ndims=0,
     )
 
   def simulator(seed, theta):
