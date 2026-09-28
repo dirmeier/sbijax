@@ -37,8 +37,8 @@ def test_sbc_ranks_are_calibrated():
     params,
     prior,
     simulator,
-    n_simulations=64,
-    n_posterior_samples=n_post,
+    n_calibrations=64,
+    n_samples=n_post,
   )
   assert ranks.shape == (64, 2)
   assert jnp.all((ranks >= 0) & (ranks <= n_post))

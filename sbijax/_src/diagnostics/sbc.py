@@ -25,16 +25,16 @@ def sbc(
   simulator,
   *,
   sampler=None,
-  n_simulations=100,
-  n_posterior_samples=1_000,
+  n_calibrations=100,
+  n_samples=1_000,
   **sample_kwargs,
 ):
   """Compute simulation-based calibration ranks for a fitted objective.
 
-  For each of ``n_simulations`` draws ``theta* ~ prior`` and
-  ``y* ~ simulator(theta*)``, draws ``n_posterior_samples`` from the posterior
+  For each of ``n_calibrations`` draws ``theta* ~ prior`` and
+  ``y* ~ simulator(theta*)``, draws ``n_samples`` from the posterior
   given ``y*`` and ranks each dimension of ``theta*`` among them. Calibrated
-  posteriors yield ranks uniform on ``[0, n_posterior_samples]``.
+  posteriors yield ranks uniform on ``[0, n_samples]``.
 
   Args:
       rng_key: a jax random key
@@ -46,12 +46,12 @@ def sbc(
       sampler: a sampler from
           :func:`~sbijax.mcmc.make_sampler`; required for
           MCMC methods, ignored by amortized methods
-      n_simulations: number of calibration draws
-      n_posterior_samples: posterior draws per calibration draw
+      n_calibrations: number of calibration draws
+      n_samples: posterior draws per calibration draw
       **sample_kwargs: forwarded to ``sample``
 
   Returns:
-      an integer array of shape ``(n_simulations, n_dims)`` of ranks
+      an integer array of shape ``(n_calibrations, n_dims)`` of ranks
   """
 
   def rank_one(key):
@@ -64,12 +64,12 @@ def sbc(
       params,
       y[0],
       sampler=sampler,
-      n_samples=n_posterior_samples,
+      n_samples=n_samples,
       **sample_kwargs,
     )
     posterior = jax.vmap(lambda x: ravel_pytree(x)[0])(flatten_chains(samples))
     theta_flat, _ = ravel_pytree(jax.tree.map(lambda a: a[0], theta_true))
     return jnp.sum(posterior < theta_flat, axis=0)
 
-  ranks = [rank_one(k) for k in jr.split(rng_key, n_simulations)]
+  ranks = [rank_one(k) for k in jr.split(rng_key, n_calibrations)]
   return jnp.stack(ranks)
