@@ -114,58 +114,6 @@ def _divide_by_marginal_std(transform, sde, beta_min, beta_max):
   return fn
 
 
-def get_log_prob_fn(apply_fn, is_training, sde, beta_max, beta_min):
-  def ve(inputs, time, context):
-    drift_and_diffusion_fn = get_forward_drift_and_diffusion_fn(
-      sde, beta_max, beta_min
-    )
-
-    def drift_fn(inputs_t):
-      drift, diffusion = drift_and_diffusion_fn(inputs, time)
-      score = apply_fn(
-        inputs=inputs_t,
-        time=time,
-        context=context,
-        is_training=is_training,
-      )
-      ret = drift - 0.5 * diffusion**2 * score
-      return ret
-
-    drift, vjp_fn = jax.vjp(drift_fn, inputs)
-    (dfdtheta,) = jax.vmap(vjp_fn)(jnp.eye(inputs.shape[0]))
-    dlogp = jnp.trace(dfdtheta)
-    return drift, dlogp
-
-  def vp(inputs, time, context):
-    drift_and_diffusion_fn = get_forward_drift_and_diffusion_fn(
-      sde, beta_max, beta_min
-    )
-
-    def drift_fn(inputs_t):
-      drift, diffusion = drift_and_diffusion_fn(inputs, time)
-      score = apply_fn(
-        inputs=inputs_t,
-        time=time,
-        context=context,
-        is_training=is_training,
-      )
-      ret = drift - 0.5 * diffusion**2 * score
-      return ret
-
-    drift, vjp_fn = jax.vjp(drift_fn, inputs)
-    (dfdtheta,) = jax.vmap(vjp_fn)(jnp.eye(inputs.shape[0]))
-    dlogp = jnp.trace(dfdtheta)
-    return drift, dlogp
-
-  match sde:
-    case "ve":
-      return ve
-    case "vp":
-      return vp
-    case _:
-      raise ValueError("incorrect sde given: choose from ['ve', 'vp']")
-
-
 # pylint: disable=too-many-arguments
 class _ScoreNet(hk.Module):
   """A simplified 1-d residual network."""

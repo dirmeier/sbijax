@@ -100,7 +100,6 @@ class SMCABC:
       # weights, so the final round always resamples
       if curr_ess < ess_min or n == n_rounds - 1:
         resample_key, rng_key = jr.split(rng_key)
-        particles[list(particles.keys())[0]]
         particles, log_weights = self._resample(
           resample_key,
           particles,
