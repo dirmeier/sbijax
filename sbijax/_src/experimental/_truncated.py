@@ -8,6 +8,13 @@ bounding hypercube; the proposal draws uniformly in the hypercube and keeps
 draws whose posterior log-density clears the boundary. This resolves the
 truncated-proposal open question in the backlog: truncation is a driver option,
 not a separate driver.
+
+The uniform draw in the hypercube follows the authors' implementation
+(https://github.com/jacksimons15327/snpse_icml/blob/5e950e2a3c07d4270f84611773bdeadb22a3db5f/sampling.py#L21-L31).
+It disagrees with the paper, whose truncated proposal (eq. 9 and Appendix
+E.3.3) draws from the prior restricted to the highest-probability region and
+uses the hypercube only to pre-filter prior draws. The two coincide for a
+uniform prior.
 """
 
 # ruff: noqa: PLR0913

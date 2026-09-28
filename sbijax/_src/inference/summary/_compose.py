@@ -68,4 +68,12 @@ def summarized_estimator(estimator, summary_net, summary_params):
       rng_key, params, summary, sampler=sampler, **kwargs
     )
 
-  return ObjectiveFns(TrainFns(init_fn, step_fn, eval_fn), sample_fn)
+  extra = None
+  if estimator.extra is not None:
+
+    def extra(prior):
+      return summarized_estimator(
+        estimator.extra(prior), summary_net, summary_params
+      )
+
+  return ObjectiveFns(TrainFns(init_fn, step_fn, eval_fn), sample_fn, extra)

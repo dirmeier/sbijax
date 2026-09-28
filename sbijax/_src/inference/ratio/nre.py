@@ -20,9 +20,9 @@ from jax._src.flatten_util import ravel_pytree
 from sbijax._src.train._types import ObjectiveFns, TrainFns, TrainingState
 
 
-def _get_prior_probs_marginal_and_joint(k, gamma):
-  p_marginal = 1 / (1 + gamma * k)
-  p_joint = gamma / (1 + gamma * k)
+def _get_prior_probs_marginal_and_joint(gamma):
+  p_marginal = 1 / (1 + gamma)
+  p_joint = gamma / (1 + gamma)
   return p_marginal, p_joint
 
 
@@ -54,8 +54,8 @@ def _marginal_joint_loss(gamma, num_classes, log_marg, log_joint):
     + log_joint[:, 0]
     - jsp.special.logsumexp(denominator_joint, axis=-1)
   )
-  p_marg, p_joint = _get_prior_probs_marginal_and_joint(num_classes, gamma)
-  return p_marg * log_prob_marginal + p_joint * num_classes * log_prob_joint
+  p_marg, p_joint = _get_prior_probs_marginal_and_joint(gamma)
+  return p_marg * log_prob_marginal + p_joint * log_prob_joint
 
 
 def _classifier_loss(params, rng_key, model, gamma, num_classes, **batch):
@@ -123,8 +123,8 @@ def nre(network, *, num_classes=10, gamma=1.0):
 
     def loglik_fn(theta):
       theta_flat, _ = ravel_pytree(theta)
-      theta_flat = theta_flat.reshape(observable.shape[0], -1)
-      return classifier(jnp.concatenate([observable, theta_flat], axis=-1))
+      theta_tiled = jnp.tile(theta_flat, [observable.shape[0], 1])
+      return classifier(jnp.concatenate([observable, theta_tiled], axis=-1))
 
     return sampler(
       rng_key,
