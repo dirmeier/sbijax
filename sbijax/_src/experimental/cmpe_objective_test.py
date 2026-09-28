@@ -5,7 +5,7 @@ import optax
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
-from sbijax._src.experimental.cmpe import cmpe
+from sbijax._src.experimental.cmpe import cmpe, discretization_schedule
 from sbijax._src.nn.make_consistency_model import make_cm
 from sbijax._src.simulate.simulate import simulate
 from sbijax._src.train._types import ObjectiveFns
@@ -31,3 +31,9 @@ def test_cmpe_objective_trains_and_samples():
   )
   samples, _ = sample(jr.key(2), obj, params, jnp.zeros(2), n_samples=64)
   assert samples["theta"].shape == (1, 64, 2)
+
+
+def test_discretization_schedule_doubles_from_s0_to_s1():
+  steps = jnp.array([0, 300, 301, 602, 903, 10_000])
+  n_intervals = discretization_schedule(steps, 1_000, 10, 50)
+  assert n_intervals.tolist() == [10, 10, 20, 40, 50, 50]

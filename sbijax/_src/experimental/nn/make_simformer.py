@@ -11,6 +11,7 @@ __all__ = ["make_simformer_based_score_model"]
 
 from sbijax._src.experimental.nn.make_score_network import (
   ScoreModel,
+  noise_range,
   timestep_embedding,
 )
 
@@ -25,7 +26,7 @@ class _Encoder(hk.Module):
   initializer: Callable[..., Any] = hk.initializers.TruncatedNormal(stddev=0.01)
   activation: Callable[..., Any] = jax.nn.gelu
 
-  def __call__(self, inputs, _time, mask, *, is_training):
+  def __call__(self, inputs, time, mask, *, is_training):
     dropout_rate = self.dropout_rate if is_training else 0.0
     mask = mask[None, None, ...] if mask is not None else None
     hidden = inputs
@@ -47,10 +48,15 @@ class _Encoder(hk.Module):
       intr = hk.nets.MLP(
         [self.widening_factor * intr.shape[-1], intr.shape[-1]],
         w_init=self.initializer,
-        activation=jax.nn.gelu,
+        activation=self.activation,
       )(intr)
       intr = hk.dropout(hk.next_rng_key(), dropout_rate, intr)
-      hidden = hidden + intr
+      # every token receives the diffusion time in every layer, as in the
+      # reference Simformer implementation
+      time_embedding = self.activation(
+        hk.Linear(intr.shape[-1], w_init=self.initializer)(time)
+      )
+      hidden = hidden + intr + time_embedding[:, None, :]
 
     hidden = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True)(
       hidden
@@ -131,11 +137,14 @@ def make_simformer_based_score_model(
   ),
   dropout_rate: float = 0.1,
   activation: Callable[..., Any] = jax.nn.gelu,
-  sde: str = "vp",
+  sde: str = "ve",
   beta_min: float = 0.1,
   beta_max: float = 10.0,
+  sigma_min: float = 1e-4,
+  sigma_max: float = 15.0,
   time_eps: float = 0.001,
-  time_max: float = 1,
+  time_max: float = 1.0,
+  scale_by_sigma: bool = False,
 ):
   """Create a score network for AiO.
 
@@ -153,18 +162,24 @@ def make_simformer_based_score_model(
       embedding_dim_conditioning: dimensionality of the binary
           conditioning labels
       time_embedding_layers: a tuple if ints determining the output sizes of
-          the data embedding network
-      dropout_rate: a tuple if ints determining the output sizes of
-          the data embedding network
-      activation: activation function to be used for
-      sde: can be either of 'vp' and 've'. Defines the type of SDE to be used
-          as a forward process. See the original publication and references
-          therein for details.
-      beta_min: beta min. Again, see the paper please.
-      beta_max: beta max. Again, see the paper please.
+          the time embedding network
+      dropout_rate: dropout rate of the attention and MLP blocks
+      activation: activation function of the time embedding and the MLP
+          blocks
+      sde: either of 'vp' and 've', the forward process. The VE noise
+          scales follow the reference implementation of
+          :cite:t:`gloeckler2024allinone`
+      beta_min: minimal noise rate of the VP SDE
+      beta_max: maximal noise rate of the VP SDE
+      sigma_min: minimal noise scale of the VE SDE
+      sigma_max: maximal noise scale of the VE SDE
       time_eps: some small number to use as minimum time point for the
           forward process. Used for numerical stability.
-      time_max: maximum integration time. 1 is good, but so is 5 or 10.
+      time_max: maximum integration time
+      scale_by_sigma: if true, divide the network output by the marginal std
+          of the forward process, so that the network predicts the negative
+          noise, as in the reference implementation of
+          :cite:t:`gloeckler2024allinone`
 
   Returns:
       returns a score model that can be used for posterior inference using
@@ -188,8 +203,18 @@ def make_simformer_based_score_model(
       dropout_rate=dropout_rate,
       activation=activation,
     )
+    noise_min, noise_max = noise_range(
+      sde, beta_min, beta_max, sigma_min, sigma_max
+    )
     net = ScoreModel(
-      n_dimension, nn, sde, beta_min, beta_max, time_eps, time_max
+      n_dimension,
+      nn,
+      sde,
+      noise_min,
+      noise_max,
+      time_eps,
+      time_max,
+      scale_by_sigma=scale_by_sigma,
     )
     return net(method, **kwargs)
 

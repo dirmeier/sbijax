@@ -105,6 +105,62 @@ flowchart LR
 4. `sample(rng_key, objective, params, observable)` draws posterior samples
    (MCMC-based methods also take `sampler=make_sampler(nuts, prior=prior)`).
 
+## Implemented methods
+
+The table lists each method with its factory function and the helper that
+builds a suitable network. ABC methods take the prior and simulator directly
+and need no network.
+
+| Method                                                  | Factory                      | Network helper                                                              | Reference                 |
+|---------------------------------------------------------|------------------------------|-----------------------------------------------------------------------------|---------------------------|
+| Sequential Monte Carlo ABC (SMC-ABC)                    | [`smcabc`][smcabc]           | none, takes `summary_fn` and `distance_fn`                                  | Beaumont et al. (2009)    |
+| Simulated annealing ABC (SABC)                          | [`sabc`][sabc]               | none, optional `summary_fn` and `distance_fn`                               | Albert et al. (2025)      |
+| Neural likelihood estimation (NLE)                      | [`nle`][nle]                 | [`make_maf`][make_maf], [`make_spf`][make_spf], [`make_mdn`][make_mdn]      | Papamakarios et al. (2019) |
+| Surjective neural likelihood estimation (SNLE)          | [`snle`][snle]               | [`make_maf`][make_maf] or [`make_spf`][make_spf] with `n_layer_dimensions`  | Dirmeier et al. (2023)    |
+| Neural posterior estimation (NPE)                       | [`npe`][npe]                 | [`make_maf`][make_maf], [`make_spf`][make_spf], [`make_mdn`][make_mdn]      | Greenberg et al. (2019)   |
+| Contrastive neural ratio estimation (NRE)               | [`nre`][nre]                 | [`make_mlp`][make_mlp], [`make_resnet`][make_resnet]                        | Miller et al. (2022)      |
+| Flow matching posterior estimation (FMPE)               | [`fmpe`][fmpe]               | [`make_cnf`][make_cnf]                                                      | Wildberger et al. (2023)  |
+| Neural posterior score estimation (NPSE)                | [`npse`][npse]               | [`experimental.nn.make_score_model`][make_score_model]                      | Sharrock et al. (2024)    |
+| All-in-one posterior estimation (AIO)                   | [`experimental.aio`][aio]    | [`experimental.nn.make_simformer_based_score_model`][make_simformer]        | Gloeckler et al. (2024)   |
+| Consistency model posterior estimation (CMPE)           | [`experimental.cmpe`][cmpe]  | [`make_cm`][make_cm]                                                        | Schmitt et al. (2023)     |
+| Neural approximate sufficient statistics (NASS)         | [`nass`][nass]               | [`make_nass_net`][make_nass_net]                                            | Chen et al. (2021)        |
+| Neural approximate slice sufficient statistics (NASSS)  | [`nasss`][nasss]             | [`make_nasss_net`][make_nasss_net]                                          | Chen et al. (2023)        |
+
+NASS and NASSS learn summary statistics, not a posterior. Pass the fitted
+summary network to [`summarized_estimator`][summarized_estimator] to train a
+neural estimator on the summaries, or use its `summarize_fn` as the
+`summary_fn` of an ABC method. The network helpers are defaults: a factory
+accepts any network with the methods listed in its docstring (see
+[Using Flax linen networks](https://sbijax.readthedocs.io/en/latest/notebooks/flax_linen.html)).
+Methods in `sbijax.experimental` may change or be removed. Full citations are
+on the [references](https://sbijax.readthedocs.io/en/latest/references.html)
+page.
+
+[smcabc]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.smcabc
+[sabc]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.sabc
+[nle]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.nle
+[snle]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.snle
+[npe]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.npe
+[nre]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.nre
+[fmpe]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.fmpe
+[npse]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.npse
+[nass]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.nass
+[nasss]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.nasss
+[summarized_estimator]: https://sbijax.readthedocs.io/en/latest/api/sbijax.html#sbijax.summarized_estimator
+[aio]: https://sbijax.readthedocs.io/en/latest/api/sbijax.experimental.html#sbijax.experimental.aio
+[cmpe]: https://sbijax.readthedocs.io/en/latest/api/sbijax.experimental.html#sbijax.experimental.cmpe
+[make_score_model]: https://sbijax.readthedocs.io/en/latest/api/sbijax.experimental.html#sbijax.experimental.nn.make_score_model
+[make_simformer]: https://sbijax.readthedocs.io/en/latest/api/sbijax.experimental.html#sbijax.experimental.nn.make_simformer_based_score_model
+[make_maf]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_maf
+[make_spf]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_spf
+[make_mdn]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_mdn
+[make_mlp]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_mlp
+[make_resnet]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_resnet
+[make_cnf]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_cnf
+[make_cm]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_cm
+[make_nass_net]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_nass_net
+[make_nasss_net]: https://sbijax.readthedocs.io/en/latest/api/sbijax.nn.html#sbijax.nn.make_nasss_net
+
 ## Installation
 
 Make sure to have a working `JAX` installation. Depending whether you want to use CPU/GPU/TPU,
