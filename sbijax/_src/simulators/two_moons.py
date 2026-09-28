@@ -81,6 +81,9 @@ def two_moons():
         * ((r - simulator_params["r_loc"]) / simulator_params["r_scale"]) ** 2
       )
       ll = ll - 0.5 * jnp.log(2 * jnp.pi * simulator_params["r_scale"] ** 2)
+      # (u, v) = (r cos a, r sin a) with a ~ U(-pi/2, pi/2): the density of a
+      # is 1 / pi and the polar change of variables contributes 1 / r
+      ll = ll - jnp.log(jnp.pi) - jnp.log(r)
 
       # I think this (isntead if -inf) is necessary for slice sampling
       ll = jnp.where(u < 0.0, -100_000.0, ll)

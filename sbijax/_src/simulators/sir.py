@@ -41,7 +41,8 @@ def sir(
       {
         "beta": tfd.LogNormal(jnp.log(jnp.array([0.4])), 0.5),
         "gamma": tfd.LogNormal(jnp.log(jnp.array([0.125])), 0.2),
-      }
+      },
+      batch_ndims=0,
     )
     return prior
 

@@ -41,7 +41,7 @@ def tree():
     lik_fn = tfd.Independent(
       tfd.Normal(
         jnp.concatenate(
-          [jnp.sin(b) ** 2, 0.1 * b**2, 0.1 * c**2, jnp.cos(b) ** 2],
+          [jnp.sin(b) ** 2, 0.1 * b**2, 0.1 * c**2, jnp.cos(c) ** 2],
           axis=-1,
         ),
         jnp.array([0.2, 0.2, 0.6, 0.1]),
@@ -56,7 +56,7 @@ def tree():
     sim_fn = tfd.Independent(
       tfd.Normal(
         jnp.concatenate(
-          [jnp.sin(b) ** 2, 0.1 * b**2, 0.1 * c**2, jnp.cos(b) ** 2],
+          [jnp.sin(b) ** 2, 0.1 * b**2, 0.1 * c**2, jnp.cos(c) ** 2],
           axis=-1,
         ),
         jnp.array([0.2, 0.2, 0.6, 0.1]),

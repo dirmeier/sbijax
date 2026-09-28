@@ -1,6 +1,7 @@
 import numpy as np
 from jax import lax
 from jax import numpy as jnp
+from jax import random as jr
 from jax.scipy.special import erf
 from scipy.signal.windows import hann
 from tensorflow_probability.substrates.jax import distributions as tfd
@@ -11,11 +12,12 @@ __all__ = ["solar_dynamo"]
 def _sample_timeseries(
   seed, y0, alpha_min, alpha_max, epsilon_max, len_timeseries=200
 ):
+  a_key, noise_key = jr.split(seed)
   a = tfd.Uniform(alpha_min, alpha_max).sample(
-    seed=seed, sample_shape=(len_timeseries,)
+    seed=a_key, sample_shape=(len_timeseries,)
   )
   noise = tfd.Uniform(0.0, epsilon_max).sample(
-    seed=seed, sample_shape=(len_timeseries,)
+    seed=noise_key, sample_shape=(len_timeseries,)
   )
 
   def _fn(fs, arrays):
