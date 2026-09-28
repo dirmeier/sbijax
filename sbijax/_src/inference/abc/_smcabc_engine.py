@@ -54,7 +54,7 @@ class SMCABC:
     n_particles=10_000,
     eps_step=0.825,
     ess_min=2_000,
-    cov_scale=1.0,
+    cov_scale=2.0,
   ):
     r"""Sample from the approximate posterior.
 
@@ -66,7 +66,8 @@ class SMCABC:
         n_particles: number of n_particles to draw for each parameter
         eps_step:  decay of initial epsilon per simulation round
         ess_min: minimal effective sample size
-        cov_scale: scaling of the transition kernel covariance
+        cov_scale: scaling of the weighted particle covariance that is the
+            transition kernel covariance; Beaumont et al. use 2
 
     Returns:
         a tuple ``(particles, smc_info)`` where ``particles`` is a named
@@ -113,9 +114,11 @@ class SMCABC:
     smc_info = namedtuple("smc_info", "particles n_simulations")
     return thetas, smc_info(all_particles, all_n_simulations)
 
-  def _chol_factor(self, particles, cov_scale):
+  def _chol_factor(self, particles, log_weights, cov_scale):
     particles = jax.vmap(lambda x: ravel_pytree(x)[0])(particles)
-    chol = jnp.linalg.cholesky(jnp.cov(particles.T) * cov_scale)
+    # jnp.cov returns a 0-d variance for a single parameter
+    cov = jnp.atleast_2d(jnp.cov(particles.T, aweights=jnp.exp(log_weights)))
+    chol = jnp.linalg.cholesky(cov * cov_scale)
     return chol
 
   def _init_particles(self, rng_key, observable, n_particles):
@@ -123,11 +126,8 @@ class SMCABC:
     init_key, rng_key = jr.split(rng_key)
     particles = self.prior.sample(seed=init_key, sample_shape=(n_particles,))
     simulator_key, rng_key = jr.split(rng_key)
-    ys = self.simulator_fn(seed=simulator_key, theta=particles)
-
-    summary_statistics = self.summary_fn(ys)
-    distances = self.distance_fn(
-      summary_statistics, self.summary_fn(observable)
+    distances = self._simulate_and_distance(
+      simulator_key, observable, particles
     )
 
     sort_idx = jnp.argsort(distances)
@@ -168,7 +168,8 @@ class SMCABC:
     )
     summary_statistics = self.summary_fn(ys)
     ds = self.distance_fn(summary_statistics, self.summary_fn(observable))
-    return ds
+    # a scalar distance may come as (n,) or, like l2_distance, as (n, 1)
+    return ds.reshape(ds.shape[0])
 
   # pylint: disable=too-many-arguments
   def _move(
@@ -182,7 +183,7 @@ class SMCABC:
     cov_scale,
   ):
     new_particles = None
-    cov_chol_factor = self._chol_factor(particles, cov_scale)
+    cov_chol_factor = self._chol_factor(particles, log_weights, cov_scale)
     n = n_particles
     while n > 0:
       sample_key, simulate_key, rng_key = jr.split(rng_key, 3)

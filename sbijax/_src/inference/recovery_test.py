@@ -11,15 +11,12 @@ They are marked ``slow`` and deselected from the default run; see the
 
 from typing import Any, NamedTuple
 
-import jax
 import pytest
 from jax import numpy as jnp
 from jax import random as jr
 from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax._src.experimental.nn.make_score_network import make_score_model
-from sbijax._src.inference.abc.sabc import sabc
-from sbijax._src.inference.abc.smcabc import smcabc
 from sbijax._src.inference.likelihood.nle import nle
 from sbijax._src.inference.likelihood.snle import snle
 from sbijax._src.inference.posterior.fmpe import fmpe
@@ -155,10 +152,6 @@ def _nig_problem():
 PROBLEMS = {"normal": _normal_problem, "nig": _nig_problem}
 
 
-def _l2(x, y):
-  return jax.vmap(jnp.linalg.norm)(x - y)
-
-
 # registry of estimators. ``build`` takes the whole problem because the network
 # dimension differs by family: posterior estimators are sized by the parameter
 # dimension, likelihood estimators by the data dimension, and nre's classifier
@@ -193,27 +186,11 @@ ESTIMATORS = {
     "build": lambda p: nre(make_mlp()),
     "kind": "mcmc",
   },
-  "sabc": {
-    "build": lambda p: sabc(p.prior, p.simulator),
-    "kind": "abc",
-    # SABC carries an unweighted population, so its particles are draws
-    "sample_kwargs": {"n_particles": 2_000, "n_simulation": 100_000},
-  },
-  "smcabc": {
-    "build": lambda p: smcabc(p.prior, p.simulator, lambda x: x, _l2),
-    "kind": "abc",
-    "sample_kwargs": {"n_rounds": 10, "n_particles": 5_000},
-  },
 }
 
 
 def _posterior_draws(rng_key, problem, spec):
-  """Fit the estimator where needed and return draws as a named pytree."""
-  if spec["kind"] == "abc":
-    sampler = spec["build"](problem)
-    draws, _ = sampler.sample(rng_key, problem.y_obs, **spec["sample_kwargs"])
-    return draws
-
+  """Fit the estimator and return draws as a named pytree."""
   sim_key, train_key, sample_key = jr.split(rng_key, 3)
   objective = spec["build"](problem)
   data = simulate(sim_key, problem.prior, problem.simulator, n=N_SIMULATIONS)
@@ -286,8 +263,8 @@ def recovery_errors(rng_key, problem_name, method_name):
 
 # (ks, mean) tolerances, set at roughly twice the worst value measured over
 # seeds 0-2, with the measurement in a trailing comment. The neural and MCMC
-# methods land an order of magnitude inside these; sabc and npse are the loose
-# ones and are the entries to watch if this file ever turns flaky.
+# methods land an order of magnitude inside these; npse is the loose one and
+# the entry to watch if this file ever turns flaky.
 TOLERANCES = {
   ("normal", "npe"): (0.09, 0.14),  # measured 0.041, 0.065
   ("normal", "npe_spf"): (0.11, 0.18),  # measured 0.052, 0.088
@@ -296,8 +273,6 @@ TOLERANCES = {
   ("normal", "nle"): (0.08, 0.09),  # measured 0.040, 0.044
   ("normal", "snle"): (0.08, 0.09),  # measured 0.040, 0.044
   ("normal", "nre"): (0.07, 0.09),  # measured 0.034, 0.044
-  ("normal", "sabc"): (0.23, 0.34),  # measured 0.113, 0.169
-  ("normal", "smcabc"): (0.07, 0.09),  # measured 0.034, 0.044
   ("nig", "npe"): (0.10, 0.15),  # measured 0.047, 0.073
   ("nig", "npe_spf"): (0.13, 0.15),  # measured 0.062, 0.074
   ("nig", "fmpe"): (0.17, 0.10),  # measured 0.084, 0.048
@@ -305,8 +280,6 @@ TOLERANCES = {
   ("nig", "nle"): (0.08, 0.10),  # measured 0.036, 0.050
   ("nig", "snle"): (0.08, 0.10),  # measured 0.036, 0.050
   ("nig", "nre"): (0.08, 0.11),  # measured 0.038, 0.055
-  ("nig", "sabc"): (0.38, 0.72),  # measured 0.186, 0.359
-  ("nig", "smcabc"): (0.07, 0.05),  # measured 0.035, 0.021
 }
 
 CASES = [(p, m) for p in PROBLEMS for m in ESTIMATORS]

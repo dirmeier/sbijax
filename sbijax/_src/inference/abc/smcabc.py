@@ -16,7 +16,9 @@ def smcabc(prior, simulator, summary_fn, distance_fn):
       prior: a ``tfd`` distribution serving as the prior over parameters
       simulator: a callable ``(rng_key, theta) -> y``
       summary_fn: maps simulated data to summary statistics
-      distance_fn: distance between simulated and observed summaries
+      distance_fn: distance between simulated and observed summaries, one
+          value per simulation, of shape ``(n,)`` or ``(n, 1)`` (e.g.
+          :func:`~sbijax.l2_distance`)
 
   Returns:
       an ``ABCSampler``

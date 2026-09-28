@@ -276,7 +276,7 @@ def _sabc_core(
   key,
   rvs,
   logpdf,
-  sim,
+  sim_fn,
   n_particles,
   n_simulation,
   v,
@@ -284,17 +284,20 @@ def _sabc_core(
   gamma0,
   sigma_gamma,
   delta,
+  ss_obs,
 ):
   """Run the SABC annealing loop on raveled arrays.
 
   JIT-compiled so the whole annealing loop runs as one fused executable;
-  ``rvs``/``logpdf``/``sim`` and the sizes/flags are static.
+  ``rvs``/``logpdf``/``sim_fn`` and the sizes/flags are static, the observed
+  summary is traced.
 
   Args:
       key: PRNG key.
       rvs: ``(key, size) -> (N, n_para)`` prior sampler.
       logpdf: ``(N, n_para) -> (N,)`` prior log-density.
-      sim: ``(key, (B, n_para)) -> (B, n_stats)`` simulate-and-distance fn.
+      sim_fn: ``(key, (B, n_para), ss_obs) -> (B, n_stats)``
+          simulate-and-distance fn.
       n_particles: population size ``N``.
       n_simulation: total simulation budget.
       v: annealing speed.
@@ -302,10 +305,15 @@ def _sabc_core(
       gamma0: DE step; ``None`` -> ``2.38/sqrt(2*n_para)``.
       sigma_gamma: DE jitter.
       delta: resampling temperature.
+      ss_obs: summary statistics of the observation.
 
   Returns:
       ``(population, u, rho, epsilon_history, u_history)``.
   """
+
+  def sim(key, theta_flat):
+    return sim_fn(key, theta_flat, ss_obs)
+
   k0, k_sim0, k_rs, key = jr.split(key, 4)
   population = rvs(k0, n_particles)
   n_para = population.shape[1]
@@ -439,20 +447,18 @@ class SABC:
     self._logpdf = None
     self._unravel = None
     self._sim = None
-    self._sim_obs_id = None
 
-  def _build_fns(self, observable):
+  def _build_fns(self):
     r"""Build and cache the raveled prior/simulator closures.
 
     Reusing the same callable objects across calls lets the jitted
     ``_sabc_core`` hit its trace cache instead of re-tracing the whole scan
-    every call. ``rvs``/``logpdf`` depend only on the prior; ``sim`` is
-    rebuilt only when the observation changes.
+    every call. The observed summary is passed to ``sim`` as an argument, so
+    the closures do not depend on the observation.
     """
     if self._rvs is None:
       probe = self.prior.sample(seed=jr.PRNGKey(0))
       _, unravel = ravel_pytree(probe)
-      self._unravel = unravel
 
       def rvs(key, size):
         sample = self.prior.sample(seed=key, sample_shape=(size,))
@@ -461,20 +467,15 @@ class SABC:
       def logpdf(theta_flat):
         return self.prior.log_prob(jax.vmap(unravel)(theta_flat))
 
-      self._rvs, self._logpdf = rvs, logpdf
-
-    if self._sim_obs_id != id(observable):
-      unravel = self._unravel
-      ss_obs = self.summary_fn(observable)
-
-      def sim(key, theta_flat):
+      def sim(key, theta_flat, ss_obs):
         theta = jax.vmap(unravel)(theta_flat)
         y = self.simulator_fn(seed=key, theta=theta)
         d = self.distance_fn(self.summary_fn(y), ss_obs)
         # scalar ((B,)/(B,1)) or per-dimension ((B, n_stats)) distances.
         return jnp.reshape(d, (theta_flat.shape[0], -1))
 
-      self._sim, self._sim_obs_id = sim, id(observable)
+      self._rvs, self._logpdf, self._sim = rvs, logpdf, sim
+      self._unravel = unravel
 
     return self._rvs, self._logpdf, self._sim, self._unravel
 
@@ -507,7 +508,7 @@ class SABC:
     proposal = proposal or DiffEvolution()
     is_multi = isinstance(schedule, MultiEps)
 
-    rvs, logpdf, sim, unravel = self._build_fns(observable)
+    rvs, logpdf, sim, unravel = self._build_fns()
 
     population, u, rho, eps_hist, u_hist = _sabc_core(
       rng_key,
@@ -521,6 +522,7 @@ class SABC:
       proposal.gamma0,
       float(proposal.sigma_gamma),
       float(delta),
+      jnp.asarray(self.summary_fn(observable)),
     )
 
     named = jax.vmap(unravel)(population)
