@@ -29,7 +29,7 @@ def _problem():
 
 def test_aio_fit_then_sample():
   prior, simulator = _problem()
-  obj = aio(make_simformer_based_score_model(2, jnp.eye(4), 1, 1))
+  obj = aio(make_simformer_based_score_model(2, jnp.ones((4, 4)), 1, 1))
   assert isinstance(obj, ObjectiveFns)
   data = simulate(jr.key(0), prior, simulator, n=64)
   params, _ = train(jr.key(1), obj, data, n_iter=2, batch_size=32)

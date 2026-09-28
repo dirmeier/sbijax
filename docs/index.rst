@@ -110,6 +110,80 @@ FMPE, NPSE, NRE, SNLE):
 4. ``sample(rng_key, objective, params, observable)`` draws posterior samples
    (MCMC-based methods also take ``sampler=make_sampler(nuts, prior=prior)``).
 
+Implemented methods
+-------------------
+
+The table lists each method with its factory function and the helper that
+builds a suitable network. ABC methods take the prior and simulator directly
+and need no network.
+
+.. list-table::
+    :header-rows: 1
+
+    * - Method
+      - Factory
+      - Network helper
+      - Reference
+    * - Sequential Monte Carlo ABC (SMC-ABC)
+      - :func:`~sbijax.smcabc`
+      - none, takes ``summary_fn`` and ``distance_fn``
+      - :cite:t:`beaumont2009adaptive`
+    * - Simulated annealing ABC (SABC)
+      - :func:`~sbijax.sabc`
+      - none, optional ``summary_fn`` and ``distance_fn``
+      - :cite:t:`albert2025simulated`
+    * - Neural likelihood estimation (NLE)
+      - :func:`~sbijax.nle`
+      - :func:`~sbijax.nn.make_maf`, :func:`~sbijax.nn.make_spf`,
+        :func:`~sbijax.nn.make_mdn`
+      - :cite:t:`papama2019neural`
+    * - Surjective neural likelihood estimation (SNLE)
+      - :func:`~sbijax.snle`
+      - :func:`~sbijax.nn.make_maf` or :func:`~sbijax.nn.make_spf` with
+        ``n_layer_dimensions``
+      - :cite:t:`dirmeier2023simulation`
+    * - Neural posterior estimation (NPE)
+      - :func:`~sbijax.npe`
+      - :func:`~sbijax.nn.make_maf`, :func:`~sbijax.nn.make_spf`,
+        :func:`~sbijax.nn.make_mdn`
+      - :cite:t:`greenberg2019automatic`
+    * - Contrastive neural ratio estimation (NRE)
+      - :func:`~sbijax.nre`
+      - :func:`~sbijax.nn.make_mlp`, :func:`~sbijax.nn.make_resnet`
+      - :cite:t:`miller2022contrast`
+    * - Flow matching posterior estimation (FMPE)
+      - :func:`~sbijax.fmpe`
+      - :func:`~sbijax.nn.make_cnf`
+      - :cite:t:`wilderberger2023flow`
+    * - Neural posterior score estimation (NPSE)
+      - :func:`~sbijax.npse`
+      - :func:`sbijax.experimental.nn.make_score_model`
+      - :cite:t:`sharrock2024sequential`
+    * - All-in-one posterior estimation (AIO)
+      - :func:`sbijax.experimental.aio`
+      - :func:`sbijax.experimental.nn.make_simformer_based_score_model`
+      - :cite:t:`gloeckler2024allinone`
+    * - Consistency model posterior estimation (CMPE)
+      - :func:`sbijax.experimental.cmpe`
+      - :func:`~sbijax.nn.make_cm`
+      - :cite:t:`schmitt2023con`
+    * - Neural approximate sufficient statistics (NASS)
+      - :func:`~sbijax.nass`
+      - :func:`~sbijax.nn.make_nass_net`
+      - :cite:t:`chen2021neural`
+    * - Neural approximate slice sufficient statistics (NASSS)
+      - :func:`~sbijax.nasss`
+      - :func:`~sbijax.nn.make_nasss_net`
+      - :cite:t:`chen2023learning`
+
+NASS and NASSS learn summary statistics, not a posterior. Pass the fitted
+summary network to :func:`~sbijax.summarized_estimator` to train a neural
+estimator on the summaries, or use its ``summarize_fn`` as the ``summary_fn``
+of an ABC method. The network helpers are defaults: a factory accepts any
+network with the methods listed in its docstring (see
+:doc:`notebooks/flax_linen`). Methods in ``sbijax.experimental`` may change or
+be removed.
+
 Installation
 ------------
 

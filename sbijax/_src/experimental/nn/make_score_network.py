@@ -15,6 +15,27 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 __all__ = ["ScoreModel", "make_score_model", "timestep_embedding"]
 
 
+def noise_range(sde, beta_min, beta_max, sigma_min, sigma_max):
+  """Return the ``(min, max)`` noise parameters of the chosen SDE.
+
+  ``ScoreModel`` reads its two noise parameters as the noise rates of the VP
+  SDE or as the noise scales of the VE SDE.
+
+  Args:
+      sde: either of 'vp' and 've'
+      beta_min: minimal noise rate of the VP SDE
+      beta_max: maximal noise rate of the VP SDE
+      sigma_min: minimal noise scale of the VE SDE
+      sigma_max: maximal noise scale of the VE SDE
+
+  Returns:
+      a tuple ``(sigma_min, sigma_max)`` for 've', else ``(beta_min, beta_max)``
+  """
+  if sde == "ve":
+    return sigma_min, sigma_max
+  return beta_min, beta_max
+
+
 def to_output_shape(x, t):
   new_shape = (-1,) + tuple(np.ones(x.ndim - 1, dtype=np.int32).tolist())
   t = t.reshape(new_shape)
@@ -74,6 +95,23 @@ def get_margprob_params_fn(sde, beta_max, beta_min):
       return vp
     case _:
       raise ValueError("incorrect sde given: choose from ['ve', 'vp']")
+
+
+def _divide_by_marginal_std(transform, sde, beta_min, beta_max):
+  """Wrap a score network so that its output is divided by the marginal std.
+
+  The wrapped network predicts the negative noise at every noise level, as in
+  the reference implementation of :cite:t:`gloeckler2024allinone`.
+  """
+  marg_prob_params = get_margprob_params_fn(
+    sde, beta_min=beta_min, beta_max=beta_max
+  )
+
+  def fn(inputs, time, **kwargs):
+    _, scale = marg_prob_params(inputs, time)
+    return transform(inputs=inputs, time=time, **kwargs) / scale
+
+  return fn
 
 
 def get_log_prob_fn(apply_fn, is_training, sde, beta_max, beta_min):
@@ -180,6 +218,8 @@ class ScoreModel(hk.Module):
           take as input arguments named ``theta``, ``time``, ``context`` and
           additional keyword arguments. Theta, time and context are
           two-dimensional arrays with the same batch dimensions.
+      scale_by_sigma: if true, divide the output of ``transform`` by the
+          marginal std of the forward process
   """
 
   def __init__(
@@ -192,9 +232,12 @@ class ScoreModel(hk.Module):
     time_eps,
     time_max,
     time_delta=0.01,
+    scale_by_sigma=False,
   ):
     super().__init__()
     self._n_dimension = n_dimension
+    if scale_by_sigma:
+      transform = _divide_by_marginal_std(transform, sde, beta_min, beta_max)
     self._score_net = transform
     self._sde = sde
     self._beta_min = beta_min
@@ -202,8 +245,14 @@ class ScoreModel(hk.Module):
     self._time_eps = time_eps
     self._time_max = time_max
     self._time_delta = time_delta
+    # the VE forward process ends at its marginal scale at time_max, the VP
+    # process at unit scale
+    if sde == "ve":
+      base_scale = beta_min * (beta_max / beta_min) ** time_max
+    else:
+      base_scale = 1.0
     self._base_distribution = tfd.Independent(
-      tfd.Normal(jnp.zeros(n_dimension), 1.0), 1
+      tfd.Normal(jnp.zeros(n_dimension), base_scale), 1
     )
 
   def __call__(self, method, **kwargs):
@@ -344,11 +393,14 @@ def make_score_model(
   param_embedding_layers: tuple[int, ...] = (128, 128),
   time_embedding_layers: tuple[int, ...] = (128, 128),
   activation: Callable[..., Any] = jax.nn.relu,
-  sde="vp",
-  beta_min=0.1,
-  beta_max=10.0,
-  time_eps=0.001,
-  time_max=1,
+  sde: str = "ve",
+  beta_min: float = 0.1,
+  beta_max: float = 10.0,
+  sigma_min: float = 0.01,
+  sigma_max: float = 10.0,
+  time_eps: float = 0.001,
+  time_max: float = 1.0,
+  scale_by_sigma: bool = False,
 ):
   """Create a score model for NPSE.
 
@@ -366,14 +418,17 @@ def make_score_model(
       time_embedding_layers: a tuple if ints determining the output sizes of
           the data embedding network
       activation: a jax activation function
-      sde: can be either of 'vp' and 've'. Defines the type of SDE to be used
-          as a forward process. See the original publication and references
-          therein for details.
-      beta_min: beta min. Again, see the paper please.
-      beta_max: beta max. Again, see the paper please.
+      sde: either of 'vp' and 've', the forward process
+      beta_min: minimal noise rate of the VP SDE
+      beta_max: maximal noise rate of the VP SDE
+      sigma_min: minimal noise scale of the VE SDE
+      sigma_max: maximal noise scale of the VE SDE
       time_eps: some small number to use as minimum time point for the
           forward process. Used for numerical stability.
-      time_max: maximum integration time. 1 is good, but so is 5 or 10.
+      time_max: maximum integration time
+      scale_by_sigma: if true, divide the network output by the marginal std
+          of the forward process, so that the network predicts the negative
+          noise
 
   Returns:
       returns a score model that can be used for inference using NPSE.
@@ -389,8 +444,18 @@ def make_score_model(
       time_embedding_layers=time_embedding_layers,
       activation=activation,
     )
+    noise_min, noise_max = noise_range(
+      sde, beta_min, beta_max, sigma_min, sigma_max
+    )
     net = ScoreModel(
-      n_dimension, nn, sde, beta_min, beta_max, time_eps, time_max
+      n_dimension,
+      nn,
+      sde,
+      noise_min,
+      noise_max,
+      time_eps,
+      time_max,
+      scale_by_sigma=scale_by_sigma,
     )
     return net(method, **kwargs)
 
