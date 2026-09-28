@@ -1,13 +1,13 @@
 from collections.abc import Callable
 from typing import Any
 
-import distrax
 import haiku as hk
 import jax
 import numpy as np
 from jax import numpy as jnp
 from jax import random as jr
 from scipy import integrate
+from tensorflow_probability.substrates.jax import distributions as tfd
 
 __all__ = ["CNF", "make_cnf"]
 
@@ -48,17 +48,13 @@ class _CNFResnet(hk.Module):
     hidden_size: int,
     activation: Callable[..., Any] = jax.nn.relu,
     dropout_rate: float = 0.2,
-    do_batch_norm: bool = True,
-    batch_norm_decay: float = 0.1,
   ):
     super().__init__()
     self.n_layers = n_layers
     self.n_dimension = n_dimension
     self.hidden_size = hidden_size
     self.activation = activation
-    self.do_batch_norm = do_batch_norm
     self.dropout_rate = dropout_rate
-    self.batch_norm_decay = batch_norm_decay
 
   def __call__(self, inputs, time, context, is_training=False, **kwargs):
     outputs = context
@@ -81,8 +77,6 @@ class _CNFResnet(hk.Module):
         hidden_size=self.hidden_size,
         activation=self.activation,
         dropout_rate=self.dropout_rate,
-        do_batch_norm=self.do_batch_norm,
-        batch_norm_decay=self.batch_norm_decay,
       )(outputs, context=t_theta_embedding, is_training=is_training)
     outputs = self.activation(outputs)
     outputs = hk.Linear(self.n_dimension)(outputs)
@@ -116,7 +110,7 @@ class CNF(hk.Module):
     super().__init__()
     self._n_dimension = n_dimension
     self._score_net = transform
-    self._base_distribution = distrax.Normal(jnp.zeros(n_dimension), 1.0)
+    self._base_distribution = tfd.Normal(jnp.zeros(n_dimension), 1.0)
     self._sigma_min = sigma_min
 
   def __call__(self, method, **kwargs):
@@ -182,8 +176,6 @@ def make_cnf(
   hidden_size: int = 64,
   activation: Callable = jax.nn.relu,
   dropout_rate: float = 0.1,
-  do_batch_norm: bool = False,
-  batch_norm_decay: float = 0.2,
   sigma_min: float = 0.001,
 ):
   """Create a conditional continuous normalizing flow.
@@ -197,8 +189,6 @@ def make_cnf(
       hidden_size: sizes of hidden layers for each resnet block
       activation: a jax activation function
       dropout_rate: dropout rate to use in resnet blocks
-      do_batch_norm: use batch normalization or not
-      batch_norm_decay: decay rate of EMA in batch norm layer
       sigma_min: minimal scaling for the vector field
   Returns:
       returns a conditional continuous normalizing flow
@@ -211,9 +201,7 @@ def make_cnf(
       n_dimension=n_dimension,
       hidden_size=hidden_size,
       activation=activation,
-      do_batch_norm=do_batch_norm,
       dropout_rate=dropout_rate,
-      batch_norm_decay=batch_norm_decay,
     )
     cnf = CNF(n_dimension, nn, sigma_min)
     return cnf(method, **kwargs)

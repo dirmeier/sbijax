@@ -102,7 +102,6 @@ def make_model(dim, use_surjectors):
   def _flow(method, **kwargs):
     layers = []
     n_dimension = dim
-    order = jnp.arange(n_dimension)
     for i in range(5):
       if i == 2 and use_surjectors:
         n_latent = 6
@@ -119,8 +118,6 @@ def make_model(dim, use_surjectors):
           ),
         )
         n_dimension = n_latent
-        order = order[::-1]
-        order = order[:n_dimension] - jnp.min(order[:n_dimension])
       else:
         layer = MaskedAutoregressive(
           bijector_fn=_bijector_fn,
@@ -133,9 +130,8 @@ def make_model(dim, use_surjectors):
             activation=jax.nn.tanh,
           ),
         )
-        order = order[::-1]
       layers.append(layer)
-      layers.append(Permutation(order, 1))
+      layers.append(Permutation(jnp.arange(n_dimension)[::-1], 1))
     chain = Chain(layers)
 
     base_distribution = tfd.Independent(

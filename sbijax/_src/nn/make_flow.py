@@ -87,14 +87,13 @@ def _make_maf(
     def _fn(z):
       params = decoder_net(z)
       mu, log_scale = jnp.split(params, 2, -1)
-      return tfd.Independent(tfd.Normal(mu, jnp.exp(log_scale)), 1)
+      return distrax.Independent(distrax.Normal(mu, jnp.exp(log_scale)), 1)
 
     return _fn
 
   @hk.transform
   def _flow(method, **kwargs):
     layers = []
-    order = jnp.arange(n_dimension)
     curr_dim = n_dimension
     for i, n_dim_curr_layer in enumerate(n_layer_dimensions):
       # layer is dimensionality preserving
@@ -110,7 +109,6 @@ def _make_maf(
             activation=activation,
           ),
         )
-        order = order[::-1]
       elif n_dim_curr_layer < curr_dim:
         n_latent = n_dim_curr_layer
         layer = AffineMaskedAutoregressiveInferenceFunnel(
@@ -126,15 +124,14 @@ def _make_maf(
           ),
         )
         curr_dim = n_latent
-        order = order[::-1]
-        order = order[:curr_dim] - jnp.min(order[:curr_dim])
       else:
         raise ValueError(
           f"n_dimension at layer {i} is layer than the dimension of"
           f" the following layer {i + 1}"
         )
       layers.append(layer)
-      layers.append(Permutation(order, 1))
+      # reverse the ordering relative to the previous layer, as in MAF
+      layers.append(Permutation(jnp.arange(curr_dim)[::-1], 1))
     chain = Chain(layers[:-1])
 
     base_distribution = tfd.Independent(
@@ -189,7 +186,7 @@ def make_spf(
   """
   if isinstance(n_layers, int) and n_layer_dimensions is not None:
     assert n_layers == len(list(n_layer_dimensions))
-  if isinstance(n_layers, int):
+  elif isinstance(n_layers, int):
     n_layer_dimensions = [n_dimension] * n_layers
 
   return _make_spf(
@@ -221,7 +218,7 @@ def _make_spf(
     def fn(z):
       params = surjectors_mlp(dims, activation=activation)(z)
       mu, log_scale = jnp.split(params, 2, -1)
-      return tfd.Independent(tfd.Normal(mu, jnp.exp(log_scale)))
+      return distrax.Independent(distrax.Normal(mu, jnp.exp(log_scale)), 1)
 
     return fn
 
@@ -232,7 +229,7 @@ def _make_spf(
           list(hidden_sizes) + [n_params * n_dim],
           activation=activation,
         ),
-        hk.Reshape((n_dimension, n_params)),
+        hk.Reshape((n_dim, n_params)),
       ]
     )
 
@@ -254,10 +251,7 @@ def _make_spf(
         layer = MaskedCouplingInferenceFunnel(
           n_keep=n_latent,
           decoder=_decoder_fn(list(hidden_sizes) + [2 * (curr_dim - n_latent)]),
-          conditioner=surjectors_mlp(
-            list(hidden_sizes) + [2 * curr_dim],
-            activation=activation,
-          ),
+          conditioner=_conditioner(curr_dim),
           bijector_fn=_bijector_fn,
         )
         curr_dim = n_latent
@@ -270,7 +264,7 @@ def _make_spf(
     chain = Chain(layers)
 
     base_distribution = tfd.Independent(
-      tfd.Normal(jnp.zeros(n_dimension), jnp.ones(n_dimension)),
+      tfd.Normal(jnp.zeros(curr_dim), jnp.ones(curr_dim)),
       1,
     )
     td = TransformedDistribution(base_distribution, chain)
