@@ -81,6 +81,16 @@ Every method in ``sbijax`` takes the same two user-supplied inputs:
   **batched** ``theta`` (a leading axis of size ``n``), so it needs to handle
   a batch of parameter draws, not a single one
 
+.. caution::
+
+    **Each distribution in the prior must be vector-valued**, even one that
+    describes a single parameter: write ``tfd.Normal(jnp.zeros(1), 1.0)``, not
+    ``tfd.Normal(0.0, 1.0)``. One draw then has shape ``(1,)`` and ``n`` draws
+    have shape ``(n, 1)``.
+
+    **The simulator must return** ``y`` **as a matrix** of shape ``(n, d)``,
+    even for one-dimensional data, i.e., ``(n, 1)`` instead of ``(n,)``.
+
 From these two, the same pipeline applies to every neural estimator (NLE, NPE,
 FMPE, NPSE, NRE, SNLE):
 
@@ -266,9 +276,10 @@ License
 
     Getting started <notebooks/getting_started>
     A more detailed intro  <notebooks/more_detailed_intro>
-    SLCP <notebooks/examples>
+    Approximate Bayesian computation <notebooks/abc>
     🔧 Custom loops <custom_loops>
     Using Flax linen networks <notebooks/flax_linen>
+    SLCP <notebooks/examples>
     Self-contained examples <examples>
 
 ..  toctree::
