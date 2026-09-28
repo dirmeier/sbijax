@@ -11,7 +11,7 @@ def test_nuts_sampler(prior_log_prob_tuple):
     prior_log_prob_tuple[1],
     prior_log_prob_tuple[0](),
     n_chains=10,
-    n_samples=200,
+    n_samples=100,
     n_warmup=100,
   )
   chex.assert_shape(samples["mean"], (10, 100, 2))

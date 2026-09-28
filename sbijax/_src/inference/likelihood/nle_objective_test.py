@@ -35,7 +35,7 @@ def test_nle_objective_trains_and_samples_with_sampler():
     jnp.zeros(2),
     sampler=sampler,
     n_chains=2,
-    n_samples=40,
+    n_samples=20,
     n_warmup=20,
   )
   assert samples["theta"].shape == (2, 20, 2)

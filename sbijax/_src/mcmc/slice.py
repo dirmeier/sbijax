@@ -30,7 +30,7 @@ def sample_with_slice(
       lp: the logdensity you wish to sample from
       prior: a function that returns a prior sample
       n_chains: number of chains to sample
-      n_samples: number of samples per chain
+      n_samples: number of samples per chain returned after the warmup
       n_warmup: number of samples to discard
       n_thin: integer specifying how many samples to discard between
           draws
@@ -59,7 +59,7 @@ def sample_with_slice(
 
   Returns:
       a tuple ``(samples, info)``: a named pytree with leaves of shape
-      ``n_chains x (n_samples - n_warmup) x dim`` and an ``MCMCSampleInfo``
+      ``n_chains x n_samples x dim`` and an ``MCMCSampleInfo``
       (acceptance rate is ``nan`` for slice sampling)
   """
   test_sample = prior.sample(seed=jr.PRNGKey(0))
@@ -74,7 +74,7 @@ def sample_with_slice(
 
   sample_key, rng_key = jr.split(rng_key)
   samples = tfp.mcmc.sample_chain(
-    num_results=n_samples - n_warmup,
+    num_results=n_samples,
     current_state=initial_states,
     num_steps_between_results=n_thin,
     kernel=tfp.mcmc.SliceSampler(
@@ -84,12 +84,9 @@ def sample_with_slice(
     trace_fn=None,
     seed=sample_key,
   )
-  samples = rearrange(samples, "s c v -> (s c) v")
+  samples = rearrange(samples, "s c v -> (c s) v")
   samples = jax.vmap(unravel_fn)(samples)
-  samples = {
-    k: v.reshape(n_chains, (n_samples - n_warmup), -1)
-    for k, v in samples.items()
-  }
+  samples = {k: v.reshape(n_chains, n_samples, -1) for k, v in samples.items()}
   rhat, ess = mcmc_convergence(samples, n_chains)
   return samples, MCMCSampleInfo(
     acceptance_rate=jnp.array(jnp.nan), rhat=rhat, ess=ess

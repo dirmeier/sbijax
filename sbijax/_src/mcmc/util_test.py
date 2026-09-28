@@ -5,7 +5,7 @@ import jax
 from jax import numpy as jnp
 from jax import random as jr
 
-from sbijax._src.mcmc.util import run_blackjax
+from sbijax._src.mcmc.util import burn_in, run_blackjax
 
 
 class _FakeState(NamedTuple):
@@ -16,15 +16,17 @@ class _FakeInfo(NamedTuple):
   acceptance_rate: jax.Array
 
 
-def _deterministic_init_fn(rng_key, initial_positions, lp):
+def _deterministic_init_fn(rng_key, initial_positions, lp, n_warmup):
   """A fake blackjax kernel: deterministically increments position by 1."""
 
-  def kernel(rng_key, state):
-    del rng_key
-    new_position = jax.tree_util.tree_map(lambda x: x + 1.0, state.position)
-    return _FakeState(new_position), _FakeInfo(jnp.array(1.0))
+  def kernel(rng_keys, states):
+    del rng_keys
+    new_position = jax.tree_util.tree_map(lambda x: x + 1.0, states.position)
+    n_chains = jax.tree_util.tree_leaves(new_position)[0].shape[0]
+    return _FakeState(new_position), _FakeInfo(jnp.ones(n_chains))
 
-  return _FakeState(initial_positions), kernel
+  states = burn_in(rng_key, kernel, _FakeState(initial_positions), n_warmup)
+  return states, kernel
 
 
 def test_run_blackjax_preserves_chain_identity():
@@ -51,8 +53,10 @@ def test_run_blackjax_preserves_chain_identity():
     n_warmup=n_warmup,
   )
 
-  # kernel increments by 1 each of `n_samples` steps, so absolute step t
-  # (1-indexed) of chain c sits at `bases[c] + t`; post-warmup keeps
-  # t = n_warmup + 1, ..., n_samples.
-  expected = bases[:, None] + jnp.arange(n_warmup + 1, n_samples + 1)[None, :]
+  # kernel increments by 1 each of `n_warmup + n_samples` steps, so absolute
+  # step t (1-indexed) of chain c sits at `bases[c] + t`; post-warmup keeps
+  # t = n_warmup + 1, ..., n_warmup + n_samples.
+  expected = (
+    bases[:, None] + jnp.arange(n_warmup + 1, n_warmup + n_samples + 1)[None, :]
+  )
   assert jnp.allclose(thetas["theta"][:, :, 0], expected)

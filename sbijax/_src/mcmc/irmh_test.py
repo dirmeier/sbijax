@@ -11,7 +11,7 @@ def test_rmh_sampler(prior_log_prob_tuple):
     prior_log_prob_tuple[1],
     prior_log_prob_tuple[0](),
     n_chains=10,
-    n_samples=200,
+    n_samples=100,
     n_warmup=100,
   )
   chex.assert_shape(samples["mean"], (10, 100, 2))
@@ -25,7 +25,7 @@ def test_imh_recovers_conjugate_posterior(conjugate_model):
     log_prob,
     prior_fn(),
     n_chains=4,
-    n_samples=5_000,
+    n_samples=4_000,
     n_warmup=1_000,
   )
   for k, v in posterior_mean.items():

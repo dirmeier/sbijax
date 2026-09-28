@@ -43,7 +43,7 @@ N_EARLY_STOPPING_PATIENCE = 20
 N_POSTERIOR_SAMPLES = 4_000
 
 # MCMC budget for the likelihood- and ratio-based methods.
-MCMC_KWARGS = {"n_chains": 4, "n_samples": 2_000, "n_warmup": 1_000}
+MCMC_KWARGS = {"n_chains": 4, "n_samples": 1_000, "n_warmup": 1_000}
 
 Y_OBS = jnp.array([-1.0, 1.0])
 

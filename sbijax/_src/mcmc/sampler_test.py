@@ -19,7 +19,7 @@ def test_make_sampler_draws_from_target():
     )
 
   samples, info = sampler(
-    jr.key(0), loglik, n_chains=4, n_samples=200, n_warmup=100
+    jr.key(0), loglik, n_chains=4, n_samples=100, n_warmup=100
   )
   assert samples["theta"].shape == (4, 100, 2)
   assert isinstance(info, MCMCSampleInfo)
@@ -49,7 +49,7 @@ def test_make_sampler_chains_move_with_constrained_prior():
 
   n_chains, n_kept = 4, 100
   samples, _ = sampler(
-    jr.key(0), loglik, n_chains=n_chains, n_samples=200, n_warmup=100
+    jr.key(0), loglik, n_chains=n_chains, n_samples=100, n_warmup=100
   )
 
   # a frozen chain has zero variance and a single unique value.

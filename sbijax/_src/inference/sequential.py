@@ -22,9 +22,8 @@ def _posterior_proposal(prior):
 
   def proposal_fn(objective, params, observable, sampler):
     def proposal(rng_key, n):
-      # One chain with n_samples=2n / n_warmup=n yields exactly n post-warmup
-      # draws for MCMC methods and >= n for amortized; the extra kwargs are
-      # ignored by amortized sample_fns.
+      # One chain yields exactly n post-warmup draws for MCMC methods; the
+      # extra kwargs are ignored by amortized sample_fns.
       samples, _ = sample(
         rng_key,
         objective,
@@ -32,7 +31,7 @@ def _posterior_proposal(prior):
         observable,
         sampler=sampler,
         prior=prior,
-        n_samples=2 * n,
+        n_samples=n,
         n_warmup=n,
         n_chains=1,
       )

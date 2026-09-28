@@ -6,15 +6,20 @@ from sbijax._src.mcmc.sampler import Kernel
 from sbijax._src.mcmc.util import run_blackjax
 
 
-def _nuts_init(rng_key, initial_positions, lp):
+def _nuts_init(rng_key, initial_positions, lp, n_warmup, **kwargs):
   n_chains = jax.tree_util.tree_leaves(initial_positions)[0].shape[0]
   init_keys = jr.split(rng_key, n_chains)
-  warmup = bj.window_adaptation(bj.nuts, lp)
+  warmup = bj.window_adaptation(bj.nuts, lp, **kwargs)
   initial_states, kernel_params = jax.vmap(
-    lambda seed, param: warmup.run(seed, param)[0]
+    lambda seed, param: warmup.run(seed, param, num_steps=n_warmup)[0]
   )(init_keys, initial_positions)
-  kernel_params = {k: v[0] for k, v in kernel_params.items()}
-  _, kernel = bj.nuts(lp, **kernel_params)
+
+  # every chain keeps the step size and mass matrix it adapted
+  def kernel(keys, states):
+    return jax.vmap(
+      lambda key, state, params: bj.nuts(lp, **params).step(key, state)
+    )(keys, states, kernel_params)
+
   return initial_states, kernel
 
 
@@ -32,8 +37,9 @@ def sample_with_nuts(
       lp: the logdensity you wish to sample from
       prior: a function that returns a prior sample
       n_chains: number of chains to sample
-      n_samples: number of samples per chain
-      n_warmup: number of samples to discard
+      n_samples: number of samples per chain returned after the warmup
+      n_warmup: number of adaptation steps, which are discarded
+      **kwargs: forwarded to ``blackjax.window_adaptation``
 
   Examples:
       >>> import functools as ft
@@ -53,7 +59,7 @@ def sample_with_nuts(
 
   Returns:
       a tuple ``(samples, info)``: a named pytree with leaves of shape
-      ``n_chains x (n_samples - n_warmup) x dim`` and an
+      ``n_chains x n_samples x dim`` and an
       ``MCMCSampleInfo`` with the mean post-warmup acceptance rate
   """
   init_key, run_key = jr.split(rng_key)
@@ -66,4 +72,5 @@ def sample_with_nuts(
     n_chains=n_chains,
     n_samples=n_samples,
     n_warmup=n_warmup,
+    **kwargs,
   )
