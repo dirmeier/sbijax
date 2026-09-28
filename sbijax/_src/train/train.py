@@ -69,6 +69,9 @@ def train(
   losses = np.zeros([n_iter, 2])
   early_stop = EarlyStopping(n_early_stopping_delta, n_early_stopping_patience)
   best_params, best_loss = state.params, np.inf
+  # one validation key for all epochs, so that the validation losses of
+  # stochastic objectives differ only through the parameters
+  val_key, rng_key = jr.split(rng_key)
   i = 0
   for i in tqdm(range(n_iter)):
     rng_key = jr.fold_in(rng_key, i)
@@ -79,16 +82,15 @@ def train(
       train_loss += metrics["loss"] * (
         batch["y"].shape[0] / train_iter.num_samples
       )
-    val_key, rng_key = jr.split(rng_key)
     val_loss = _weighted(
-      lambda b, s=state, k=val_key: eval_fn(k, s, b)["loss"], val_iter
+      lambda b, s=state: eval_fn(val_key, s, b)["loss"], val_iter
     )
     losses[i] = jnp.array([train_loss, val_loss])
+    if val_loss < best_loss:
+      best_loss, best_params = val_loss, state.params
     _, early_stop = early_stop.update(val_loss)
     if early_stop.should_stop:
       break
-    if val_loss < best_loss:
-      best_loss, best_params = val_loss, state.params
 
   stacked = jnp.vstack(losses)[: (i + 1), :]
   return best_params, Info(round=next_round(info), losses=stacked)

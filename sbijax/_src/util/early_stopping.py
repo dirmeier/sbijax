@@ -1,5 +1,4 @@
 import dataclasses
-import math
 
 
 # pylint: disable=missing-function-docstring
@@ -33,9 +32,7 @@ class EarlyStopping:
     Returns:
         tuple
     """
-    if (
-      math.isinf(self.best_metric) or self.best_metric - metric > self.min_delta
-    ):
+    if self.best_metric - metric > self.min_delta:
       self.best_metric = metric
       self.patience_count = 0
       return True, self
