@@ -69,12 +69,17 @@ Every method in `sbijax` takes the same two user-supplied inputs:
   Nothing checks that the prior is literally a
   `tensorflow_probability.substrates.jax` (`tfd`) distribution, but every
   example uses a `tfd.JointDistributionNamed`, which gives you both methods
-  for free
+  for free. **Each distribution in the prior must be vector-valued**, even one
+  that describes a single parameter: write `tfd.Normal(jnp.zeros(1), 1.0)`,
+  not `tfd.Normal(0.0, 1.0)`. One draw then has shape `(1,)` and `n` draws
+  have shape `(n, 1)`
 * a **simulator**: a plain function `(seed, theta) -> y`. Use those exact
   argument names (or `**kwargs`) — ABC methods (`sabc`/`smcabc`) call it by
   keyword internally. `simulate`/`run_sequential` always call it with a
   **batched** `theta` (a leading axis of size `n`), so it needs to handle a
-  batch of parameter draws, not a single one
+  batch of parameter draws, not a single one. It must return `y` as a matrix
+  of shape `(n, d)`, even for one-dimensional data, i.e., `(n, 1)` instead of
+  `(n,)`
 
 From these two, the same pipeline applies to every neural estimator (NLE, NPE,
 FMPE, NPSE, NRE, SNLE):

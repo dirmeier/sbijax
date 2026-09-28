@@ -139,11 +139,9 @@ def make_model(dim, use_surjectors):
       reinterpreted_batch_ndims=1,
     )
     td = TransformedDistribution(base_distribution, chain)
-    return td(method, **kwargs)
+    return getattr(td, method)(**kwargs)
 
-  td = hk.transform(_flow)
-  td = hk.without_apply_rng(td)
-  return td
+  return hk.transform(_flow)
 
 
 def run(n_rounds, n_iter):

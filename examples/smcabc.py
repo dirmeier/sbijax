@@ -44,7 +44,7 @@ def run(n_rounds):
   particles, _ = smc.sample(
     jr.key(1),
     y_observed,
-    n_rounds=1,
+    n_rounds=n_rounds,
     n_particles=1000,
     ess_min=500,
     eps_step=0.9,
