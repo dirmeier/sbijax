@@ -31,7 +31,7 @@ bibliography: paper.bib
 
 In natural sciences like astrophysics, biology or neuroscience, models can be frequently formulated as simulator functions, i.e., computer programs that stochastically map a parameter vector $\theta$ to synthetic data $x$. Even though simulators of this kind can represent realistic descriptions of real-world data-generating processes, they often do emit intractable probability density functions. However, statistical inference of the parameters of a simulator requires the likelihood $p(x | \theta)$ to be tractable, such that inference algorithms like Markov chain Monte Carlo can be applied.
 Simulation-based inference (SBI) circumvents this by only requiring the ability to sample from the simulator: parameters $\theta$ are drawn from the prior distribution $p(\theta)$, an observable $x$ is drawn from the simulator $p(x|\theta)$, and the resulting pairs are used to approximate the posterior distribution. In computational statistics, neural SBI describes an emerging family of methods for Bayesian inference for simulator models that use neural networks as surrogate models. Here we introduce `sbijax`, a Python package that implements a wide variety of state-of-the-art methods in neural SBI using a user-friendly programming interface.
-Targeted at domain scientists, e.g., in computational physics or computational biology, and SBI researchers, `sbijax` offers high-level functionality to quickly construct SBI estimators and compute posterior distributions with only a few lines of code.
+Targeted at domain scientists, e.g., in computational physics or computational biology, and SBI researchers, `sbijax` offers a compact functional interface to construct SBI estimators and compute posterior distributions with a few lines of code.
 In addition, the package provides functionality for conventional approximate Bayesian computation, to compute model diagnostics, and to automatically estimate summary
 statistics. By virtue of being entirely written in `JAX`, `sbijax` is extremely computationally efficient, allowing rapid training of neural networks and executing code automatically in parallel on both CPU and GPU.
 
@@ -53,20 +53,20 @@ Using `JAX` has several advantages, including a) that it uses the same syntax as
 the `JAX`-verse and common Bayesian inference tools. Specifically, we use `Haiku` [@haiku2020github] to construct and train neural networks, `surjectors` for normalizing flow based
 density estimation [@dirmeier2024surjectors], `TensorFlow Probability` [@dillon2017tensorflow] to define statistical distributions, and `BlackJAX` [@cabezas2024blackjax] for posterior sampling using Markov Chain Monte Carlo.
 
-| **Model**                                      | **Class name** | **Reference**           |
-|------------------------------------------------|------------|-----------------------------|
-| Sequential Monte Carlo ABC                     | `SMCABC`   | @beaumont2009adaptive       |
-| Simulated annealing ABC                        | `SABC`     | @albert2025simulated        |
-| Neural likelihood estimation                   | `NLE`      | @papamakarios2019sequential  |
-| Surjective neural likelihood estimation        | `SNLE`     | @dirmeier2025simulationbased     |
-| Automatic posterior transformation             | `NPE`      | @greenberg2019automatic     |
-| Contrastive neural ratio estimation            | `NRE`      | @miller2022contrastive      |
-| Flow matching posterior estimation             | `FMPE`     | @wildberger2023flow         |
-| Posterior Score Estimation                     | `NPSE`     | @sharrock2024sequential     |
-| All-In-One Posterior Estimation                | `AIO`      | @gloeckler2024allinone      |
-| Consistency model posterior estimation         | `CMPE`     | @schmitt2023consistency     |
-| Neural approximate sufficient statistics       | `NASS`     | @chen2021neural             |
-| Neural approximate slice sufficient statistics | `NASSS`    | @chen2023learning           |
+| **Method**                                     | **Function**          | **Reference**                |
+|------------------------------------------------|-----------------------|------------------------------|
+| Sequential Monte Carlo ABC                     | `smcabc`              | @beaumont2009adaptive        |
+| Simulated annealing ABC                        | `sabc`                | @albert2025simulated         |
+| Neural likelihood estimation                   | `nle`                 | @papamakarios2019sequential  |
+| Surjective neural likelihood estimation        | `snle`                | @dirmeier2025simulationbased |
+| Neural posterior estimation                    | `npe`                 | @greenberg2019automatic      |
+| Contrastive neural ratio estimation            | `nre`                 | @miller2022contrastive       |
+| Flow matching posterior estimation             | `fmpe`                | @wildberger2023flow          |
+| Neural posterior score estimation              | `npse`                | @sharrock2024sequential      |
+| All-in-one posterior estimation                | `experimental.aio`    | @gloeckler2024allinone       |
+| Consistency model posterior estimation         | `experimental.cmpe`   | @schmitt2023consistency      |
+| Neural approximate sufficient statistics       | `nass`                | @chen2021neural              |
+| Neural approximate slice sufficient statistics | `nasss`               | @chen2023learning            |
 
 :Implemented SBI methods in `sbijax` \label{tbl-methods}.
 
@@ -114,7 +114,7 @@ surjective neural likelihood estimation and posterior estimation using causal co
 
 # AI usage disclosure
 
-No GenAI or other AI tools have been used in writing the software or this manuscript.
+Claude Code was used to assist with parts of the software, in particular bug fixes, tests, and documentation. All AI-assisted changes were reviewed by the authors, who take full responsibility for the software and the manuscript.
 
 # Acknowledgements
 
