@@ -37,6 +37,7 @@ class _Encoder(hk.Module):
       intr = hk.MultiHeadAttention(
         num_heads=self.num_heads,
         key_size=self.head_size or (intr.shape[-1] // self.num_heads),
+        model_size=intr.shape[-1],
         w_init=self.initializer,
       )(intr, intr, intr, mask=mask)
       intr = hk.dropout(hk.next_rng_key(), dropout_rate, intr)

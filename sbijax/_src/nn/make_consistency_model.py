@@ -197,8 +197,6 @@ class _CMResnet(hk.Module):
     hidden_size: int,
     activation: Callable[..., Any] = jax.nn.relu,
     dropout_rate: float = 0.0,
-    do_batch_norm: bool = False,
-    batch_norm_decay: float = 0.1,
     t_min: float = 0.001,
     sigma_data: float = 1.0,
   ):
@@ -207,9 +205,7 @@ class _CMResnet(hk.Module):
     self.n_dimension = n_dimension
     self.hidden_size = hidden_size
     self.activation = activation
-    self.do_batch_norm = do_batch_norm
     self.dropout_rate = dropout_rate
-    self.batch_norm_decay = batch_norm_decay
     self.sigma_data = sigma_data
     self.var_data = self.sigma_data**2
     self.t_min = t_min
@@ -230,8 +226,6 @@ class _CMResnet(hk.Module):
         hidden_size=self.hidden_size,
         activation=self.activation,
         dropout_rate=self.dropout_rate,
-        do_batch_norm=self.do_batch_norm,
-        batch_norm_decay=self.batch_norm_decay,
       )(outputs, context=t_theta_embedding, is_training=is_training)
     outputs = self.activation(outputs)
     outputs = hk.Linear(self.n_dimension)(outputs)
@@ -256,8 +250,6 @@ def make_cm(
   hidden_size: int = 64,
   activation: Callable[..., Any] = jax.nn.tanh,
   dropout_rate: float = 0.2,
-  do_batch_norm: bool = False,
-  batch_norm_decay: float = 0.2,
   t_min: float = 0.001,
   t_max: float = 200.0,
   sigma_data: float = 1.0,
@@ -273,8 +265,6 @@ def make_cm(
       hidden_size: sizes of hidden layers for each resnet block
       activation: a jax activation function
       dropout_rate: dropout rate to use in resnet blocks
-      do_batch_norm: use batch normalization or not
-      batch_norm_decay: decay rate of EMA in batch norm layer
       t_min: minimal time point for ODE integration
       t_max: maximal time point for ODE integration
       sigma_data: the standard deviation of the data :)
@@ -292,9 +282,7 @@ def make_cm(
       n_dimension=n_dimension,
       hidden_size=hidden_size,
       activation=activation,
-      do_batch_norm=do_batch_norm,
       dropout_rate=dropout_rate,
-      batch_norm_decay=batch_norm_decay,
       t_min=t_min,
       sigma_data=sigma_data,
     )
