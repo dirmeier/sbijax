@@ -29,7 +29,7 @@ bibliography: paper.bib
 
 # Summary
 
-In natural sciences like astrophysics, biology or neuroscience, models can be frequently formulated as simulator functions, i.e., computer programs that stochastically map a parameter vector $\theta$ to synthetic data $x$. Even though simulators of this kind can represent realistic descriptions of real-world data-generating processes, they often do emit intractable probability density functions. However, statistical inference of the parameters of a simulator requires the likelihood $p(x | \theta)$ to be tractable, such that inference algorithms like Markov chain Monte Carlo can be applied.
+In natural sciences like astrophysics, biology or neuroscience, models can be frequently formulated as simulator functions, i.e., computer programs that stochastically map a parameter vector $\theta$ to synthetic data $x$. Even though simulators of this kind can represent realistic descriptions of real-world data-generating processes, they often emit intractable probability density functions. However, statistical inference of the parameters of a simulator requires the likelihood $p(x | \theta)$ to be tractable, such that inference algorithms like Markov Chain Monte Carlo can be applied.
 Simulation-based inference (SBI) circumvents this by only requiring the ability to sample from the simulator: parameters $\theta$ are drawn from the prior distribution $p(\theta)$, an observable $x$ is drawn from the simulator $p(x|\theta)$, and the resulting pairs are used to approximate the posterior distribution. In computational statistics, neural SBI describes an emerging family of methods for Bayesian inference for simulator models that use neural networks as surrogate models. Here we introduce `sbijax`, a Python package that implements a wide variety of state-of-the-art methods in neural SBI using a user-friendly programming interface.
 Targeted at domain scientists, e.g., in computational physics or computational biology, and SBI researchers, `sbijax` offers a compact functional interface to construct SBI estimators and compute posterior distributions with a few lines of code.
 In addition, the package provides functionality for conventional approximate Bayesian computation, to compute model diagnostics, and to automatically estimate summary
@@ -41,7 +41,7 @@ Modern approaches to neural SBI utilize recent developments in neural density es
 Similarly to conventional methods, such as approximate Bayesian computation (ABC, @sisson2018handbook) and its sequential (SMC-ABC; @sisson2007sequential, @beaumont2009adaptive) and annealing-based (e.g., SABC, @albert2015simulated) variants, neural SBI methods infer this posterior distribution by first simulating synthetic
 data and then numerically constructing an appropriate approximation to this pseudo data set. SBI methods are attractive for a couple of reasons.
 On the one hand, this family of methods has been shown to be more computationally efficient and often more accurate than ABC methods, in particular for smaller simulation budgets. On the other hand,
-SBI allows to easily amortize inference, i.e., to infer the posterior distribution for multiple different observations once a neural model has been trained.
+SBI allows one to easily amortize inference, i.e., to infer the posterior distribution for multiple different observations once a neural model has been trained.
 
 Here we propose `sbijax`, a Python package implementing state-of-the-art methodology of neural simulation-based inference.
 While the main focus of the package is the implementation of recent algorithms to make them available to practitioners, e.g., @albert2025simulated or @gloeckler2024allinone,
@@ -73,7 +73,7 @@ density estimation [@dirmeier2024surjectors], `TensorFlow Probability` [@dillon2
 # State of the field
 
 While a plethora of different models has been proposed in the recent literature, the development of adequate software packages has not followed at the same pace,
-and only few packages exist that allow modelers to use these methods. Most prominently, the Python package `sbi` [@tejero-cantero2020sbi]
+and few packages exist that allow modelers to use these methods. Most prominently, the Python package `sbi` [@tejero-cantero2020sbi]
 implements several approaches for neural simulation-based inference, such as a neural posterior, likelihood-ratio, and likelihood estimation [@cranmer2020frontier] utilizing a `PyTorch` backend [@paszke2019pytorch].
 The package additionally provides an API for model diagnostics, such as posterior predictive checks, effective sample size computations and simulation-based calibration. However, the package lacks implementations of recent developments which pose the state-of-the-art in the field, such as by @chen2023learning, @dirmeier2025simulationbased or @albert2025simulated. `BayesFlow` [@bayesflow_2023_software] offers a wide variety of neural methods, but is similarly limited in the set of estimators it is implementing. For approximate Bayesian computation, several Python packages are available. In particular `abcpy` [@dutta2021abcpy] implements a multitude of different ABC algorithms.
 However, none of these packages implement modern (neural) SBI methods.
@@ -94,7 +94,7 @@ This allows users to construct models directly with `Haiku`, and to incorporate 
  As a result, model definitions remain flexible and low-level, while seamlessly interoperating with the broader `JAX` ecosystem.
 
 3) A deliberately low-level interface.
-An inference workflow typically written as a short sequence of ordinary function calls, where the inputs and outputs of every step, e.g., the simulated data set and the network parameters, are managed by the developer explicitly. This asks developers to be deliberate about the workflow they are executing rather than calling the member functions of an object whose internal state is (often) opaque to them. We consider this trade-off worthwhile for a scientific software tool, since it makes a method transparent to the practitioner using it (albeit it induces some additional complexity) and straightforward to modify for a researcher extending it.
+An inference workflow typically written as a short sequence of ordinary function calls, where the inputs and outputs of every step, e.g., the simulated data set and the network parameters, are managed by the developer explicitly. This asks developers to be deliberate about the workflow they are executing rather than calling the member functions of an object whose internal state is (often) opaque to them. We consider this trade-off worthwhile for a scientific software tool, since it makes a method transparent to use (although it induces some additional complexity) and straightforward to modify for a researcher extending it.
 
 4) Support for extensibility and research.
 `Sbijax` is structured to facilitate experimentation with new SBI methods.
