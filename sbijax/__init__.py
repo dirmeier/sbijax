@@ -1,6 +1,6 @@
 """sbijax: Simulation-based inference in JAX."""
 
-__version__ = "0.4.2"
+__version__ = "0.4.2.post1"
 
 from sbijax._src.diagnostics.convergence import ess, rhat
 from sbijax._src.diagnostics.sbc import sbc
