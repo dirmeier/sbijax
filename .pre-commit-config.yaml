@@ -27,3 +27,9 @@ repos:
     - id: ruff
       args: [ --fix ]
     - id: ruff-format
+
+- repo: https://github.com/jorisroovers/gitlint
+  rev: v0.18.0
+  hooks:
+    - id: gitlint
+    - id: gitlint-ci
