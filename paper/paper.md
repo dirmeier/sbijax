@@ -64,7 +64,7 @@ density estimation [@dirmeier2024surjectors], `TensorFlow Probability` [@dillon2
 | Flow matching posterior estimation             | `fmpe`                | @wildberger2023flow          |
 | Neural posterior score estimation              | `npse`                | @sharrock2024sequential      |
 | All-in-one posterior estimation                | `experimental.aio`    | @gloeckler2024allinone       |
-| Consistency model posterior estimation         | `experimental.cmpe`   | @schmitt2023consistency      |
+| Consistency model posterior estimation         | `experimental.cmpe`   | @schmitt2024consistency      |
 | Neural approximate sufficient statistics       | `nass`                | @chen2021neural              |
 | Neural approximate slice sufficient statistics | `nasss`               | @chen2023learning            |
 
