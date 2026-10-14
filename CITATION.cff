@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: Simulation-based Inference with the Python Package sbijax
+message: 'If you use this software, please cite it as below.'
+type: software
+authors:
+  - family-names: Dirmeier
+    given-names: Simon
+    affiliation: >-
+      Swiss Data Science Center, Zurich, Switzerland; ETH
+      Zurich, Zurich, Switzerland
+  - family-names: Mira
+    given-names: Antonietta
+    affiliation: >-
+      Università della Svizzera italiana, Switzerland;
+      University of Insubria, Italy
+  - family-names: Albert
+    given-names: Carlo
+    affiliation: >-
+      Swiss Federal Institute of Aquatic Science and
+      Technology, Switzerland
+repository-code: 'https://github.com/dirmeier/sbijax'
+license: Apache-2.0
