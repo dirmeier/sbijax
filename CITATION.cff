@@ -1,6 +1,8 @@
 cff-version: 1.2.0
 title: Simulation-based Inference with the Python Package sbijax
-message: 'If you use this software, please cite it as below.'
+message: >-
+  If you use this software, please cite our article in the
+  Journal of Open Source Software.
 type: software
 authors:
   - family-names: Dirmeier
@@ -18,5 +20,26 @@ authors:
     affiliation: >-
       Swiss Federal Institute of Aquatic Science and
       Technology, Switzerland
+doi: 10.5281/zenodo.23376230
 repository-code: 'https://github.com/dirmeier/sbijax'
 license: Apache-2.0
+preferred-citation:
+  type: article
+  title: Simulation-based Inference with the Python Package sbijax
+  authors:
+    - family-names: Dirmeier
+      given-names: Simon
+    - family-names: Mira
+      given-names: Antonietta
+    - family-names: Albert
+      given-names: Carlo
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  date-published: 2026-10-30
+  doi: 10.21105/joss.11195
+  issn: 2475-9066
+  volume: 11
+  issue: 126
+  start: 11195
+  url: 'https://joss.theoj.org/papers/10.21105/joss.11195'

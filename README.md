@@ -5,13 +5,11 @@
 [![documentation](https://readthedocs.org/projects/sbijax/badge/?version=latest)](https://sbijax.readthedocs.io/en/latest/?badge=latest)
 [![version](https://img.shields.io/pypi/v/sbijax.svg?colorB=black&style=flat)](https://pypi.org/project/sbijax/)
 
-> Simulation-based inference in JAX
 
 ``Sbijax`` is a Python library for neural simulation-based inference and
 approximate Bayesian computation using [JAX](https://github.com/google/jax).
 It implements recent methods, such as *Simulated Annealing ABC*,
-*Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient Statistics*
-or *Neural Posterior Score Estimation*.
+*Surjective Neural Likelihood Estimation*, *Neural Approximate Sufficient Statistics* or *Neural Posterior Score Estimation*.
 
 > [!CAUTION]
 > ⚠️ As per the LICENSE file, there is no warranty whatsoever for this free software tool. If you discover bugs, please report them.
@@ -214,7 +212,7 @@ In order to contribute:
 
 ### Development commands
 
-The project uses `uv` for everything:
+From the repository root, you can install dependencies, run the tests, and lint, format and type-check the code with:
 
 ```bash
 uv sync --all-groups
@@ -225,6 +223,25 @@ uv run ruff check sbijax examples
 uv run ruff check --fix sbijax examples
 uv run ruff format sbijax examples
 uv run mypy sbijax examples
+```
+
+## Citing sbijax
+
+If you find our work relevant to your research, please consider citing:
+
+```
+@article{dirmeier2026sbijax,
+    author = {Simon Dirmeier and Antonietta Mira and Carlo Albert},
+    title = {Simulation-based Inference with the Python Package sbijax},
+    year = {2026},
+    journal = {Journal of Open Source Software},
+    publisher = {The Open Journal},
+    volume = {11},
+    number = {126},
+    pages = {11195},
+    doi = {10.21105/joss.11195},
+    url = {https://doi.org/10.21105/joss.11195}
+}
 ```
 
 ## Acknowledgements
