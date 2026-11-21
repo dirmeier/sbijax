@@ -7,6 +7,7 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 
 from sbijax._src.inference._sample_info import MCMCSampleInfo
 from sbijax._src.mcmc.slice import sample_with_slice
+from sbijax.mcmc import make_sampler, slice_sampling
 
 prior = tfd.JointDistributionNamed(
   {"theta": tfd.Normal(jnp.zeros(2), 1.0)}, batch_ndims=0
@@ -75,3 +76,20 @@ def test_unknown_kernel_option_raises():
 def test_invalid_kernel_options_raise(bad):
   with pytest.raises(ValueError):
     sample_with_slice(jr.PRNGKey(0), lp, prior, n_samples=5, n_warmup=5, **bad)
+
+
+def test_make_sampler_with_slice_sampling_recovers_posterior(conjugate_model):
+  prior_fn, _, posterior_mean = conjugate_model
+
+  def loglik(theta):
+    return tfd.Normal(theta["a"], 1.0).log_prob(1.5) + tfd.Normal(
+      theta["b"], 1.0
+    ).log_prob(-0.5)
+
+  sampler = make_sampler(slice_sampling, prior=prior_fn(), n_thin=1)
+  samples, info = sampler(
+    jr.PRNGKey(2), loglik, n_chains=4, n_samples=1_000, n_warmup=500
+  )
+  for k, v in posterior_mean.items():
+    assert abs(float(samples[k].mean()) - v) < 0.1
+  assert 0.0 <= float(info.acceptance_rate) <= 1.0

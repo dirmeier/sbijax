@@ -5,7 +5,7 @@ from sbijax._src.mcmc.mala import mala, sample_with_mala
 from sbijax._src.mcmc.nuts import nuts, sample_with_nuts
 from sbijax._src.mcmc.rmh import rmh, sample_with_rmh
 from sbijax._src.mcmc.sampler import make_sampler
-from sbijax._src.mcmc.slice import sample_with_slice
+from sbijax._src.mcmc.slice import sample_with_slice, slice_sampling
 
 __all__ = [
   "imh",
@@ -18,4 +18,5 @@ __all__ = [
   "sample_with_nuts",
   "sample_with_rmh",
   "sample_with_slice",
+  "slice_sampling",
 ]

@@ -7,9 +7,10 @@ sbijax.mcmc
 and exposes the low-level MCMC routines they are built on.
 
 :func:`make_sampler` bundles a :class:`Kernel` -- a handle identifying a
-BlackJAX MCMC algorithm -- with the prior and ``N(0, I)`` chain initialisation
+BlackJAX MCMC algorithm -- with the prior and prior-draw chain initialisation
 into a sampler that is passed to :func:`sbijax.sample`. The available algorithms
-are ``nuts``, ``mala``, ``rmh`` and ``imh``::
+are ``nuts``, ``mala``, ``rmh``, ``imh`` and
+``slice_sampling``::
 
     from sbijax.mcmc import make_sampler, nuts
 
@@ -22,6 +23,7 @@ are ``nuts``, ``mala``, ``rmh`` and ``imh``::
     mala
     nuts
     rmh
+    slice_sampling
     sample_with_imh
     sample_with_mala
     sample_with_nuts
@@ -50,4 +52,7 @@ are ``nuts``, ``mala``, ``rmh`` and ``imh``::
     :no-value:
 
 .. autodata:: rmh
+    :no-value:
+
+.. autodata:: slice_sampling
     :no-value:

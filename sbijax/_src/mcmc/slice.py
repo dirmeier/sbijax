@@ -8,6 +8,7 @@ from jax import Array
 from jax import numpy as jnp
 from jax import random as jr
 
+from sbijax._src.mcmc.sampler import Kernel
 from sbijax._src.mcmc.util import burn_in, run_blackjax
 
 if TYPE_CHECKING:
@@ -139,3 +140,6 @@ def _slice_init(
     )
 
   return states, thinned
+
+
+slice_sampling = Kernel(init_fn=_slice_init)
