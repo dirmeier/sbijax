@@ -10,7 +10,7 @@ from sbijax._src.mcmc.util import run_blackjax
 
 
 class Kernel(NamedTuple):
-  """Identifies a BlackJAX MCMC algorithm (NUTS, MALA, RMH, IMH).
+  """Identifies a BlackJAX MCMC algorithm (NUTS, MALA, RMH, IMH, slice).
 
   Wraps the algorithm's initializer so :func:`make_sampler` can build the
   concrete kernel and initial chain states at sampling time. The single field

@@ -3,7 +3,7 @@
 Compares four SABC implementations — `sbijax` (JAX), `sabc-mlx` (MLX),
 `sabc-numpy`, `sabc-numba` — on three SBI tasks (`gaussian_mixture`,
 `mixture_distractors`, `two_moons`), scored against an MCMC reference posterior
-(TFP slice sampler on each task's tractable likelihood).
+(BlackJAX slice sampler on each task's tractable likelihood).
 
 ## Usage
 

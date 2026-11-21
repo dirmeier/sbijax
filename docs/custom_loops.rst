@@ -102,8 +102,8 @@ supplying your own log-density. For example, with the slice sampler:
         n_chains=4, n_samples=2_000, n_warmup=1_000,
     )
 
-Any of the algorithms -- ``nuts``, ``mala``, ``rmh``, ``imh`` -- can be passed
+Any of the algorithms -- ``nuts``, ``mala``, ``rmh``, ``imh``, ``slice_sampling`` -- can be passed
 to :func:`sbijax.mcmc.make_sampler`, which wraps exactly this pattern (target
-``loglik + log p(theta)``, ``N(0, I)`` initialisation, chosen kernel) behind
+``loglik + log p(theta)``, prior-draw initialisation, chosen kernel) behind
 :func:`sbijax.sample`. Rolling it by hand lets you swap the kernel, change the
 initialisation, or condition on a different prior without retraining.

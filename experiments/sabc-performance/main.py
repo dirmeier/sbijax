@@ -42,7 +42,7 @@ def _reference_by_chain(
   def lp(theta):
     return jnp.sum(prior.log_prob(theta)) + jnp.sum(likelihood(observed, theta))
 
-  draws = sample_with_slice(
+  draws, _ = sample_with_slice(
     jr.PRNGKey(seed),
     lp,
     prior,
